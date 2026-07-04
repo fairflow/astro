@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Astro — chart wheel mock-up</title>
+<style>
+  :root{
+    --bg:#0e1220; --bg2:#141a2e; --panel:#171e33; --line:#28304d;
+    --ink:#e8e4d8; --dim:#9aa0b5; --gold:#d4af6a; --gold-dim:#8a744a;
+    --trine:#4e9df1; --sextile:#46c48f; --square:#e05555; --opp:#e0704e;
+    --conj:#d4af6a; --quincunx:#b7a5e0; --transit:#5fd4d0;
+    --fire:#e07a5f; --earth:#a8b168; --air:#e6c86e; --water:#6fa8dc;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  body{background:var(--bg); color:var(--ink);
+       font:15px/1.45 -apple-system,"Segoe UI",Roboto,sans-serif;}
+  h1,h2,h3,.serif{font-family:"Iowan Old Style","Palatino",Georgia,serif}
+  header{padding:18px 26px 10px; border-bottom:1px solid var(--line);
+         background:linear-gradient(180deg,#131a30,var(--bg));}
+  header h1{font-size:22px; letter-spacing:.06em; color:var(--gold); font-weight:600}
+  header h1 span{color:var(--dim); font-size:13px; letter-spacing:.02em; margin-left:12px; font-family:-apple-system,sans-serif}
+  .form{display:flex; gap:10px; flex-wrap:wrap; margin:12px 0 4px}
+  .form label{display:flex; flex-direction:column; font-size:11px; color:var(--dim);
+              text-transform:uppercase; letter-spacing:.08em; gap:3px}
+  .form input,.form select{background:var(--bg2); border:1px solid var(--line); color:var(--ink);
+              border-radius:6px; padding:6px 9px; font-size:14px; min-width:110px}
+  .form .go{align-self:flex-end; background:var(--gold); color:#1a1408; border:none;
+            font-weight:600; padding:7px 16px; border-radius:6px; cursor:pointer}
+  main{display:flex; gap:0; align-items:flex-start; max-width:1200px; margin:0 auto}
+  #wheelwrap{flex:1 1 640px; min-width:420px; padding:10px}
+  svg{display:block; width:100%; height:auto}
+  aside{flex:0 0 360px; padding:16px 20px 30px 6px; min-height:600px}
+  .toolbar{display:flex; gap:8px; margin-bottom:12px; flex-wrap:wrap}
+  .toolbar button{background:var(--bg2); color:var(--dim); border:1px solid var(--line);
+      border-radius:14px; padding:5px 12px; font-size:12.5px; cursor:pointer}
+  .toolbar button.on{color:var(--gold); border-color:var(--gold-dim); background:#1c2138}
+  #panel{background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 16px}
+  #panel .hint{color:var(--dim); font-size:13.5px}
+  #panel h2{font-size:17px; color:var(--gold); margin-bottom:2px}
+  #panel .sub{color:var(--dim); font-size:12.5px; margin-bottom:8px}
+  #panel .fact{font-size:14px; margin-bottom:10px}
+  .orbbar{height:5px; border-radius:3px; background:#242b45; margin:6px 0 12px; overflow:hidden}
+  .orbbar i{display:block; height:100%; background:var(--gold)}
+  #more{background:none; border:1px solid var(--gold-dim); color:var(--gold);
+        padding:5px 14px; border-radius:14px; font-size:12.5px; cursor:pointer}
+  #detail{display:none; margin-top:12px; border-top:1px solid var(--line); padding-top:10px}
+  .styletabs{display:flex; gap:5px; margin-bottom:10px; flex-wrap:wrap}
+  .styletabs button{background:none; border:1px solid var(--line); color:var(--dim);
+      border-radius:12px; padding:3px 10px; font-size:11.5px; cursor:pointer}
+  .styletabs button.on{color:#12182b; background:var(--gold); border-color:var(--gold); font-weight:600}
+  #interp{font-size:14px; line-height:1.55}
+  #interp p{margin-bottom:8px}
+  #mods{margin-top:10px}
+  #mods h3{font-size:12px; text-transform:uppercase; letter-spacing:.08em; color:var(--dim); margin-bottom:5px}
+  #mods li{list-style:none; font-size:13px; margin-bottom:4px; padding-left:10px; border-left:2px solid var(--line)}
+  #mods li b{color:var(--gold)}
+  #aspectlist{margin-top:16px}
+  #aspectlist h3{font-size:12px; text-transform:uppercase; letter-spacing:.1em; color:var(--dim); margin-bottom:6px}
+  #aspectlist .row{display:flex; align-items:center; gap:8px; padding:4px 8px; border-radius:6px;
+      cursor:pointer; font-size:14px}
+  #aspectlist .row:hover{background:#1c2340}
+  #aspectlist .row.sel{background:#232b4d; outline:1px solid var(--gold-dim)}
+  #aspectlist .g{font-size:16px; width:20px; text-align:center}
+  #aspectlist .a{width:22px; text-align:center; font-weight:600}
+  #aspectlist .orb{margin-left:auto; color:var(--dim); font-size:12px; font-variant-numeric:tabular-nums}
+  .legend{display:flex; align-items:center; gap:10px; margin-top:14px; color:var(--dim); font-size:11.5px}
+  .legend .ramp{flex:1; height:6px; border-radius:3px;
+      background:linear-gradient(90deg, rgba(212,175,106,1), rgba(212,175,106,.25))}
+  footer{max-width:1200px; margin:6px auto 30px; padding:0 26px; color:var(--dim); font-size:12.5px}
+  footer b{color:var(--gold)}
+  .aspect-line{cursor:pointer}
+  .aspect-hit{stroke:transparent; stroke-width:13; fill:none; cursor:pointer}
+  .planet{cursor:pointer}
+  .dimmed{opacity:.12 !important; transition:opacity .25s}
+  text{user-select:none}
+  @media (max-width:860px){ main{flex-direction:column} aside{flex:auto; width:100%; padding:0 20px} }
+</style>
+</head>
+<body>
+<header>
+  <h1>ASTRO <span>chart wheel mock-up · design proposal demonstrator · positions are illustrative</span></h1>
+  <div class="form">
+    <label>Name<input value="Sample Person"></label>
+    <label>Date of birth<input type="date" value="1975-03-08"></label>
+    <label>Time of birth<input type="time" value="14:30"></label>
+    <label>Time accuracy<select><option>Exact</option><option selected>± 5 min</option><option>± 30 min</option><option>± 2 h</option><option>Unknown</option></select></label>
+    <label>Place<input value="London, United Kingdom"></label>
+    <button class="go">Cast chart</button>
+  </div>
+</header>
+
+<main>
+  <div id="wheelwrap"><svg id="wheel" viewBox="0 0 720 720" role="img" aria-label="Natal chart wheel"></svg></div>
+  <aside>
+    <div class="toolbar">
+      <button id="btnTransits">Transits · 2026-07-04</button>
+      <button id="btnAsteroids" class="on">Asteroid bodies</button>
+    </div>
+    <div id="panel">
+      <div class="hint">Tap an aspect line, a planet glyph, or a row in the aspect
+      list below. Line opacity encodes orb tightness — exact aspects are strongest.</div>
+    </div>
+    <div id="aspectlist"></div>
+    <div class="legend"><span>tight orb</span><span class="ramp"></span><span>edge of orb</span></div>
+  </aside>
+</main>
+
+<footer>
+  <b>Mock-up scope.</b> Aspect detection, orb→opacity shading, clustering nudges,
+  transit overlay and the interpretation-style switcher are live code; planetary
+  positions and house cusps are hard-coded illustrations (in production they come
+  from the offline ephemeris and Placidus engine — see docs/DESIGN.md). Glyphs are
+  styled Unicode here; production uses a uniform custom SVG glyph set.
+</footer>
+
+<script>
+"use strict";
+/* ---------------- data (illustrative) ---------------- */
+const SIGNS=["♈","♉","♊","♋","♌","♍","♎","♏","♐","♑","♒","♓"];
+const SIGN_NAMES=["Aries","Taurus","Gemini","Cancer","Leo","Virgo","Libra","Scorpio","Sagittarius","Capricorn","Aquarius","Pisces"];
+const ELEM=["fire","earth","air","water"];
+const BODIES=[ // [key, glyph, name, natal longitude, isLuminary, isAsteroid]
+ ["sun","☉","Sun",347.5,1,0],["moon","☽","Moon",107.0,1,0],
+ ["mercury","☿","Mercury",355.0,0,0],["venus","♀","Venus",287.5,0,0],
+ ["mars","♂","Mars",295.0,0,0],["jupiter","♃","Jupiter",15.0,0,0],
+ ["saturn","♄","Saturn",102.0,0,0],["uranus","♅","Uranus",212.0,0,0],
+ ["neptune","♆","Neptune",251.0,0,0],["pluto","♇","Pluto",187.0,0,0],
+ ["chiron","⚷","Chiron",20.0,0,1],["ceres","⚳","Ceres",165.0,0,1],
+ ["pallas","⚴","Pallas",300.0,0,1],["juno","⚵","Juno",140.0,0,1],
+ ["vesta","⚶","Vesta",240.0,0,1],["eris","⯰","Eris",13.0,0,1],
+ ["node","☊","N Node",255.0,0,1]];
+const CUSPS=[78,96,114,130,155,200,258,276,294,310,335,20]; // Placidus, illustrative
+const ASC=CUSPS[0], MC=CUSPS[9];
+const TRANSITS=[ // sky of 2026-07-04 (approximate, illustrative)
+ ["sun","☉","Sun",102.5],["venus","♀","Venus",90.0],["mars","♂","Mars",150.0],
+ ["jupiter","♃","Jupiter",105.0],["saturn","♄","Saturn",5.0],
+ ["uranus","♅","Uranus",63.0],["neptune","♆","Neptune",2.5],["pluto","♇","Pluto",303.5]];
+const ASPECTS=[ // [name, symbol, angle, base orb, luminary orb, css color var, class]
+ ["Conjunction","☌",0,8,10,"--conj","neutral"],
+ ["Sextile","⚹",60,5,6,"--sextile","flowing"],
+ ["Square","□",90,7,8,"--square","challenge"],
+ ["Trine","△",120,8,9,"--trine","flowing"],
+ ["Quincunx","⚻",150,2.5,3,"--quincunx","adjusting"],
+ ["Opposition","☍",180,8,10,"--opp","challenge"]];
+const TRANSIT_ORB=3;
+
+/* ---------------- interpretation library (samples) ---------------- */
+const KEYWORDS={sun:"conscious identity",moon:"feeling nature",mercury:"mind and exchange",
+ venus:"valuing and relating",mars:"will and drive",jupiter:"expansion and meaning",
+ saturn:"structure and limit",uranus:"awakening and rupture",neptune:"imagination and dissolution",
+ pluto:"depth and transformation",chiron:"the wound that teaches",ceres:"nurture and cycles of loss",
+ pallas:"pattern-recognition",juno:"committed partnership",vesta:"devotion and focus",
+ eris:"the excluded and the disruptive",node:"the direction of growth"};
+const STYLES=[["jungian","Jungian"],["mundane","Mundane"],["energy","Energy"],["minimal","Minimal"]];
+// Authored samples for a few aspects; everything else falls back to templates.
+const LIBRARY={
+ "sun-trine-moon":{
+  jungian:"Conscious purpose and the feeling life are on speaking terms: what the ego wills, the inner child does not sabotage. In Jungian terms the conscious and unconscious stand in a naturally cooperative axis — integration comes cheaply here, which is its own subtle danger: what is never fought for is rarely examined. The parental imagos tend to be experienced as compatible, and inner conflict, when it arrives, comes from elsewhere in the chart.",
+  mundane:"Home life and career goals rarely collide; decisions tend to be backed by mood rather than undermined by it. Others read this person as self-consistent, and doors open on that account — colleagues trust what they see. Family and vocation can usually be negotiated without rupture.",
+  energy:"A standing resonance between the solar and lunar currents: energy invested in identity feeds emotional reserves and vice versa, a loop that regenerates rather than drains. Across the long progressions this shows as unusually smooth transitions between life chapters — the progressed lunation cycle's crises land softly here.",
+  minimal:"Sun trine Moon. Wants and needs mostly agree. Low internal friction; consistency is a strength, complacency the associated risk."},
+ "moon-conj-saturn":{
+  jungian:"The feeling nature is fused with the archetype of limit and authority: emotion arrives already inspected. Early experience often installed a stern inner witness beside the child's needs — the negative senex standing over the moon-child. The task of the second half of life is to let Saturn serve feeling (containment, reliability, emotional craft) rather than police it.",
+  mundane:"Emotional needs were schooled early by duty, scarcity or a serious household; adult life shows it as reserve, reliability and a preference for proving care through acts rather than words. Often responsibility for others arrives young. Comfort with solitude is real but should be chosen, not defaulted to.",
+  energy:"The lunar current runs through a narrow, well-built channel: slower flow, higher pressure, remarkable endurance. Feelings build in long arcs and release late. Progressed-Moon returns and Saturn's own cycle (29.5y) beat together here — around the Saturn returns the dam is renovated: what was constriction can be rebuilt as capacity.",
+  minimal:"Moon conjunct Saturn. Feelings are controlled, delayed, and dependable. Tendency to under-ask for comfort. Improves markedly with age."},
+ "chiron-conj-jupiter":{
+  jungian:"The wounded-healer archetype is yoked to the principle of meaning: the injury — often to faith, belonging or one's sense of promise — becomes the very place where philosophy grows. The figure of the generous teacher who cannot take his own medicine haunts this pairing until the wound is related to consciously; then it turns mentor, and meaning is transmitted to others precisely through what was once the sore point.",
+  mundane:"Setbacks tend to arrive dressed as opportunities and vice versa: education interrupted, a mentor who disappoints, a promotion that exposes an old insecurity. Practically, teaching, guiding and publishing are the arenas where the old bruise becomes employable wisdom.",
+  energy:"A growth current amplifying a wound signature: expansion cycles (Jupiter's 12-year beat) repeatedly revisit the sore point, each pass either inflating around it or — with attention — growing genuine tissue. Long progressions show roughly decade-spaced waves where the theme returns at a higher turn of the spiral.",
+  minimal:"Chiron conjunct Jupiter. The sore spot and the growth engine share a room. Learning and teaching around the wound work; bravado around it doesn't."},
+ "venus-conj-mars":{
+  jungian:"Anima and animus travel together: desire and affection are not split, which lends charisma and directness in love. The shadow side is impatience with the slow tempo of relatedness — wanting and winning can eclipse meeting. Integration looks like courtship consciously extended in time.",
+  mundane:"Attraction is acted on; this person courts, initiates, and is at their best when pursuit is welcome and reciprocated. Creative and commercial instincts combine well — good for enterprise where taste must be executed, not just felt.",
+  energy:"The receptive and active currents are phase-locked: charm carries force, force carries charm. Watch the build-peak-release cycle in relationships — it runs hot and fast, and the release phase needs conscious lengthening or partners are left a beat behind.",
+  minimal:"Venus conjunct Mars. Desire and affection point the same way. Direct in love, effective in creative work, occasionally too fast for the other person."},
+ "saturn-square-eris":{
+  jungian:"The keeper of order stands at cross-purposes to the goddess of the excluded: whatever the personality refuses a seat at the table returns to overturn it. Projected, this is a lifelong quarrel with authorities or with the disruptive Other; withdrawn, it is the discovery that one's own outsider is the renovator the structure needed.",
+  mundane:"Friction with institutions recurs: rules experienced as rigged, or the self cast as the inconvenient dissenter. Constructive expression is reform work — changing structures from a position inside them, earned slowly.",
+  energy:"A high-tension standing wave between consolidation and disruption; pressure accumulates in structures until the excluded element forces re-formation. The cycle is long and generational, but its squares and returns time the personal chapters where rebuilding is non-negotiable.",
+  minimal:"Saturn square Eris. Order versus the excluded voice. Recurring friction with rules and gatekeepers; useful when converted into patient reform."},
+ "t-sun-conj-saturn":{
+  jungian:"The year's solar renewal passes through the senex gate: identity is audited. What is structurally sound in one's self-image is confirmed; what is borrowed is quietly repossessed.",
+  mundane:"A short annual season (a few days) of sober stock-taking: duties bill, energy dips, elders and bosses feature. Excellent for finishing, poor for launching.",
+  energy:"The vital current meets maximum impedance in its annual cycle — a compression phase. Rest, prune, consolidate; the current re-expands within the week.",
+  minimal:"Transiting Sun conjunct natal Saturn. A few serious, low-energy days each year. Finish things; don't start them."},
+ "t-jupiter-conj-moon":{
+  jungian:"The principle of meaning visits the feeling nature: roughly once every twelve years, the inner life is asked to grow a size. Old emotional containers — including cherished Saturnine ones — feel suddenly small.",
+  mundane:"A season (weeks to a few months, with retrograde passes) favouring home, family growth, moves to bigger quarters, and public warmth. Appetites of all kinds enlarge; so can waistline and spending.",
+  energy:"An expansion wave through the lunar current: feelings amplify, generosity rises, tears come easier — the signal is louder, not different. Ride it to widen emotional range that outlasts the transit.",
+  minimal:"Transiting Jupiter conjunct natal Moon. Feelings and appetites enlarge for a while. Generosity up, judgement of portions down."}
+};
+const FALLBACK={
+ jungian:(A,B,rel)=>`${A.name} and ${B.name} stand in ${rel.toLowerCase()}: the principle of ${KEYWORDS[A.key]} ${rel==="Conjunction"?"is fused with":"meets"} the principle of ${KEYWORDS[B.key]}. Held consciously, the pairing becomes a working partnership of the two archetypes; left unconscious, one pole tends to be lived and the other projected onto people and events. (Sample library text — full authored entry pending.)`,
+ mundane:(A,B,rel)=>`In outer life, matters of ${KEYWORDS[A.key]} and ${KEYWORDS[B.key]} arrive together — situations recur in which both must be handled at once, and the ${rel.toLowerCase()} colours whether they cooperate or compete. (Sample library text.)`,
+ energy:(A,B,rel)=>`Two currents — ${KEYWORDS[A.key]} and ${KEYWORDS[B.key]} — are coupled by this ${rel.toLowerCase()}: activity in one reliably excites the other. Watch the build, peak and release phases arrive as a pair across the relevant planetary cycles. (Sample library text.)`,
+ minimal:(A,B,rel)=>`${A.name} ${rel.toLowerCase()} ${B.name}. ${rel==="Trine"||rel==="Sextile"?"These two functions cooperate easily.":rel==="Square"||rel==="Opposition"?"These two functions pull against each other until consciously worked.":rel==="Quincunx"?"These two functions require perpetual small adjustments.":"These two functions operate as one."} (Sample.)`};
+
+/* ---------------- math ---------------- */
+const norm=d=>((d%360)+360)%360;
+const sep=(a,b)=>{const d=Math.abs(norm(a)-norm(b));return d>180?360-d:d;};
+const rad=d=>d*Math.PI/180;
+const CX=360,CY=360;
+function pt(lon,r){const d=rad(norm(lon)-ASC);return[CX-r*Math.cos(d),CY+r*Math.sin(d)];}
+function fmtDeg(lon){const s=Math.floor(norm(lon)/30),d=norm(lon)-s*30,
+  dd=Math.floor(d),mm=Math.round((d-dd)*60);
+  return `${dd}°${String(mm).padStart(2,"0")}′ ${SIGNS[s]}︎ ${SIGN_NAMES[s]}`;}
+function fmtOrb(o){const d=Math.floor(o),m=Math.round((o-d)*60);return `${d}°${String(m).padStart(2,"0")}′`;}
+
+function findAspects(list){ // natal×natal
+  const out=[];
+  for(let i=0;i<list.length;i++)for(let j=i+1;j<list.length;j++){
+    const A=list[i],B=list[j];
+    for(const[name,sym,angle,orb,lorb,color,klass]of ASPECTS){
+      const maxOrb=(A.lum||B.lum)?lorb:orb;
+      const eff=(A.ast||B.ast)?Math.min(maxOrb,3):maxOrb; // asteroids: tight 3° orb
+      const o=Math.abs(sep(A.lon,B.lon)-angle);
+      if(o<=eff){out.push({A,B,name,sym,angle,orb:o,maxOrb:eff,color,klass,
+        weight:(1-o/eff)*(A.lum?1.6:1)*(B.lum?1.6:1)});}
+    }}
+  return out.sort((x,y)=>y.weight-x.weight);
+}
+function findTransitAspects(tr,nat){
+  const out=[];
+  for(const T of tr)for(const N of nat){
+    if(N.ast&&N.key!=="chiron"&&N.key!=="eris")continue; // majors only: less noise
+    for(const[name,sym,angle,,,color,klass]of ASPECTS){
+      if(name==="Quincunx")continue;
+      const o=Math.abs(sep(T.lon,N.lon)-angle);
+      if(o<=TRANSIT_ORB)out.push({A:T,B:N,name,sym,angle,orb:o,maxOrb:TRANSIT_ORB,
+        color,klass,transit:true,weight:1-o/TRANSIT_ORB});}}
+  return out.sort((x,y)=>y.weight-x.weight);
+}
+function nudge(items,minGap){ // spread display longitudes of crowded glyphs
+  const s=[...items].sort((a,b)=>a.lon-b.lon);
+  s.forEach(p=>p.dlon=p.lon);
+  for(let pass=0;pass<3;pass++)for(let i=0;i<s.length;i++){
+    const p=s[i],q=s[(i+1)%s.length];
+    let gap=norm(q.dlon-p.dlon); if(gap===0)gap=360;
+    if(gap<minGap){const push=(minGap-gap)/2;p.dlon=norm(p.dlon-push);q.dlon=norm(q.dlon+push);}
+  }
+}
+
+/* ---------------- state ---------------- */
+let showAsteroids=true, showTransits=false, selected=null, styleId="jungian";
+const bodies=()=>BODIES.filter(b=>showAsteroids||!b[5])
+  .map(([key,glyph,name,lon,lum,ast])=>({key,glyph,name,lon,lum,ast}));
+const transitBodies=()=>TRANSITS.map(([key,glyph,name,lon])=>({key,glyph,name:"t "+name,lon,transit:true}));
+
+/* ---------------- svg helpers ---------------- */
+const svg=document.getElementById("wheel");
+const NS="http://www.w3.org/2000/svg";
+function el(tag,attrs,parent){const e=document.createElementNS(NS,tag);
+  for(const k in attrs)e.setAttribute(k,attrs[k]);(parent||svg).appendChild(e);return e;}
+function txt(t,x,y,cls,size,fill,parent,rot){
+  const e=el("text",{x,y,"text-anchor":"middle","dominant-baseline":"central",
+    "font-size":size,fill:fill||"var(--ink)"},parent);
+  if(cls)e.setAttribute("class",cls);
+  if(rot!==undefined)e.setAttribute("transform",`rotate(${rot} ${x} ${y})`);
+  e.textContent=t;return e;}
+
+/* ---------------- render ---------------- */
+const R={zodOut:348,zodIn:302,houseNum:150,planet:262,tick:302,hub:176,transit:330};
+let natalAspects=[],transitAspects=[];
+
+function render(){
+  svg.innerHTML="";
+  const B=bodies(); nudge(B,8.2);
+  natalAspects=findAspects(B);
+  const T=transitBodies(); nudge(T,7);
+  transitAspects=showTransits?findTransitAspects(T,B):[];
+
+  el("circle",{cx:CX,cy:CY,r:R.zodOut+8,fill:"var(--bg2)",stroke:"var(--line)"});
+  // zodiac band
+  for(let s=0;s<12;s++){
+    const a0=s*30,[x1,y1]=pt(a0,R.zodIn),[x2,y2]=pt(a0,R.zodOut);
+    el("line",{x1,y1,x2,y2,stroke:"var(--line)","stroke-width":1});
+    const[gx,gy]=pt(a0+15,(R.zodOut+R.zodIn)/2);
+    txt(SIGNS[s]+"︎",gx,gy,"",26,`var(--${ELEM[s%4]})`);
+  }
+  el("circle",{cx:CX,cy:CY,r:R.zodOut,fill:"none",stroke:"var(--line)"});
+  el("circle",{cx:CX,cy:CY,r:R.zodIn,fill:"none",stroke:"var(--line)"});
+  for(let d=0;d<360;d+=5){ // ticks
+    const long=d%10===0,[x1,y1]=pt(d,R.zodIn),[x2,y2]=pt(d,R.zodIn+(long?10:6));
+    el("line",{x1,y1,x2,y2,stroke:"var(--gold-dim)","stroke-width":long?1:.5,opacity:.7});
+  }
+  // houses
+  for(let h=0;h<12;h++){
+    const c=CUSPS[h],angle=[0,3,6,9].includes(h);
+    const[x1,y1]=pt(c,R.hub),[x2,y2]=pt(c,R.zodIn);
+    el("line",{x1,y1,x2,y2,stroke:angle?"var(--gold)":"var(--line)",
+      "stroke-width":angle?2:1,opacity:angle?.9:.8});
+    if(angle){const lbl=h===0?"ASC":h===3?"IC":h===6?"DSC":"MC";
+      const[lx,ly]=pt(c,R.zodIn-14);txt(lbl,lx,ly,"",11,"var(--gold)");}
+    const next=CUSPS[(h+1)%12];
+    let mid=c+norm(next-c)/2;
+    const[nx,ny]=pt(mid,R.houseNum);
+    txt(String(h+1),nx,ny,"",12,"var(--dim)");
+  }
+  el("circle",{cx:CX,cy:CY,r:R.hub,fill:"#10162a",stroke:"var(--line)"});
+
+  // natal aspect lines
+  const gAsp=el("g",{id:"gAspects"});
+  natalAspects.forEach((a,i)=>{
+    const[x1,y1]=pt(a.A.lon,R.hub),[x2,y2]=pt(a.B.lon,R.hub);
+    const op=0.25+0.75*(1-a.orb/a.maxOrb);
+    const w=a.orb<2?2.2:1.4;
+    const g=el("g",{class:"aspect-line","data-i":i},gAsp);
+    if(a.orb<1)el("line",{x1,y1,x2,y2,stroke:`var(${a.color})`,"stroke-width":5,opacity:.25},g);
+    el("line",{x1,y1,x2,y2,stroke:`var(${a.color})`,"stroke-width":w,opacity:op,
+      ...(a.name==="Quincunx"?{"stroke-dasharray":"5 4"}:{})},g);
+    el("line",{x1,y1,x2,y2,class:"aspect-hit"},g);
+    g.addEventListener("click",()=>select(a));
+  });
+
+  // natal planets
+  const gPl=el("g",{});
+  B.forEach(p=>{
+    const[hx,hy]=pt(p.lon,R.hub),[tx,ty]=pt(p.lon,R.hub+8);
+    el("line",{x1:hx,y1:hy,x2:tx,y2:ty,stroke:"var(--dim)","stroke-width":1});
+    const[px,py]=pt(p.dlon,R.planet),[cx2,cy2]=pt(p.lon,R.hub+8);
+    el("line",{x1:cx2,y1:cy2,x2:px,y2:py,stroke:"var(--line)","stroke-width":.6,opacity:.85});
+    const g=el("g",{class:"planet","data-key":p.key},gPl);
+    el("circle",{cx:px,cy:py,r:15,fill:"var(--bg)",stroke:"var(--line)","stroke-width":1},g);
+    txt(p.glyph+"︎",px,py,"",p.ast?15:19,p.lum?"var(--gold)":"var(--ink)",g);
+    const[dx,dy]=pt(p.dlon,R.planet+24);
+    txt(`${Math.floor(norm(p.lon)%30)}°`,dx,dy,"",9.5,"var(--dim)",g);
+    g.addEventListener("click",()=>selectPlanet(p));
+  });
+
+  // transit overlay
+  if(showTransits){
+    el("circle",{cx:CX,cy:CY,r:R.zodOut+8,fill:"none",stroke:"var(--transit)",opacity:.35});
+    T.forEach(p=>{
+      const[px,py]=pt(p.dlon,R.transit+42);
+      const g=el("g",{class:"planet"},svg);
+      txt(p.glyph+"︎",px,py,"",15,"var(--transit)",g);
+      const[m1x,m1y]=pt(p.lon,R.zodOut+4),[m2x,m2y]=pt(p.lon,R.zodOut+14);
+      el("line",{x1:m1x,y1:m1y,x2:m2x,y2:m2y,stroke:"var(--transit)","stroke-width":1.5},g);
+    });
+    const gT=el("g",{});
+    transitAspects.forEach(a=>{
+      const[x1,y1]=pt(a.A.lon,R.zodOut+2),[x2,y2]=pt(a.B.lon,R.hub);
+      const op=0.3+0.7*(1-a.orb/a.maxOrb);
+      const g=el("g",{class:"aspect-line"},gT);
+      el("line",{x1,y1,x2,y2,stroke:"var(--transit)","stroke-width":1.2,opacity:op,
+        "stroke-dasharray":"6 4"},g);
+      el("line",{x1,y1,x2,y2,class:"aspect-hit"},g);
+      g.addEventListener("click",()=>select(a));
+    });
+  }
+  const cap=txt("Placidus · Tropical · illustrative positions",14,14,"serif",12,"var(--dim)");
+  cap.setAttribute("text-anchor","start");
+  renderList();
+}
+
+/* ---------------- selection & panel ---------------- */
+function highlight(a){
+  svg.querySelectorAll(".aspect-line, .planet").forEach(e=>e.classList.add("dimmed"));
+  if(!a)return;
+  svg.querySelectorAll(".aspect-line").forEach((e,)=>{
+    const i=e.getAttribute("data-i");
+    if(i!==null&&natalAspects[+i]===a)e.classList.remove("dimmed");
+  });
+  svg.querySelectorAll(".planet").forEach(e=>{
+    const k=e.getAttribute("data-key");
+    if(k===a.A.key||k===a.B.key)e.classList.remove("dimmed");
+  });
+  if(a.transit)svg.querySelectorAll(".aspect-line, .planet").forEach(e=>e.classList.remove("dimmed"));
+}
+function clearHighlight(){svg.querySelectorAll(".dimmed").forEach(e=>e.classList.remove("dimmed"));}
+
+function libKey(a){
+  const pref=a.transit?"t-":"";
+  const rel={"Conjunction":"conj","Sextile":"sextile","Square":"square",
+             "Trine":"trine","Quincunx":"quincunx","Opposition":"opp"}[a.name];
+  return `${pref}${a.A.key}-${rel}-${a.B.key.replace(/^t /,"")}`;
+}
+function interpText(a){
+  const e=LIBRARY[libKey(a)];
+  if(e)return e[styleId];
+  return FALLBACK[styleId](a.A,a.B,a.name);
+}
+function modifiers(a){ // shared-planet aspects, the composer's raw material
+  return natalAspects.filter(x=>x!==a&&!x.transit&&
+    (x.A.key===a.A.key||x.B.key===a.A.key||x.A.key===a.B.key||x.B.key===a.B.key))
+   .slice(0,4).map(x=>{
+     const shared=(x.A.key===a.A.key||x.B.key===a.A.key)?a.A:a.B;
+     const conn = x.klass===a.klass ? "reinforces"
+                : x.klass==="flowing" ? "offers an easier outlet for"
+                : x.klass==="challenge" ? "complicates"
+                : "colours";
+     return {x,shared,conn};
+   });
+}
+function select(a){
+  selected=a; highlight(a);
+  const panel=document.getElementById("panel");
+  const op=(0.25+0.75*(1-a.orb/a.maxOrb)).toFixed(2);
+  panel.innerHTML=`
+    <h2 class="serif">${a.A.name} ${a.sym} ${a.B.name}</h2>
+    <div class="sub">${a.transit?"Transit aspect · sky of 2026-07-04":"Natal aspect"} · ${a.name} (${a.angle}°) · ${a.klass}</div>
+    <div class="fact">${a.A.name} at ${fmtDeg(a.A.lon)} · ${a.B.name.replace(/^t /,"")} at ${fmtDeg(a.B.lon)}<br>
+      Orb <b>${fmtOrb(a.orb)}</b> of ${a.maxOrb}° allowed → line opacity ${op}</div>
+    <div class="orbbar"><i style="width:${(1-a.orb/a.maxOrb)*100}%"></i></div>
+    <button id="more">More detail ▾</button>
+    <div id="detail">
+      <div class="styletabs">${STYLES.map(([id,label])=>
+        `<button data-s="${id}" class="${id===styleId?"on":""}">${label}</button>`).join("")}</div>
+      <div id="interp"></div>
+      <div id="mods"></div>
+    </div>`;
+  panel.querySelector("#more").addEventListener("click",()=>{
+    const d=panel.querySelector("#detail");
+    d.style.display=d.style.display==="block"?"none":"block";
+    renderDetail();
+  });
+  panel.querySelectorAll(".styletabs button").forEach(b=>
+    b.addEventListener("click",()=>{styleId=b.getAttribute("data-s");
+      panel.querySelectorAll(".styletabs button").forEach(x=>x.classList.toggle("on",x===b));
+      renderDetail();}));
+  renderList();
+}
+function renderDetail(){
+  if(!selected)return;
+  const d=document.getElementById("interp"); if(!d)return;
+  d.innerHTML=`<p>${interpText(selected)}</p>`;
+  const mods=modifiers(selected), m=document.getElementById("mods");
+  m.innerHTML = mods.length? `<h3>Modified by (composer view)</h3><ul>`+
+    mods.map(({x,shared,conn})=>`<li><b>${x.A.name} ${x.sym} ${x.B.name}</b> shares ${shared.name} and ${conn} this aspect (orb ${fmtOrb(x.orb)})</li>`).join("")+
+    `</ul>`:"";
+}
+function selectPlanet(p){
+  selected=null; clearHighlight();
+  svg.querySelectorAll(".aspect-line, .planet").forEach(e=>e.classList.add("dimmed"));
+  svg.querySelectorAll(".planet").forEach(e=>{
+    if(e.getAttribute("data-key")===p.key)e.classList.remove("dimmed");});
+  svg.querySelectorAll(".aspect-line").forEach(e=>{
+    const i=e.getAttribute("data-i");
+    if(i!==null){const a=natalAspects[+i];
+      if(a.A.key===p.key||a.B.key===p.key)e.classList.remove("dimmed");}});
+  const house=(()=>{for(let h=0;h<12;h++){const c=CUSPS[h],n=CUSPS[(h+1)%12];
+      if(norm(p.lon-c)<norm(n-c))return h+1;}return"?";})();
+  const list=natalAspects.filter(a=>a.A.key===p.key||a.B.key===p.key);
+  document.getElementById("panel").innerHTML=`
+    <h2 class="serif">${p.glyph} ${p.name}</h2>
+    <div class="sub">Natal position</div>
+    <div class="fact">${fmtDeg(p.lon)} · House ${house}<br>
+    ${list.length} aspect${list.length===1?"":"s"} in orb — highlighted on the wheel.
+    Tap one for its reading.</div>`;
+  renderList();
+}
+
+/* ---------------- aspect list ---------------- */
+function renderList(){
+  const box=document.getElementById("aspectlist");
+  const rows=[...natalAspects,...transitAspects];
+  box.innerHTML="<h3>Aspects · strongest first</h3>"+rows.map((a,i)=>
+    `<div class="row ${a===selected?"sel":""}" data-i="${i}">
+      <span class="g">${a.A.glyph}</span><span class="a" style="color:var(${a.color})">${a.sym}</span>
+      <span class="g">${a.B.glyph}</span>
+      <span>${a.A.name} – ${a.B.name.replace(/^t /,"")}${a.transit?" <em style='color:var(--transit);font-size:11px'>transit</em>":""}</span>
+      <span class="orb">${fmtOrb(a.orb)}</span></div>`).join("");
+  box.querySelectorAll(".row").forEach(r=>
+    r.addEventListener("click",()=>select(rows[+r.getAttribute("data-i")])));
+}
+
+/* ---------------- toolbar ---------------- */
+document.getElementById("btnTransits").addEventListener("click",e=>{
+  showTransits=!showTransits;e.target.classList.toggle("on",showTransits);
+  selected=null;render();resetPanel();});
+document.getElementById("btnAsteroids").addEventListener("click",e=>{
+  showAsteroids=!showAsteroids;e.target.classList.toggle("on",showAsteroids);
+  selected=null;render();resetPanel();});
+function resetPanel(){document.getElementById("panel").innerHTML=
+  '<div class="hint">Tap an aspect line, a planet glyph, or a row in the aspect list below. Line opacity encodes orb tightness — exact aspects are strongest.</div>';}
+
+render();
+</script>
+</body>
+</html>
