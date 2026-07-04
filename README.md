@@ -6,7 +6,8 @@ Placidus houses, synastry & transits, locally saved charts, and psychological
 interpretations in four switchable styles (Jungian, Mundane, Energy-patterns,
 Minimalist).
 
-**Status: design phase.**
+**Status: M1 (compute core) done** — ephemeris providers, asteroid Chebyshev
+packs, Placidus houses, aspects; 111 golden tests green. UI next (M2).
 
 - 📄 **[Design proposal](docs/DESIGN.md)** — platform review (web / iPadOS /
   Android), ephemeris & licensing strategy, graphics, interpretation engine
@@ -26,6 +27,26 @@ python3 -m http.server 8321
 
 (Or simply open `mockup/chart.html` directly in a browser — it has no external
 dependencies.)
+
+## Development
+
+```bash
+npm install          # TS deps (astronomy-engine, vitest, typescript)
+npm test             # golden tests: planets/houses vs Swiss Ephemeris,
+                     # asteroid packs vs held-out JPL Horizons samples
+npm run typecheck
+
+# Python tooling (one-off / regeneration):
+python3 -m venv .venv && .venv/bin/pip install pyswisseph numpy
+.venv/bin/python tools/golden_refs.py   # regenerate golden references
+.venv/bin/python tools/make_packs.py    # rebuild asteroid packs from Horizons
+```
+
+Layout: `src/ephemeris/` (providers: astronomy-engine core, Chebyshev packs,
+analytic Node/Lilith), `src/chart/` (time, Placidus/Porphyry houses, aspects,
+chart assembly), `data/packs/` (committed asteroid ephemeris packs,
+1900–2100), `test/golden/` (committed reference values), `tools/` (Python
+generators; pyswisseph is dev-only and never ships).
 
 ## Planned stack
 

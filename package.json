@@ -1,0 +1,19 @@
+{
+  "name": "astro",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Astrology app compute core (M1): ephemeris providers, houses, aspects",
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "astronomy-engine": "^2.1.19"
+  },
+  "devDependencies": {
+    "@types/node": "^26.1.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.0.0"
+  }
+}
