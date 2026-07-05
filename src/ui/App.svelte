@@ -8,6 +8,9 @@
   import GlyphDefs from './GlyphDefs.svelte';
   import DisplayControls from './DisplayControls.svelte';
   import Themes from './Themes.svelte';
+  import TransitsView from './TransitsView.svelte';
+  import SynastryView from './SynastryView.svelte';
+  import CompositeView from './CompositeView.svelte';
   import { STYLES, type StyleId } from '../interpret/types';
   import { fetchPacks, PACK_BODIES } from '../ephemeris/packs';
   import { fetchGazetteer, type Gazetteer } from '../store/gazetteer';
@@ -31,6 +34,11 @@
   let display = $state(loadDisplay());
   let expanded = $state(false);
   let styleId = $state<StyleId>(loadStyle());
+  let mode = $state<'natal' | 'transits' | 'synastry' | 'composite'>('natal');
+  const MODES = [
+    ['natal', 'Natal'], ['transits', 'Transits'],
+    ['synastry', 'Synastry'], ['composite', 'Composite'],
+  ] as const;
 
   function loadStyle(): StyleId {
     const s = localStorage.getItem('astro-style');
@@ -75,6 +83,13 @@
     selection = { kind: 'none' };
   }
 
+  function chartFromSaved(c: SavedChart) {
+    const [y, mo, d] = c.date.split('-').map(Number);
+    const [h, mi] = (c.time || '12:00').split(':').map(Number);
+    const { jdUt } = localToUt(y!, mo!, d!, h ?? 12, mi ?? 0, c.place.zone);
+    return computeChart(provider, { jdUt, lat: c.place.lat, lon: c.place.lon });
+  }
+
   function loadSaved(c: SavedChart) {
     form.name = c.name;
     form.date = c.date;
@@ -111,6 +126,27 @@
   <ChartForm bind:form {gaz} onsubmit={cast} />
 </header>
 
+{#if chart}
+  <nav class="modetabs">
+    {#each MODES as [id, label] (id)}
+      <button class:on={mode === id} onclick={() => mode = id}>{label}</button>
+    {/each}
+    <span class="stylepick" role="radiogroup" aria-label="Interpretation style">
+      <span>Style</span>
+      {#each STYLES as s (s.id)}
+        <button class:on={styleId === s.id} onclick={() => styleId = s.id}>{s.label}</button>
+      {/each}
+    </span>
+  </nav>
+{/if}
+
+{#if chart && current && mode === 'transits'}
+  <TransitsView natal={chart} meta={current.meta} {provider} {display} style={styleId} />
+{:else if chart && current && mode === 'synastry'}
+  <SynastryView natal={chart} meta={current.meta} {chartFromSaved} style={styleId} />
+{:else if chart && current && mode === 'composite'}
+  <CompositeView natal={chart} meta={current.meta} {chartFromSaved} {display} style={styleId} />
+{:else}
 <main class="app">
   {#if chart}
     <div id="wheelwrap">
@@ -118,12 +154,6 @@
       <Wheel {chart} {selection} {display} onselect={s => selection = s} />
     </div>
     <aside class="app">
-      <div class="stylepick" role="radiogroup" aria-label="Interpretation style">
-        <span>Style</span>
-        {#each STYLES as s (s.id)}
-          <button class:on={styleId === s.id} onclick={() => styleId = s.id}>{s.label}</button>
-        {/each}
-      </div>
       <Panel {chart} {selection} meta={current!.meta} style={styleId} onselect={s => selection = s} />
       <AspectList {chart} {selection} onselect={s => selection = s} />
       <div class="legend"><span>tight orb</span><span class="ramp"></span><span>edge of orb</span></div>
@@ -140,6 +170,7 @@
     </div>
   {/if}
 </main>
+{/if}
 
 {#if expanded && chart}
   <div class="overlay" role="dialog" aria-label="Expanded chart">

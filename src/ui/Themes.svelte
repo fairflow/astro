@@ -4,6 +4,7 @@
   import {
     chironDossier, saturnDossier, sunMoonDossier, type Dossier,
   } from '../interpret/dossiers';
+  import { careerDossier, relationshipsDossier } from '../interpret/dossiers-life';
   import { tensionReport, tensionText } from '../interpret/composer';
   import type { StyleId } from '../interpret/types';
 
@@ -18,6 +19,8 @@
     chironDossier(chart, style),
     saturnDossier(chart, style, provider, jdBirth),
     sunMoonDossier(chart, style),
+    relationshipsDossier(chart, style),
+    careerDossier(chart, style),
   ]);
   const tensions = $derived(tensionReport(chart));
 </script>

@@ -112,6 +112,18 @@ aside.app { flex: 0 0 372px; padding: 16px 20px 30px 6px; }
 .cusps .h { color: var(--dim); display: inline-block; width: 26px; }
 .retro { color: var(--square); font-size: 11px; vertical-align: super; }
 
+/* ---- mode tabs ---- */
+.modetabs {
+  max-width: 1220px; margin: 10px auto 4px; padding: 0 24px;
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+}
+.modetabs > button {
+  background: var(--bg2); color: var(--dim); border: 1px solid var(--line);
+  border-radius: 16px; padding: 6px 16px; font-size: 13.5px;
+}
+.modetabs > button.on { color: #12182b; background: var(--gold); border-color: var(--gold); font-weight: 600; }
+.modetabs .stylepick { margin-left: auto; margin-bottom: 0; }
+
 /* ---- interpretation ---- */
 .stylepick {
   display: flex; gap: 6px; align-items: center; margin-bottom: 10px;
