@@ -2,6 +2,7 @@
   import PartnerPick from './PartnerPick.svelte';
   import CrossAspectList from './CrossAspectList.svelte';
   import { crossAspects, houseOverlay, midpointContacts } from '../chart/relate';
+  import { synastrySnapshot } from '../interpret/snapshot';
   import { contextReading } from '../interpret/contexts';
   import { relationshipsDossier } from '../interpret/dossiers-life';
   import { BODY_NAME, fmtDegInSign, fmtOrb } from '../render/glyphs';
@@ -34,6 +35,27 @@
     ? houseOverlay(partnerChart.positions, natal.houses.cusps)
     : []);
   const mids = $derived(partnerChart ? midpointContacts(natal, partnerChart) : []);
+  const midsRev = $derived(partnerChart ? midpointContacts(partnerChart, natal) : []);
+
+  let copied = $state(false);
+  async function copySynastry() {
+    if (!partnerChart || !partner) return;
+    const text = synastrySnapshot(
+      natal, meta, partnerChart, partner.name, cross, overlays, mids, midsRev);
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); } finally { ta.remove(); }
+    }
+    copied = true;
+    setTimeout(() => copied = false, 2200);
+  }
 
   const dossier = $derived(partnerChart && partner
     ? relationshipsDossier(natal, style, {
@@ -45,7 +67,15 @@
 </script>
 
 <div class="sview">
-  <PartnerPick excludeName={meta.name} onpick={c => { partner = c; sel = null; }} />
+  <div class="pickrow">
+    <PartnerPick excludeName={meta.name} onpick={c => { partner = c; sel = null; }} />
+    {#if partnerChart && partner}
+      <button class="copyai" onclick={copySynastry}
+        title="Copy both charts + inter-aspects, overlays and midpoint contacts as markdown for an AI conversation">
+        {copied ? 'Copied ✓' : 'Copy for AI (synastry)'}
+      </button>
+    {/if}
+  </div>
 
   {#if partnerChart && partner}
     <div class="cols">
@@ -99,6 +129,12 @@
 
 <style>
   .sview { padding: 0 12px; }
+  .pickrow { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+  .copyai {
+    background: var(--bg2); color: var(--sextile); border: 1px solid var(--line);
+    border-radius: 14px; padding: 5px 12px; font-size: 12.5px; margin-bottom: 12px;
+  }
+  .copyai:hover { border-color: var(--sextile); }
   .cols { display: flex; gap: 14px; align-items: flex-start; }
   .cols > div { flex: 1 1 420px; min-width: 340px; }
   details {

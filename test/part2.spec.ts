@@ -3,7 +3,10 @@ import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { pairText } from '../src/interpret/templates.js';
 import { markersFor } from '../src/interpret/markers.js';
-import { chartSnapshot } from '../src/interpret/snapshot.js';
+import { chartSnapshot, synastrySnapshot } from '../src/interpret/snapshot.js';
+import {
+  crossAspects, houseOverlay, midpointContacts,
+} from '../src/chart/relate.js';
 import { STYLES } from '../src/interpret/types.js';
 import { findAspects, type ChartPoint } from '../src/chart/aspects.js';
 import { computeChart, defaultProvider } from '../src/chart/chart.js';
@@ -67,5 +70,36 @@ describe('user-test part 2 fixes', () => {
     expect(md.match(/^- /gm)!.length).toBeGreaterThan(20);
     expect(md).not.toContain('︎');
     expect(md).toContain('Interpretations deliberately omitted');
+  });
+
+  it('synastrySnapshot covers both charts, inter-aspects and midpoints', () => {
+    const packDir = fileURLToPath(new URL('../data/packs/', import.meta.url));
+    const packBodies = ['ceres', 'pallas', 'juno', 'vesta', 'chiron', 'eris'];
+    if (!packBodies.every(b => existsSync(`${packDir}${b}.json`))) return;
+    const packs: ChebPack[] = packBodies.map(b =>
+      JSON.parse(readFileSync(`${packDir}${b}.json`, 'utf8')));
+    const provider = defaultProvider(packs);
+    const a = computeChart(provider, {
+      jdUt: jdUtFromUtc(1961, 12, 3, 14, 15), lat: 50.85, lon: 4.35,
+    });
+    const b = computeChart(provider, {
+      jdUt: jdUtFromUtc(1955, 4, 2, 9, 20), lat: 51.07, lon: -1.79,
+    });
+    const toPts = (c: typeof a) => c.positions.map(p => ({ body: p.body, state: p }));
+    const cross = crossAspects(toPts(a), toPts(b));
+    const md = synastrySnapshot(
+      a,
+      { name: 'A', date: '1961-12-03', time: '15:15', accuracy: 'exact',
+        place: { name: 'Brussels', country: 'BE', lat: 50.85, lon: 4.35, zone: 'Europe/Brussels' },
+        offsetMinutes: 60 },
+      b, 'B', cross,
+      houseOverlay(b.positions, a.houses.cusps),
+      midpointContacts(a, b), midpointContacts(b, a),
+    );
+    expect(md).toContain('# Synastry — A × B');
+    expect(md).toContain('## Inter-aspects');
+    expect(md).toContain("A's Sun trine B's Sun");
+    expect(md).toContain('Midpoint contacts');
+    expect(md).not.toContain('︎');
   });
 });
