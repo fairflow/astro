@@ -85,6 +85,15 @@ main.app { display: flex; align-items: flex-start; max-width: 1220px; margin: 0 
   background: var(--bg2); color: var(--ink); border: 1px solid var(--line);
   border-radius: 16px; padding: 7px 16px; font-size: 13.5px;
 }
+.overlay .flyout {
+  position: absolute; left: 22px; bottom: 20px; z-index: 101;
+  width: min(430px, 44vw); background: var(--panel);
+  border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px;
+  box-shadow: 0 8px 30px #000c;
+}
+
+/* Text-size setting (Display menu) scales the reading columns. */
+aside.app, .tview .listcol, .sview .cols, .cview .listcol { zoom: var(--ts, 1); }
 aside.app { flex: 0 0 372px; padding: 16px 20px 30px 6px; }
 .empty {
   margin: 60px auto; max-width: 460px; text-align: center; color: var(--dim);

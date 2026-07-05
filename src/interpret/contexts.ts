@@ -95,7 +95,7 @@ export function compositeTemplate(
   const A = PLANET_PROFILE[a], B = PLANET_PROFILE[b];
   switch (style) {
     case 'jungian':
-      return `In the chart of the relationship itself — the third thing the two of you make — ${A.noun} and ${B.noun} ${COMP_MODE[klass]}. This is not either person's pattern: it is what the *couple* does, and both members will feel it acting on them from inside the bond.`;
+      return `In the chart of the relationship itself — the third thing the two of you make — ${A.noun} and ${B.noun} ${COMP_MODE[klass]}. This is not either person's pattern: it is what the couple does, and both members will feel it acting on them from inside the bond.`;
     case 'mundane':
       return `As a unit, ${BODY_NAME[a]} matters and ${BODY_NAME[b]} matters ${COMP_MODE[klass]}: expect the partnership's shared life — plans, house, reputation as a pair — to show this signature regardless of who "causes" it.`;
     case 'energy':

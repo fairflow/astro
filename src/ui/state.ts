@@ -22,10 +22,12 @@ export interface DisplaySettings {
   slant: number;
   /** High-contrast theme. */
   contrast: boolean;
+  /** Multiplies text sizes (wheel labels and reading panels). */
+  textScale: number;
 }
 
 export const DEFAULT_DISPLAY: DisplaySettings = {
-  glyphScale: 1.25, weight: 7, slant: 0, contrast: false,
+  glyphScale: 1.25, weight: 7, slant: 0, contrast: false, textScale: 1,
 };
 
 const DISPLAY_KEY = 'astro-display';

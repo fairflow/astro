@@ -9,6 +9,7 @@
   import DisplayControls from './DisplayControls.svelte';
   import Themes from './Themes.svelte';
   import TransitsView from './TransitsView.svelte';
+  import OverlayInfo from './OverlayInfo.svelte';
   import SynastryView from './SynastryView.svelte';
   import CompositeView from './CompositeView.svelte';
   import { STYLES, type StyleId } from '../interpret/types';
@@ -49,6 +50,7 @@
   $effect(() => storeDisplay($state.snapshot(display)));
   $effect(() => {
     document.documentElement.classList.toggle('hc', display.contrast);
+    document.documentElement.style.setProperty('--ts', String(display.textScale));
   });
 
   const provider = $derived(defaultProvider(packs));
@@ -178,6 +180,11 @@
     <div class="bigwheel">
       <Wheel {chart} {selection} {display} onselect={s => selection = s} />
     </div>
+    {#if selection.kind !== 'none'}
+      <div class="flyout">
+        <OverlayInfo {chart} {selection} style={styleId} />
+      </div>
+    {/if}
   </div>
 {/if}
 

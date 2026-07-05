@@ -31,7 +31,7 @@ export const LIBRARY: Record<string, PairEntry> = {
       minimal: 'Wants and needs mostly agree. Low internal friction; consistency is a strength, complacency the associated risk.',
     },
     challenge: {
-      jungian: 'What the ego sets out to become and what the soul actually needs pull in different directions — the parental imagos disagree inside. The friction is productive: this is a chart that must *earn* its self-knowledge, and usually does.',
+      jungian: 'What the ego sets out to become and what the soul actually needs pull in different directions — the parental imagos disagree inside. The friction is productive: this is a chart that must earn its self-knowledge, and usually does.',
       mundane: 'Career and home, image and comfort, partner and family repeatedly demand choices. Life tends to alternate between advancing outwardly and retreating to repair; scheduling both on purpose beats being yanked between them.',
       energy: 'The solar and lunar currents run out of phase: peaks of purposeful output coincide with troughs of emotional reserve. Learning one’s own cycle — and not reading its low points as failure — converts the interference into range.',
       minimal: 'Wants and needs disagree. Expect recurring identity-versus-comfort choices; managed deliberately, the tension gives depth.',
@@ -57,7 +57,7 @@ export const LIBRARY: Record<string, PairEntry> = {
       minimal: 'Self-worth is argued with an inner critic. Achievement is real, enjoyment lags. Improves substantially with age.',
     },
     neutral: {
-      jungian: 'Ego and senex share one seat: identity *is* responsibility, from early on. The gift is gravity and trustworthiness; the shadow is a childhood shortened by seriousness that adulthood must consciously repay with play.',
+      jungian: 'Ego and senex share one seat: identity is responsibility, from early on. The gift is gravity and trustworthiness; the shadow is a childhood shortened by seriousness that adulthood must consciously repay with play.',
       mundane: 'Duty arrives early — eldest-child energy regardless of birth order. Career and reputation are built carefully and defended; frivolity has to be scheduled.',
       energy: 'The identity current is permanently banked and channelled: steady, dense, slow to divert. Momentum, once gained, is nearly unstoppable — gaining it is the work.',
       minimal: 'Identity and duty fused. Serious, durable, slow-starting; lighten deliberately.',
@@ -71,7 +71,7 @@ export const LIBRARY: Record<string, PairEntry> = {
       minimal: 'Feelings are steady and contained without being cold. Dependable; low drama.',
     },
     challenge: {
-      jungian: 'The stern inner witness stands over the moon-child: needs were schooled early by duty, scarcity or a serious household, and adult feeling arrives pre-inspected. The task is to let Saturn *serve* feeling — containment as craft — rather than police it.',
+      jungian: 'The stern inner witness stands over the moon-child: needs were schooled early by duty, scarcity or a serious household, and adult feeling arrives pre-inspected. The task is to let Saturn serve feeling — containment as craft — rather than police it.',
       mundane: 'Care was rationed or conditional somewhere back there; the adult under-asks for comfort and over-delivers duty. Partnerships warm considerably once needing something is no longer treated as an imposition.',
       energy: 'The lunar current runs through a narrow, high-pressure channel: feelings build in long arcs and release late. Saturn’s 29.5-year cycle renovates the dam — each return, what was constriction can be rebuilt as capacity.',
       minimal: 'Feelings are controlled, delayed, dependable. Tendency to under-ask for comfort. Improves markedly with age.',
@@ -93,7 +93,7 @@ export const LIBRARY: Record<string, PairEntry> = {
     challenge: {
       jungian: 'Desire and affection contradict: what is wanted and what is valued point at different objects, or at the same object in incompatible ways. Projection is vivid here — the exciting one and the good one seem to be different people until the split is owned as internal.',
       mundane: 'Relationships run hot-and-cold; timing in love is chronically off by a beat — advances at the wrong moment, hesitation at the right one. Awareness of the rhythm, and saying it aloud, defuses most of it.',
-      energy: 'The receptive and active currents interfere: attraction spikes when availability dips and vice versa. The pattern *is* the energy source — couples and creations born of this signature have durable heat once the phase difference is worked with, not against.',
+      energy: 'The receptive and active currents interfere: attraction spikes when availability dips and vice versa. The pattern is the energy source — couples and creations born of this signature have durable heat once the phase difference is worked with, not against.',
       minimal: 'Wanting and valuing clash. Hot-cold rhythm in love; name it openly and it settles.',
     },
     neutral: {
@@ -111,7 +111,7 @@ export const LIBRARY: Record<string, PairEntry> = {
       minimal: 'The wound informs identity without running it. Natural mentor; underprices the gift.',
     },
     challenge: {
-      jungian: 'The wound crosses the ego’s path: somewhere early, being *seen* and being *hurt* got entangled, and self-expression still braces for the old sting. The wounded-healer arc applies in full — mastery comes precisely in the domain of the injury, but only after the injury is related to consciously instead of compensated.',
+      jungian: 'The wound crosses the ego’s path: somewhere early, being seen and being hurt got entangled, and self-expression still braces for the old sting. The wounded-healer arc applies in full — mastery comes precisely in the domain of the injury, but only after the injury is related to consciously instead of compensated.',
       mundane: 'Confidence is the visible issue: qualifications outrun self-presentation, and moments of exposure (promotion, performance, publication) reactivate old shame out of proportion. Each deliberate exposure shrinks the effect; avoidance feeds it.',
       energy: 'The identity current shorts through an old lesion when amplitude rises — visibility spikes trigger energy crashes. Repeated, titrated exposure rewires the pathway; the healed circuit carries more current than an unbroken one would have.',
       minimal: 'Being seen hurts more than it should. The skill grows exactly where the flinch is. Exposure in small doses works.',
@@ -119,7 +119,7 @@ export const LIBRARY: Record<string, PairEntry> = {
     neutral: {
       jungian: 'Identity and wound share a root: “who I am” and “where it hurts” answer to the same name. This is the strongest healer signature of all — and the one most required to do its own work first.',
       mundane: 'Life keeps assigning the mentor role whether requested or not. Formalising it — training, credentials, boundaries — turns a leak into a profession.',
-      energy: 'The core current runs *through* the wound, not beside it: every act of self-becoming touches it, every healing enlarges the self. Slow, cumulative, profound.',
+      energy: 'The core current runs through the wound, not beside it: every act of self-becoming touches it, every healing enlarges the self. Slow, cumulative, profound.',
       minimal: 'Self and wound are one address. Heavy signature, big yield: the healer’s path, obligatory rather than optional.',
     },
   },

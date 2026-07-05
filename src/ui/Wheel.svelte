@@ -59,10 +59,10 @@
       stroke-width={c.isAngle ? 2 : 1} opacity={c.isAngle ? 0.9 : 0.8} />
     {#if c.label}
       <text x={c.label.pos.x} y={c.label.pos.y} text-anchor="middle"
-        dominant-baseline="central" font-size="11" fill="var(--gold)">{c.label.text}</text>
+        dominant-baseline="central" font-size={11 * display.textScale} fill="var(--gold)">{c.label.text}</text>
     {/if}
     <text x={c.numPos.x} y={c.numPos.y} text-anchor="middle" dominant-baseline="central"
-      font-size="12" fill="var(--dim)">{c.num}</text>
+      font-size={12 * display.textScale} fill="var(--dim)">{c.num}</text>
   {/each}
   <circle cx={geom.cx} cy={geom.cy} r={geom.rHub} fill="var(--hub, #10162a)" stroke="var(--line)" />
 
@@ -104,15 +104,15 @@
       />
       {#if p.retro}
         <text x={p.pos.x + geom.glyphPx / 2 + 3} y={p.pos.y - geom.glyphPx / 2 + 2}
-          text-anchor="middle" font-size={9 + 2 * display.glyphScale}
+          text-anchor="middle" font-size={(9 + 2 * display.glyphScale) * display.textScale}
           fill="var(--square)">℞</text>
       {/if}
       <text x={p.degPos.x} y={p.degPos.y} text-anchor="middle" dominant-baseline="central"
-        font-size={8 + 2.5 * display.glyphScale} fill="var(--dim)">{p.degText}</text>
+        font-size={(8 + 2.5 * display.glyphScale) * display.textScale} fill="var(--dim)">{p.degText}</text>
     </g>
   {/each}
 
-  <text x="14" y="16" class="serif" font-size="12" fill="var(--dim)">
+  <text x="14" y="16" class="serif" font-size={12 * display.textScale} fill="var(--dim)">
     {chart.houses.polarFallback ? 'Porphyry (polar fallback)' : 'Placidus'} · Tropical
   </text>
 </svg>
