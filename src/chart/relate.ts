@@ -152,6 +152,27 @@ const MIDPOINT_BODIES: BodyKey[] = [
   'uranus', 'neptune', 'pluto',
 ];
 
+/**
+ * Transiting bodies on a chart's Sun/Moon midpoint (Ebertin 90° dial,
+ * tight orb) — used by the transits-to-couple view.
+ */
+export function sunMoonMidpointHits(
+  sky: ChartPoint[], chart: Chart, orb = 1.5,
+): { body: BodyKey; orb: number }[] {
+  const sun = chart.positions.find(p => p.body === 'sun');
+  const moon = chart.positions.find(p => p.body === 'moon');
+  if (!sun || !moon) return [];
+  const mid = circularMidpoint(sun.lon, moon.lon);
+  const out: { body: BodyKey; orb: number }[] = [];
+  for (const p of sky) {
+    if (MINOR.has(p.body) || p.body === 'moon') continue;
+    const d = Math.abs(degDiff(p.state.lon, mid));
+    const dial = Math.min(d % 90, 90 - (d % 90));
+    if (dial <= orb) out.push({ body: p.body, orb: dial });
+  }
+  return out.sort((x, y) => x.orb - y.orb);
+}
+
 export function midpointContacts(
   ofChart: Chart, byChart: Chart, orb = 1.5, max = 12,
 ): MidpointContact[] {

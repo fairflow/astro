@@ -178,7 +178,7 @@
 {/if}
 
 {#if chart && current && mode === 'transits'}
-  <TransitsView natal={chart} meta={current.meta} {provider} {display} style={styleId} />
+  <TransitsView natal={chart} meta={current.meta} {provider} {display} style={styleId} {chartFromSaved} />
 {:else if chart && current && mode === 'synastry'}
   <SynastryView natal={chart} meta={current.meta} {chartFromSaved} style={styleId} {display} />
 {:else if chart && current && mode === 'composite'}

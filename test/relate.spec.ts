@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   circularMidpoint, compositeChart, crossAspects, houseOverlay,
-  midpointContacts, transitAspects,
+  midpointContacts, sunMoonMidpointHits, transitAspects,
 } from '../src/chart/relate.js';
 import { contextReading } from '../src/interpret/contexts.js';
 import { readingFor } from '../src/interpret/composer.js';
@@ -95,6 +95,22 @@ describe('houseOverlay and midpointContacts', () => {
     const miss = midpointContacts(a, miniChart([pt('venus', 33)]));
     expect(miss.some(m => m.body === 'venus' && m.pair.includes('sun')
       && m.pair.includes('moon'))).toBe(false);
+  });
+});
+
+describe('sunMoonMidpointHits', () => {
+  it('finds a transiting body on the S/M midpoint incl. the 90° dial', () => {
+    const chart = miniChart([pt('sun', 0), pt('moon', 60)]); // mid = 30
+    const direct = sunMoonMidpointHits([pt('saturn', 30.8)], chart);
+    expect(direct).toHaveLength(1);
+    expect(direct[0]!.orb).toBeCloseTo(0.8, 6);
+    const dial = sunMoonMidpointHits([pt('pluto', 120.5)], chart);
+    expect(dial).toHaveLength(1);
+    const miss = sunMoonMidpointHits([pt('saturn', 33)], chart);
+    expect(miss).toHaveLength(0);
+    // transiting Moon and minor bodies are excluded
+    expect(sunMoonMidpointHits([pt('moon', 30)], chart)).toHaveLength(0);
+    expect(sunMoonMidpointHits([pt('vesta', 30)], chart)).toHaveLength(0);
   });
 });
 
