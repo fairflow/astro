@@ -85,6 +85,19 @@ updated at the end of each working session.
   combination engine; phase B = burn into deployable field-test app.
   Part 2 of the transcript still to come.
 
+## Later on 2026-07-05 (same day, evening)
+
+- ASTRODYNAMICS rename; part-2 user-test fixes (template variety,
+  practice lines, markers, Copy-for-AI natal + synastry, full-width
+  dossiers); IFS narration model doc (docs/plans/); bi-wheels
+  (natal+transits, natal+synastry); transits-to-couple view
+  (composite bi-wheel, three lists, S/M dial hits).
+- Implementation & deployment report for the designer:
+  `docs/reports/2026-07-05-implementation-and-deployment.md`
+  (stack explained, licences, complexity audit, deployment options;
+  headline actions: move interpretation texts to fetched JSON packs
+  before phase-B authoring volume; add service worker (M5)).
+
 ## How to resume
 
 ```bash
