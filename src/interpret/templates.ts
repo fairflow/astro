@@ -10,11 +10,44 @@ import type { StyleId } from './types.js';
  * the high-salience keys. Template output is marked as such in the UI.
  */
 
-const CLASS_VERB: Record<AspectClass, { link: string; effect: string }> = {
-  neutral: { link: 'is fused with', effect: 'they operate as one function, for better and worse' },
-  flowing: { link: 'cooperates easily with', effect: 'the two functions feed each other with little friction' },
-  challenge: { link: 'works against the grain of', effect: 'the two functions interrupt each other until consciously worked' },
-  adjusting: { link: 'sits at an awkward angle to', effect: 'the two functions never quite meet and require perpetual small adjustments' },
+const CLASS_LINK: Record<AspectClass, string> = {
+  neutral: 'is fused with',
+  flowing: 'cooperates easily with',
+  challenge: 'works against the grain of',
+  adjusting: 'sits at an awkward angle to',
+};
+
+/**
+ * Per-style effect phrasings — deliberately NOT shared between styles.
+ * User test 1 found the styles read as identical wherever templates
+ * shared sentences (finding F1); test/styles-distinct.spec.ts enforces
+ * that no sentence is common to two styles for any pair.
+ */
+const EFFECT: Record<StyleId, Record<AspectClass, string>> = {
+  jungian: {
+    neutral: 'the two archetypes speak with one voice — a strength that never doubts itself, and a blind spot that cannot see itself',
+    flowing: 'each lends the other strength without being asked, so their combined gift feels like simply "how I am"',
+    challenge: 'each interrupts the other’s intent, and whichever is disowned returns through other people until both are given a seat',
+    adjusting: 'the two archetypes never quite face each other; they must be introduced again and again, and the introductions are the growth',
+  },
+  mundane: {
+    neutral: 'in practice they show up as a single package — situations rarely involve one without the other',
+    flowing: 'day to day, progress in one area quietly carries the other along with it',
+    challenge: 'commitments, people and priorities from the two areas collide on a regular basis, and the collisions are the pattern to plan around',
+    adjusting: 'the two areas of life refuse to share a calendar; each accommodation holds for a while and then needs redoing',
+  },
+  energy: {
+    neutral: 'both currents surge and ebb on one shared pulse',
+    flowing: 'the currents run in phase — charge passes between them with almost no loss',
+    challenge: 'the currents run counter-phase, and the interference is felt as heat: fuel when worked, friction when fought',
+    adjusting: 'the currents drift in and out of phase and need continual small corrections to stay coupled',
+  },
+  minimal: {
+    neutral: 'They act as one unit; take the package deal into account',
+    flowing: 'They help each other without effort; low maintenance',
+    challenge: 'They get in each other’s way until deliberately coordinated; budget for the friction',
+    adjusting: 'They never fully sync; expect ongoing small corrections rather than a fix',
+  },
 };
 
 const JUNGIAN_CODA = [
@@ -37,16 +70,16 @@ export function pairText(
 ): string {
   const A = PLANET_PROFILE[a], B = PLANET_PROFILE[b];
   const na = BODY_NAME[a], nb = BODY_NAME[b];
-  const v = CLASS_VERB[klass];
+  const eff = EFFECT[style][klass];
   switch (style) {
     case 'jungian':
-      return `${cap(A.noun)} ${v.link} ${B.noun}: ${v.effect}. ${vary(a, b, JUNGIAN_CODA)}`;
+      return `${cap(A.noun)} ${CLASS_LINK[klass]} ${B.noun}: ${eff}. ${vary(a, b, JUNGIAN_CODA)}`;
     case 'mundane':
-      return `Matters of ${themeWords(a)} and ${themeWords(b)} arrive together in outer life. ${cap(v.effect)} — expect situations in which ${na} concerns and ${nb} concerns must be handled at once.`;
+      return `Matters of ${themeWords(a)} and ${themeWords(b)} arrive together in outer life: ${eff} — expect situations in which ${na} concerns and ${nb} concerns must be handled at once.`;
     case 'energy':
-      return `The ${na} current (${A.drive}) and the ${nb} current (${B.drive}) are coupled: ${v.effect}. ${vary(a, b, ENERGY_CODA)}`;
+      return `The ${na} current (${A.drive}) and the ${nb} current (${B.drive}) are coupled: ${eff}. ${vary(a, b, ENERGY_CODA)}`;
     case 'minimal':
-      return `${na} ${klassWord(klass)} ${nb}. ${cap(v.effect)}.`;
+      return `${na} ${klassWord(klass)} ${nb}. ${eff}.`;
   }
 }
 

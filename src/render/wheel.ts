@@ -34,7 +34,10 @@ export interface WheelGeometry {
     from: XY; to: XY; isAngle: boolean;
     label?: { text: string; pos: XY };
     num: number; numPos: XY;
+    degText: string; degPos: XY;
   }[];
+  /** Shaded annulus sectors for alternate houses. */
+  houseBands: { shaded: boolean; d: string }[];
   planets: {
     body: BodyKey; luminary: boolean; retro: boolean;
     pos: XY; degText: string; degPos: XY;
@@ -111,14 +114,34 @@ export function wheelGeometry(chart: Chart, opts: WheelOptions = {}): WheelGeome
     const isAngle = h % 3 === 0;
     const next = chart.houses.cusps[(h + 1) % 12]!;
     const mid = c + normDeg(next - c) / 2;
+    const within = normDeg(c) % 30;
     return {
       from: pt(c, R.hub), to: pt(c, R.zodIn), isAngle,
       label: isAngle
         ? { text: angleLabel[h]!, pos: pt(c, R.zodIn - 14 * s) }
         : undefined,
       num: h + 1, numPos: pt(mid, R.houseNum),
+      // cusp degree within its sign, shown near the zodiac band (F4)
+      degText: `${Math.floor(within)}°`,
+      degPos: pt(c + 3.5, R.zodIn - 12 * s),
     };
   });
+
+  // Alternate-house shading between hub and zodiac band (F4): annulus
+  // sector per even house. Longitudes increase counter-clockwise on
+  // screen, so the outer arc runs sweep=0 from cusp to next cusp.
+  const houseBands = chart.houses.cusps.map((c, h) => {
+    const next = chart.houses.cusps[(h + 1) % 12]!;
+    const span = normDeg(next - c);
+    const large = span > 180 ? 1 : 0;
+    const p1 = pt(c, R.hub), p2 = pt(next, R.hub);
+    const q1 = pt(c, R.zodIn), q2 = pt(next, R.zodIn);
+    return {
+      shaded: h % 2 === 1,
+      d: `M ${p1.x} ${p1.y} A ${R.hub} ${R.hub} 0 ${large} 0 ${p2.x} ${p2.y} `
+        + `L ${q2.x} ${q2.y} A ${R.zodIn} ${R.zodIn} 0 ${large} 1 ${q1.x} ${q1.y} Z`,
+    };
+  }).filter(b => b.shaded);
 
   const shown: ChartPosition[] = chart.positions;
   const displayLons = nudge(shown.map(p => p.lon), 6.8 + 2.6 * glyphScale);
@@ -154,6 +177,6 @@ export function wheelGeometry(chart: Chart, opts: WheelOptions = {}): WheelGeome
   return {
     size, cx, cy, rHub: R.hub, rZodiacOuter: R.zodOut,
     glyphPx, signGlyphPx,
-    signs, ticks, cusps, planets, aspects,
+    signs, ticks, cusps, houseBands, planets, aspects,
   };
 }

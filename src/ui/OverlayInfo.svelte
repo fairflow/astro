@@ -1,8 +1,12 @@
 <script lang="ts">
   import type { Chart } from '../chart/chart';
   import { aspectKey } from '../render/wheel';
-  import { BODY_NAME, fmtDegInSign, fmtOrb } from '../render/glyphs';
+  import {
+    BODY_NAME, SIGN_ELEMENT, SIGN_MODALITY, SIGN_NAMES,
+    fmtDegInSign, fmtOrb,
+  } from '../render/glyphs';
   import { readingFor } from '../interpret/composer';
+  import { SIGN_TONE } from '../interpret/vocab';
   import type { StyleId } from '../interpret/types';
   import type { Selection } from './selection';
 
@@ -31,9 +35,13 @@
   <p>{readingFor(aspect, style).text}</p>
 {:else if body}
   <h3 class="serif">{BODY_NAME[body.body]}{body.speed < 0 ? ' ℞' : ''}</h3>
-  <div class="facts">{fmtDegInSign(body.lon)} · house {body.house} · {body.speed.toFixed(2)}°/day</div>
+  <div class="facts">{fmtDegInSign(body.lon)} · H{body.house} · {body.speed.toFixed(2)}°/day</div>
   <p>{chart.aspects.filter(a => a.a === body.body || a.b === body.body).length}
     aspects in orb — highlighted on the wheel; tap one for its reading.</p>
+{:else if selection.kind === 'sign'}
+  <h3 class="serif">{SIGN_NAMES[selection.index]}</h3>
+  <div class="facts">{SIGN_ELEMENT[selection.index]} · {SIGN_MODALITY[selection.index]}</div>
+  <p>{SIGN_TONE[selection.index]} — planets in this sign (lit on the wheel) take on this manner.</p>
 {/if}
 
 <style>

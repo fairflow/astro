@@ -208,6 +208,15 @@ aside.app { flex: 0 0 372px; padding: 16px 20px 30px 6px; }
 
 /* ---- svg ---- */
 .aspect-line { cursor: pointer; }
+.signhit { cursor: pointer; }
+.signhit.selsign circle { stroke: var(--gold); stroke-width: 1.5; fill: rgba(212, 175, 106, 0.09); }
+:root.hc { --houseband: rgba(255, 255, 255, 0.05); }
+.panel .stylenote {
+  font-size: 10.5px; text-transform: uppercase; letter-spacing: .1em;
+  color: var(--gold-dim); margin-bottom: 3px;
+}
+.panel abbr { text-decoration: underline dotted; cursor: help; }
+.aspectlist .hn { color: var(--dim); font-size: 11px; font-style: normal; }
 .aspect-hit { stroke: transparent; stroke-width: 13; fill: none; }
 .planet { cursor: pointer; }
 .dimmed { opacity: .12 !important; transition: opacity .25s; }

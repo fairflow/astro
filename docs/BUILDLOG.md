@@ -75,6 +75,15 @@ updated at the end of each working session.
   reference-place / derived-ASC method is a planned option.
 - First user test (Benita, 2026-07-05) → see
   `docs/plans/2026-07-05-usertest-stage1.md` for findings and plan.
+  **Stages 1a+1b implemented on m4-draft** (styles genuinely distinct —
+  test-enforced; "Jungian"→"Psychological"; style-echo header + fade;
+  house shading/numerals/cusp degrees on the wheel; H numbers in all
+  readouts; body introductions incl. Eris; clickable signs with sign
+  cards; Jupiter glyph redrawn; glossary accordion + term tooltips).
+  Stage 1c (content pipeline) deliberately deferred: phase A = 3-way
+  authoring dialogue (Claude/Benita/Matthew) building fragments +
+  combination engine; phase B = burn into deployable field-test app.
+  Part 2 of the transcript still to come.
 
 ## How to resume
 

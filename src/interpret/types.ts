@@ -1,7 +1,9 @@
 export type StyleId = 'jungian' | 'mundane' | 'energy' | 'minimal';
 
 export const STYLES: { id: StyleId; label: string }[] = [
-  { id: 'jungian', label: 'Jungian' },
+  // id stays 'jungian' internally; label renamed after user test 1
+  // (docs/plans/2026-07-05-usertest-stage1.md, finding F2).
+  { id: 'jungian', label: 'Psychological' },
   { id: 'mundane', label: 'Mundane' },
   { id: 'energy', label: 'Energy' },
   { id: 'minimal', label: 'Minimal' },

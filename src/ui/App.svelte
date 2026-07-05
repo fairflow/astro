@@ -10,6 +10,7 @@
   import Themes from './Themes.svelte';
   import TransitsView from './TransitsView.svelte';
   import OverlayInfo from './OverlayInfo.svelte';
+  import Glossary from './Glossary.svelte';
   import SynastryView from './SynastryView.svelte';
   import CompositeView from './CompositeView.svelte';
   import { STYLES, type StyleId } from '../interpret/types';
@@ -160,6 +161,7 @@
       <AspectList {chart} {selection} onselect={s => selection = s} />
       <div class="legend"><span>tight orb</span><span class="ramp"></span><span>edge of orb</span></div>
       <Themes {chart} style={styleId} {provider} jdBirth={current!.jdUt} />
+      <Glossary />
     </aside>
   {:else}
     <div class="empty">

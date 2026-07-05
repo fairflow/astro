@@ -30,6 +30,18 @@ export const SIGN_ELEMENT = [
   'air', 'water', 'fire', 'earth', 'air', 'water',
 ];
 
+/** cardinal, fixed, mutable repeating from Aries. */
+export const SIGN_MODALITY = [
+  'cardinal', 'fixed', 'mutable', 'cardinal', 'fixed', 'mutable',
+  'cardinal', 'fixed', 'mutable', 'cardinal', 'fixed', 'mutable',
+];
+
+/** Modern sign rulers, Aries..Pisces. */
+export const SIGN_RULER: BodyKey[] = [
+  'mars', 'venus', 'mercury', 'moon', 'sun', 'mercury',
+  'venus', 'pluto', 'jupiter', 'saturn', 'uranus', 'neptune',
+];
+
 export const ASPECT_GLYPH: Record<AspectName, string> = {
   conjunction: '☌', sextile: '⚹', square: '□', trine: '△',
   quincunx: '⚻', opposition: '☍',

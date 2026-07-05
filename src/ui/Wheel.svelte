@@ -1,6 +1,7 @@
 <script lang="ts">
   import { wheelGeometry } from '../render/wheel';
   import { bodyGlyphId, signGlyphId } from '../render/glyphset';
+  import { signIndex } from '../render/glyphs';
   import type { Chart } from '../chart/chart';
   import type { BodyKey } from '../ephemeris/types';
   import type { Selection } from './selection';
@@ -18,9 +19,16 @@
     opacityFloor: display.contrast ? 0.45 : 0.25,
   }));
 
+  function inSelectedSign(body: BodyKey): boolean {
+    if (selection.kind !== 'sign') return false;
+    const p = chart.positions.find(x => x.body === body);
+    return p !== undefined && signIndex(p.lon) === selection.index;
+  }
+
   function aspectDimmed(key: string, a: BodyKey, b: BodyKey): boolean {
     if (selection.kind === 'aspect') return key !== selection.key;
     if (selection.kind === 'body') return a !== selection.body && b !== selection.body;
+    if (selection.kind === 'sign') return !inSelectedSign(a) && !inSelectedSign(b);
     return false;
   }
 
@@ -29,6 +37,7 @@
       const sel = geom.aspects.find(x => x.key === selection.key);
       return sel ? sel.aspect.a !== body && sel.aspect.b !== body : false;
     }
+    if (selection.kind === 'sign') return !inSelectedSign(body);
     return false;
   }
 </script>
@@ -39,12 +48,18 @@
   <!-- zodiac band -->
   {#each geom.signs as s (s.index)}
     <line x1={s.from.x} y1={s.from.y} x2={s.to.x} y2={s.to.y} stroke="var(--line)" />
-    <use
-      href={`#${signGlyphId(s.index)}`}
-      x={s.pos.x - geom.signGlyphPx / 2} y={s.pos.y - geom.signGlyphPx / 2}
-      width={geom.signGlyphPx} height={geom.signGlyphPx}
-      color={`var(--${s.element})`}
-    />
+    <g class="signhit" role="button" tabindex="0" aria-label={`sign ${s.index}`}
+      class:selsign={selection.kind === 'sign' && selection.index === s.index}
+      onclick={() => onselect({ kind: 'sign', index: s.index })}
+      onkeydown={e => e.key === 'Enter' && onselect({ kind: 'sign', index: s.index })}>
+      <circle cx={s.pos.x} cy={s.pos.y} r={geom.signGlyphPx * 0.72} fill="transparent" />
+      <use
+        href={`#${signGlyphId(s.index)}`}
+        x={s.pos.x - geom.signGlyphPx / 2} y={s.pos.y - geom.signGlyphPx / 2}
+        width={geom.signGlyphPx} height={geom.signGlyphPx}
+        color={`var(--${s.element})`}
+      />
+    </g>
   {/each}
   <circle cx={geom.cx} cy={geom.cy} r={geom.rZodiacOuter} fill="none" stroke="var(--line)" />
   {#each geom.ticks as t}
@@ -53,6 +68,9 @@
   {/each}
 
   <!-- houses -->
+  {#each geom.houseBands as b}
+    <path d={b.d} fill="var(--houseband, rgba(255,255,255,0.03))" stroke="none" />
+  {/each}
   {#each geom.cusps as c}
     <line x1={c.from.x} y1={c.from.y} x2={c.to.x} y2={c.to.y}
       stroke={c.isAngle ? 'var(--gold)' : 'var(--line)'}
@@ -61,8 +79,10 @@
       <text x={c.label.pos.x} y={c.label.pos.y} text-anchor="middle"
         dominant-baseline="central" font-size={11 * display.textScale} fill="var(--gold)">{c.label.text}</text>
     {/if}
+    <text x={c.degPos.x} y={c.degPos.y} text-anchor="middle" dominant-baseline="central"
+      font-size={8.5 * display.textScale} fill="var(--dim)" opacity="0.85">{c.degText}</text>
     <text x={c.numPos.x} y={c.numPos.y} text-anchor="middle" dominant-baseline="central"
-      font-size={12 * display.textScale} fill="var(--dim)">{c.num}</text>
+      font-size={14 * display.textScale} fill="var(--ink)" opacity="0.75">{c.num}</text>
   {/each}
   <circle cx={geom.cx} cy={geom.cy} r={geom.rHub} fill="var(--hub, #10162a)" stroke="var(--line)" />
 

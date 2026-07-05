@@ -35,7 +35,11 @@ export const BODY_GLYPHS: Record<BodyKey, GlyphDef> = {
   mars: {
     d: 'M42 36 A23 23 0 1 1 41.9 36 Z M58 42 L82 18 M60 18 H82 V40',
   },
-  jupiter: { d: 'M62 14 C38 14 24 34 24 64 M12 64 H76 M60 40 V90' },
+  // "2"-with-crossbar form (the previous crossbar-and-curve version
+  // read as the digit 4 in user test 1)
+  jupiter: {
+    d: 'M22 32 C22 12 52 10 55 27 C57 41 42 52 28 64 L24 68 H80 M62 46 V90',
+  },
   saturn: {
     d: 'M40 10 V60 M28 24 H52 M40 44 C46 34 66 34 66 52 C66 66 56 70 52 78 C50 84 54 90 62 87',
   },
