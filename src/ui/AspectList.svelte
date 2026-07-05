@@ -1,9 +1,8 @@
 <script lang="ts">
   import type { Chart } from '../chart/chart';
   import { aspectKey } from '../render/wheel';
-  import {
-    ASPECT_COLOR, ASPECT_GLYPH, BODY_GLYPH, BODY_NAME, VS, fmtOrb,
-  } from '../render/glyphs';
+  import { ASPECT_COLOR, BODY_NAME, fmtOrb } from '../render/glyphs';
+  import Glyph from './Glyph.svelte';
   import type { Selection } from './selection';
 
   let { chart, selection, onselect }: {
@@ -21,9 +20,9 @@
       class:sel={selection.kind === 'aspect' && selection.key === aspectKey(a)}
       onclick={() => onselect({ kind: 'aspect', key: aspectKey(a) })}
     >
-      <span class="g">{BODY_GLYPH[a.a]}{VS}</span>
-      <span class="a" style={`color:var(${ASPECT_COLOR[a.def.name]})`}>{ASPECT_GLYPH[a.def.name]}</span>
-      <span class="g">{BODY_GLYPH[a.b]}{VS}</span>
+      <span class="g"><Glyph body={a.a} size={17} /></span>
+      <span class="a"><Glyph aspect={a.def.name} size={15} color={`var(${ASPECT_COLOR[a.def.name]})`} /></span>
+      <span class="g"><Glyph body={a.b} size={17} /></span>
       <span>{BODY_NAME[a.a]} – {BODY_NAME[a.b]}</span>
       <span class="as">{a.applying ? 'a' : 's'}</span>
       <span class="orb">{fmtOrb(a.orb)}</span>

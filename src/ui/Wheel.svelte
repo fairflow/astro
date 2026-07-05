@@ -1,16 +1,22 @@
 <script lang="ts">
   import { wheelGeometry } from '../render/wheel';
+  import { bodyGlyphId, signGlyphId } from '../render/glyphset';
   import type { Chart } from '../chart/chart';
   import type { BodyKey } from '../ephemeris/types';
   import type { Selection } from './selection';
+  import type { DisplaySettings } from './state';
 
-  let { chart, selection, onselect }: {
+  let { chart, selection, display, onselect }: {
     chart: Chart;
     selection: Selection;
+    display: DisplaySettings;
     onselect: (s: Selection) => void;
   } = $props();
 
-  const geom = $derived(wheelGeometry(chart));
+  const geom = $derived(wheelGeometry(chart, {
+    glyphScale: display.glyphScale,
+    opacityFloor: display.contrast ? 0.45 : 0.25,
+  }));
 
   function aspectDimmed(key: string, a: BodyKey, b: BodyKey): boolean {
     if (selection.kind === 'aspect') return key !== selection.key;
@@ -31,10 +37,14 @@
   <circle cx={geom.cx} cy={geom.cy} r={geom.rZodiacOuter + 8} fill="var(--bg2)" stroke="var(--line)" />
 
   <!-- zodiac band -->
-  {#each geom.signs as s}
+  {#each geom.signs as s (s.index)}
     <line x1={s.from.x} y1={s.from.y} x2={s.to.x} y2={s.to.y} stroke="var(--line)" />
-    <text x={s.pos.x} y={s.pos.y} text-anchor="middle" dominant-baseline="central"
-      font-size="26" fill={`var(--${s.element})`}>{s.glyph}</text>
+    <use
+      href={`#${signGlyphId(s.index)}`}
+      x={s.pos.x - geom.signGlyphPx / 2} y={s.pos.y - geom.signGlyphPx / 2}
+      width={geom.signGlyphPx} height={geom.signGlyphPx}
+      color={`var(--${s.element})`}
+    />
   {/each}
   <circle cx={geom.cx} cy={geom.cy} r={geom.rZodiacOuter} fill="none" stroke="var(--line)" />
   {#each geom.ticks as t}
@@ -54,7 +64,7 @@
     <text x={c.numPos.x} y={c.numPos.y} text-anchor="middle" dominant-baseline="central"
       font-size="12" fill="var(--dim)">{c.num}</text>
   {/each}
-  <circle cx={geom.cx} cy={geom.cy} r={geom.rHub} fill="#10162a" stroke="var(--line)" />
+  <circle cx={geom.cx} cy={geom.cy} r={geom.rHub} fill="var(--hub, #10162a)" stroke="var(--line)" />
 
   <!-- aspects -->
   {#each geom.aspects as a (a.key)}
@@ -83,16 +93,22 @@
       role="button" tabindex="0" aria-label={p.body}
       onclick={() => onselect({ kind: 'body', body: p.body })}
       onkeydown={e => e.key === 'Enter' && onselect({ kind: 'body', body: p.body })}>
-      <circle cx={p.pos.x} cy={p.pos.y} r="15" fill="var(--bg)"
+      <circle cx={p.pos.x} cy={p.pos.y} r={geom.glyphPx / 2 + 5}
+        fill="var(--bg)"
         stroke={selection.kind === 'body' && selection.body === p.body ? 'var(--gold)' : 'var(--line)'} />
-      <text x={p.pos.x} y={p.pos.y} text-anchor="middle" dominant-baseline="central"
-        font-size={p.luminary ? 19 : 15} fill={p.luminary ? 'var(--gold)' : 'var(--ink)'}>{p.glyph}</text>
+      <use
+        href={`#${bodyGlyphId(p.body)}`}
+        x={p.pos.x - geom.glyphPx / 2} y={p.pos.y - geom.glyphPx / 2}
+        width={geom.glyphPx} height={geom.glyphPx}
+        color={p.luminary ? 'var(--gold)' : 'var(--ink)'}
+      />
       {#if p.retro}
-        <text x={p.pos.x + 11} y={p.pos.y - 9} text-anchor="middle" font-size="9"
+        <text x={p.pos.x + geom.glyphPx / 2 + 3} y={p.pos.y - geom.glyphPx / 2 + 2}
+          text-anchor="middle" font-size={9 + 2 * display.glyphScale}
           fill="var(--square)">℞</text>
       {/if}
       <text x={p.degPos.x} y={p.degPos.y} text-anchor="middle" dominant-baseline="central"
-        font-size="9.5" fill="var(--dim)">{p.degText}</text>
+        font-size={8 + 2.5 * display.glyphScale} fill="var(--dim)">{p.degText}</text>
     </g>
   {/each}
 

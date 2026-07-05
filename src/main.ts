@@ -1,5 +1,7 @@
 import { mount } from 'svelte';
 import App from './ui/App.svelte';
+import GlyphSheet from './ui/GlyphSheet.svelte';
 import './ui/app.css';
 
-mount(App, { target: document.getElementById('app')! });
+const root = location.search.includes('glyphs') ? GlyphSheet : App;
+mount(root, { target: document.getElementById('app')! });

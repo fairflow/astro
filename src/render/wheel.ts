@@ -1,9 +1,15 @@
 import { BodyKey, normDeg } from '../ephemeris/types.js';
 import type { Chart, ChartPosition } from '../chart/chart.js';
 import type { Aspect } from '../chart/aspects.js';
-import {
-  ASPECT_COLOR, BODY_GLYPH, SIGN_ELEMENT, SIGN_GLYPHS, VS,
-} from './glyphs.js';
+import { ASPECT_COLOR, SIGN_ELEMENT } from './glyphs.js';
+
+export interface WheelOptions {
+  size?: number;
+  /** Multiplies planet/sign glyph sizes (display setting). */
+  glyphScale?: number;
+  /** Minimum aspect-line opacity (raised in high-contrast mode). */
+  opacityFloor?: number;
+}
 
 /**
  * Pure geometry for the natal wheel: everything the SVG template needs,
@@ -19,7 +25,10 @@ export interface WheelGeometry {
   cy: number;
   rHub: number;
   rZodiacOuter: number;
-  signs: { glyph: string; element: string; pos: XY; from: XY; to: XY }[];
+  /** Glyph edge length for planets and signs (already scaled). */
+  glyphPx: number;
+  signGlyphPx: number;
+  signs: { index: number; element: string; pos: XY; from: XY; to: XY }[];
   ticks: { from: XY; to: XY; major: boolean }[];
   cusps: {
     from: XY; to: XY; isAngle: boolean;
@@ -27,7 +36,7 @@ export interface WheelGeometry {
     num: number; numPos: XY;
   }[];
   planets: {
-    body: BodyKey; glyph: string; luminary: boolean; retro: boolean;
+    body: BodyKey; luminary: boolean; retro: boolean;
     pos: XY; degText: string; degPos: XY;
     anchorFrom: XY; anchorTo: XY; leaderTo: XY;
   }[];
@@ -65,22 +74,27 @@ function nudge(lons: number[], minGap: number): number[] {
   return out;
 }
 
-export function wheelGeometry(chart: Chart, size = 720): WheelGeometry {
+export function wheelGeometry(chart: Chart, opts: WheelOptions = {}): WheelGeometry {
+  const size = opts.size ?? 720;
+  const glyphScale = opts.glyphScale ?? 1.25;
+  const floor = opts.opacityFloor ?? 0.25;
   const cx = size / 2, cy = size / 2;
   const s = size / 720; // radii tuned at 720
   const R = {
     zodOut: 348 * s, zodIn: 302 * s, planet: 262 * s,
-    deg: 238 * s, houseNum: 150 * s, hub: 176 * s,
+    deg: 234 * s, houseNum: 150 * s, hub: 176 * s,
   };
+  const glyphPx = 26 * s * glyphScale;
+  const signGlyphPx = 27 * s * Math.min(glyphScale, 1.4);
   const asc = chart.houses.asc;
   const pt = (lon: number, r: number): XY => {
     const d = (normDeg(lon) - asc) * Math.PI / 180;
     return { x: cx - r * Math.cos(d), y: cy + r * Math.sin(d) };
   };
 
-  const signs = SIGN_GLYPHS.map((g, i) => ({
-    glyph: g + VS,
-    element: SIGN_ELEMENT[i]!,
+  const signs = SIGN_ELEMENT.map((element, i) => ({
+    index: i,
+    element,
     pos: pt(i * 30 + 15, (R.zodOut + R.zodIn) / 2),
     from: pt(i * 30, R.zodIn),
     to: pt(i * 30, R.zodOut),
@@ -107,18 +121,17 @@ export function wheelGeometry(chart: Chart, size = 720): WheelGeometry {
   });
 
   const shown: ChartPosition[] = chart.positions;
-  const displayLons = nudge(shown.map(p => p.lon), 8.2);
+  const displayLons = nudge(shown.map(p => p.lon), 6.8 + 2.6 * glyphScale);
   const planets = shown.map((p, i) => ({
     body: p.body,
-    glyph: BODY_GLYPH[p.body] + VS,
     luminary: LUMINARIES.has(p.body),
     retro: p.speed < 0,
     pos: pt(displayLons[i]!, R.planet),
     degText: `${Math.floor(normDeg(p.lon) % 30)}°`,
-    degPos: pt(displayLons[i]!, R.deg),
+    degPos: pt(displayLons[i]!, R.deg - glyphPx / 2),
     anchorFrom: pt(p.lon, R.hub),
     anchorTo: pt(p.lon, R.hub + 8 * s),
-    leaderTo: pt(displayLons[i]!, R.planet - 15 * s),
+    leaderTo: pt(displayLons[i]!, R.planet - glyphPx / 2 - 4 * s),
   }));
 
   const aspects = chart.aspects.map(a => {
@@ -131,7 +144,7 @@ export function wheelGeometry(chart: Chart, size = 720): WheelGeometry {
       from: pt(pa.lon, R.hub),
       to: pt(pb.lon, R.hub),
       colorVar: ASPECT_COLOR[a.def.name],
-      opacity: 0.25 + 0.75 * tight,
+      opacity: floor + (1 - floor) * tight,
       width: a.orb < 2 ? 2.2 : 1.4,
       dashed: a.def.name === 'quincunx',
       partile: a.orb < 1,
@@ -140,6 +153,7 @@ export function wheelGeometry(chart: Chart, size = 720): WheelGeometry {
 
   return {
     size, cx, cy, rHub: R.hub, rZodiacOuter: R.zodOut,
+    glyphPx, signGlyphPx,
     signs, ticks, cusps, planets, aspects,
   };
 }

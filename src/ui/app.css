@@ -5,6 +5,12 @@
   --conj: #d4af6a; --quincunx: #b7a5e0;
   --fire: #e07a5f; --earth: #a8b168; --air: #e6c86e; --water: #6fa8dc;
 }
+:root.hc {
+  --bg: #04060c; --bg2: #0b1120; --panel: #0e152a; --line: #45507c;
+  --ink: #f7f4ea; --dim: #c6cbdc; --gold: #eac67e; --gold-dim: #b0965e;
+  --trine: #6fb3ff; --sextile: #5ee3a6; --square: #ff6b6b; --opp: #ff8b5e;
+  --quincunx: #cbb8ff; --hub: #070b16;
+}
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
   background: var(--bg); color: var(--ink);
@@ -59,8 +65,26 @@ header.app .brand .spacer { flex: 1; }
 
 /* ---- layout ---- */
 main.app { display: flex; align-items: flex-start; max-width: 1220px; margin: 0 auto; }
-#wheelwrap { flex: 1 1 640px; min-width: 420px; padding: 10px; }
+#wheelwrap { flex: 1 1 640px; min-width: 420px; padding: 10px; position: relative; }
 #wheelwrap svg { display: block; width: 100%; height: auto; }
+#wheelwrap .expand {
+  position: absolute; top: 16px; right: 16px; z-index: 5;
+  background: var(--bg2); color: var(--dim); border: 1px solid var(--line);
+  border-radius: 14px; padding: 5px 12px; font-size: 12.5px;
+}
+#wheelwrap .expand:hover { color: var(--gold); border-color: var(--gold-dim); }
+
+.overlay {
+  position: fixed; inset: 0; z-index: 100; background: rgba(4, 6, 12, 0.97);
+  display: flex; align-items: center; justify-content: center;
+}
+.overlay .bigwheel { width: min(96vh, 96vw); }
+.overlay .bigwheel svg { display: block; width: 100%; height: auto; }
+.overlay .close {
+  position: absolute; top: 18px; right: 22px; z-index: 101;
+  background: var(--bg2); color: var(--ink); border: 1px solid var(--line);
+  border-radius: 16px; padding: 7px 16px; font-size: 13.5px;
+}
 aside.app { flex: 0 0 372px; padding: 16px 20px 30px 6px; }
 .empty {
   margin: 60px auto; max-width: 460px; text-align: center; color: var(--dim);
@@ -87,6 +111,32 @@ aside.app { flex: 0 0 372px; padding: 16px 20px 30px 6px; }
 .cusps { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 14px; margin-top: 10px; font-size: 13px; }
 .cusps .h { color: var(--dim); display: inline-block; width: 26px; }
 .retro { color: var(--square); font-size: 11px; vertical-align: super; }
+
+/* ---- interpretation ---- */
+.stylepick {
+  display: flex; gap: 6px; align-items: center; margin-bottom: 10px;
+  font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: .08em;
+}
+.stylepick button {
+  background: var(--bg2); color: var(--dim); border: 1px solid var(--line);
+  border-radius: 12px; padding: 3px 10px; font-size: 12px; text-transform: none;
+  letter-spacing: normal;
+}
+.stylepick button.on { color: #12182b; background: var(--gold); border-color: var(--gold); font-weight: 600; }
+.panel .reading { margin-top: 10px; font-size: 14px; line-height: 1.55; }
+.panel .src {
+  color: var(--dim); font-size: 10px; text-transform: uppercase;
+  letter-spacing: .06em; border: 1px solid var(--line); border-radius: 8px;
+  padding: 0 6px; margin-left: 4px; white-space: nowrap;
+}
+.panel .modhead {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--dim); margin: 10px 0 4px;
+}
+.panel .mod {
+  font-size: 13px; margin-bottom: 4px; padding-left: 10px;
+  border-left: 2px solid var(--line);
+}
 
 /* ---- aspect list ---- */
 .aspectlist { margin-top: 16px; }

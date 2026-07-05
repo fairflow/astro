@@ -1,17 +1,21 @@
 <script lang="ts">
   import type { Chart } from '../chart/chart';
   import { aspectKey } from '../render/wheel';
-  import {
-    ASPECT_GLYPH, BODY_GLYPH, BODY_NAME, VS, fmtDegInSign, fmtOrb,
-  } from '../render/glyphs';
+  import { BODY_NAME, fmtDegInSign, fmtOrb } from '../render/glyphs';
+  import Glyph from './Glyph.svelte';
   import { fmtOffset } from '../chart/civil';
+  import {
+    modifiersFor, modifierSentence, readingFor,
+  } from '../interpret/composer';
+  import type { StyleId } from '../interpret/types';
   import type { Selection } from './selection';
   import type { ChartMeta } from './state';
 
-  let { chart, selection, meta, onselect }: {
+  let { chart, selection, meta, style, onselect }: {
     chart: Chart;
     selection: Selection;
     meta: ChartMeta;
+    style: StyleId;
     onselect: (s: Selection) => void;
   } = $props();
 
@@ -43,19 +47,27 @@
     {@const A = pos(selAspect.a)}
     {@const B = pos(selAspect.b)}
     <h2 class="serif">
-      {BODY_NAME[selAspect.a]} {ASPECT_GLYPH[selAspect.def.name]} {BODY_NAME[selAspect.b]}
+      {BODY_NAME[selAspect.a]} <Glyph aspect={selAspect.def.name} size={16} /> {BODY_NAME[selAspect.b]}
     </h2>
     <div class="sub">
       {selAspect.def.name} ({selAspect.def.angle}°) · {selAspect.def.klass} ·
       {selAspect.applying ? 'applying' : 'separating'}
     </div>
-    <div class="row">{BODY_GLYPH[selAspect.a]}{VS} {fmtDegInSign(A.lon)} · house {A.house}</div>
-    <div class="row">{BODY_GLYPH[selAspect.b]}{VS} {fmtDegInSign(B.lon)} · house {B.house}</div>
+    <div class="row"><Glyph body={selAspect.a} size={15} /> {fmtDegInSign(A.lon)} · house {A.house}</div>
+    <div class="row"><Glyph body={selAspect.b} size={15} /> {fmtDegInSign(B.lon)} · house {B.house}</div>
     <div class="row"><span class="k">Orb</span> <b>{fmtOrb(selAspect.orb)}</b> of {selAspect.maxOrb}° allowed</div>
     <div class="orbbar"><i style={`width:${(1 - selAspect.orb / selAspect.maxOrb) * 100}%`}></i></div>
-    <div class="hint">Interpretations arrive with M3 — this panel will show the reading here, in your chosen style.</div>
+    {@const reading = readingFor(selAspect, style)}
+    {@const mods = modifiersFor(chart, selAspect)}
+    <div class="reading">{reading.text} <span class="src">{reading.source}</span></div>
+    {#if mods.length}
+      <div class="modhead">Modified by</div>
+      {#each mods as m}
+        <div class="mod">{modifierSentence(m, style)}</div>
+      {/each}
+    {/if}
   {:else if selBody}
-    <h2 class="serif">{BODY_GLYPH[selBody.body]}{VS} {BODY_NAME[selBody.body]}
+    <h2 class="serif"><Glyph body={selBody.body} size={17} /> {BODY_NAME[selBody.body]}
       {#if selBody.speed < 0}<span class="retro">℞</span>{/if}
     </h2>
     <div class="sub">natal position</div>
@@ -68,7 +80,7 @@
       {#each bodyAspects as a (aspectKey(a))}
         <button class="row" style="background:none;border:none;color:inherit;display:block;text-align:left;padding:0 0 2px"
           onclick={() => onselect({ kind: 'aspect', key: aspectKey(a) })}>
-          {BODY_GLYPH[a.a]}{VS} {ASPECT_GLYPH[a.def.name]} {BODY_GLYPH[a.b]}{VS}
+          <Glyph body={a.a} size={14} /> <Glyph aspect={a.def.name} size={13} /> <Glyph body={a.b} size={14} />
           {BODY_NAME[a.a]}–{BODY_NAME[a.b]} · {fmtOrb(a.orb)}
         </button>
       {/each}
