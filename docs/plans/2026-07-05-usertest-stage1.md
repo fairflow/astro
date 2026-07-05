@@ -114,3 +114,39 @@ Planets and aspects are tappable; sign glyphs are not.
 Stage 1a (next session): A1–A4, B1 — small code, immediate effect.
 Stage 1b: A5–A8, B2, B4. Stage 1c: B3 pipeline + first review batch;
 then B5/B6. Await part 2 of the transcript before locking 1b/1c.
+
+**Status: 1a + 1b implemented on m4-draft, 2026-07-05.**
+
+## Part 2 findings (transcript continued)
+
+- **F8 — Repetition inside dossiers**: the same template sentences
+  recur across sections ("it just says the same thing everywhere…
+  boring"). → Fixed in part: per-pair lead-sentence skeletons (3 per
+  style) + hash-varied codas; full fix is the 1c authored matrix.
+- **F9 — "How do you work it consciously?"**: hard-aspect readings
+  named the tension but gave no method. → Every challenge/adjusting
+  template now ends with a style-appropriate practice line (2 variants
+  each).
+- **F10 — Conversation markers**: "I need these markers in my own head
+  as I'm speaking… not enough suggestibility for conversation."
+  → Markers row under every aspect reading: keyword chips
+  (drives, shared themes, aspect) + one open "Ask:" question.
+- **F11 — Dossiers too narrow**: "should have expanded across the
+  window." → Themes + glossary moved to a full-width section below the
+  wheel/panel columns.
+- **F12 — Snapshot-to-AI workflow**: they already paste charts into
+  Claude for IFS-style profiles; the app should feed that. → "Copy for
+  AI" button: markdown snapshot of raw factors (positions, houses,
+  aspects+orbs, lunation phase, computed contradictions, sign emphasis),
+  interpretations deliberately omitted. Future: built-in LLM layer (B5)
+  and an in-app IFS register.
+- **F13 — Declined**: an in-app "save your own translation/notes"
+  feature — Benita: "No… I'm not that analytical." Not building.
+- **F14 — Humanised the no-Sun-Moon-aspect text** ("not human
+  language") — rewritten per style in plain speech.
+- Badges (template/computed/authored) were self-explanatory in
+  practice — B and M decoded them unaided; keep, tooltips still planned.
+- **Rename**: app title is now ASTRODYNAMICS (was ASTRO; domain
+  astrodynamics.org.uk formerly held, lapsed).
+- Note: synastry/composite exist on m4-draft only — Benita tested main
+  (:8322). Merge (or point her at :8323) before her next session.

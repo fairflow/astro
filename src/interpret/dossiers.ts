@@ -230,11 +230,15 @@ export function sunMoonDossier(chart: Chart, style: StyleId): Dossier {
       });
     }
   } else {
+    const NO_ASPECT: Record<StyleId, string> = {
+      jungian: 'What you want to become and what you need to feel safe simply don’t talk to each other much — like two friends who get on fine but only meet when someone books the table. Neither sabotages the other; nothing brings them together automatically either. The work, and it is workable, is making the introductions yourself: asking, before a big choice, "and what does the needing part say?"',
+      mundane: 'Ambitions and home life don’t clash here — they just run in different rooms. Left alone, career decisions get made without consulting comfort, and domestic choices without consulting direction. A simple habit fixes most of it: check every big plan once against each.',
+      energy: 'The two main currents run side by side without touching: purpose doesn’t drain feeling, feeling doesn’t swamp purpose — and neither recharges the other. Bridging moments (rest scheduled inside ambitions, aims spoken at home) have to be built; once built, they hold.',
+      minimal: 'Wants and needs neither help nor block each other. Connect them on purpose or they drift apart quietly.',
+    };
     sections.push({
       heading: 'No major Sun–Moon aspect',
-      text: style === 'minimal'
-        ? 'Wants and needs run on separate tracks; neither helps nor blocks the other.'
-        : 'Conscious purpose and emotional need are unaspected to each other: they run on parallel tracks, and integration is a matter of deliberate scheduling rather than inner negotiation.',
+      text: NO_ASPECT[style],
       source: 'authored',
     });
   }

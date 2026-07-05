@@ -65,21 +65,106 @@ function vary(a: BodyKey, b: BodyKey, list: string[]): string {
   return list[(a.length * 7 + b.length * 3) % list.length]!;
 }
 
-export function pairText(
-  a: BodyKey, b: BodyKey, klass: AspectClass, style: StyleId,
+const bareNoun = (noun: string) => noun.replace(/^the /, '');
+
+/**
+ * "How do you work it consciously?" (user test part 2): hard aspects
+ * carry a practice line. Two variants per style, hash-varied by pair.
+ */
+const PRACTICE: Record<StyleId, Record<'challenge' | 'adjusting', string[]>> = {
+  jungian: {
+    challenge: [
+      'Working it consciously: notice which of the two you identify with and which you keep meeting in other people — then give the second a deliberate seat: a time, a place, a say.',
+      'To work it consciously, catch the moment one principle speaks for both; pause there and ask what the silenced one would have said.',
+    ],
+    adjusting: [
+      'Consciously worked, this is maintenance rather than crisis: small scheduled acts of translation between two parts that will never share a language.',
+      'The conscious version is a standing appointment between the two — brief, regular, renegotiated without drama.',
+    ],
+  },
+  mundane: {
+    challenge: [
+      'Practically: put both demands on the calendar on purpose, and decide in advance which wins in which arena — so the collision happens on paper, not in life.',
+      'The practical move is to stop improvising the clash: fixed times, fixed territories, and one honest review when they still collide.',
+    ],
+    adjusting: [
+      'Practically, treat it like a chronic condition managed well: small routine adjustments, never a once-and-for-all fix.',
+      'What works in practice is a light routine check: is the arrangement between these two areas still fair this month?',
+    ],
+  },
+  energy: {
+    challenge: [
+      'Worked deliberately, the interference becomes rhythm: let one current run fully, then the other, and the alternation itself carries you.',
+      'The practice is phase management — stop running both currents at peak at once; sequence them and collect the energy the clash was wasting.',
+    ],
+    adjusting: [
+      'The practice is periodic re-tuning: brief, regular corrections keep the coupling alive at almost no cost.',
+      'Small frequent nudges hold these currents in useful contact; postponed, the drift costs far more to correct.',
+    ],
+  },
+  minimal: {
+    challenge: [
+      'To work it: name which one is active right now, schedule the other, review weekly.',
+      'Method: pick lanes for each, keep to them, revisit when they still collide.',
+    ],
+    adjusting: [
+      'Method: small standing adjustments. There is no permanent fix; stop waiting for one.',
+      'Keep a light routine check on this pair; that is the whole method.',
+    ],
+  },
+};
+
+/**
+ * Lead-sentence skeletons, hash-varied by pair, so the same construction
+ * doesn't open every reading (user test part 2: "it just says the same
+ * thing everywhere").
+ */
+function lead(
+  a: BodyKey, b: BodyKey, klass: AspectClass, style: StyleId, eff: string,
 ): string {
   const A = PLANET_PROFILE[a], B = PLANET_PROFILE[b];
   const na = BODY_NAME[a], nb = BODY_NAME[b];
+  const skeletons: Record<StyleId, string[]> = {
+    jungian: [
+      `${cap(A.noun)} ${CLASS_LINK[klass]} ${B.noun}: ${eff}.`,
+      `Here ${bareNoun(A.noun)} and ${bareNoun(B.noun)} are bound into one figure, and ${eff}.`,
+      `An inner dialogue runs between ${bareNoun(A.noun)} and ${bareNoun(B.noun)}: ${eff}.`,
+    ],
+    mundane: [
+      `Matters of ${themeWords(a)} and ${themeWords(b)} arrive together in outer life: ${eff}.`,
+      `${na} business and ${nb} business tend to land in the same week: ${eff}.`,
+      `Life keeps booking ${na} and ${nb} into the same room: ${eff}.`,
+    ],
+    energy: [
+      `The ${na} current (${A.drive}) and the ${nb} current (${B.drive}) are coupled: ${eff}.`,
+      `Two currents share this stretch of the field — ${A.drive}, and ${B.drive} — and ${eff}.`,
+      `Where ${na} flows, ${nb} responds: ${eff}.`,
+    ],
+    minimal: [
+      `${na} ${klassWord(klass)} ${nb}. ${eff}.`,
+      `${na} and ${nb}: ${eff}.`,
+    ],
+  };
+  return vary(a, b, skeletons[style]);
+}
+
+export function pairText(
+  a: BodyKey, b: BodyKey, klass: AspectClass, style: StyleId,
+): string {
   const eff = EFFECT[style][klass];
+  const opening = lead(a, b, klass, style, eff);
+  const practice = (klass === 'challenge' || klass === 'adjusting')
+    ? ' ' + vary(b, a, PRACTICE[style][klass])
+    : '';
   switch (style) {
     case 'jungian':
-      return `${cap(A.noun)} ${CLASS_LINK[klass]} ${B.noun}: ${eff}. ${vary(a, b, JUNGIAN_CODA)}`;
+      return `${opening} ${vary(a, b, JUNGIAN_CODA)}${practice}`;
     case 'mundane':
-      return `Matters of ${themeWords(a)} and ${themeWords(b)} arrive together in outer life: ${eff} — expect situations in which ${na} concerns and ${nb} concerns must be handled at once.`;
+      return `${opening}${practice ? practice : ` Expect situations in which ${BODY_NAME[a]} concerns and ${BODY_NAME[b]} concerns must be handled at once.`}`;
     case 'energy':
-      return `The ${na} current (${A.drive}) and the ${nb} current (${B.drive}) are coupled: ${eff}. ${vary(a, b, ENERGY_CODA)}`;
+      return `${opening} ${vary(a, b, ENERGY_CODA)}${practice}`;
     case 'minimal':
-      return `${na} ${klassWord(klass)} ${nb}. ${eff}.`;
+      return `${opening}${practice}`;
   }
 }
 

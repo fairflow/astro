@@ -12,6 +12,7 @@
     modifiersFor, modifierSentence, readingFor,
   } from '../interpret/composer';
   import { BODY_INTRO } from '../interpret/bodyintro';
+  import { markersFor } from '../interpret/markers';
   import { SIGN_TONE } from '../interpret/vocab';
   import { STYLES, type StyleId } from '../interpret/types';
   import type { Selection } from './selection';
@@ -81,12 +82,18 @@
     <div class="orbbar"><i style={`width:${(1 - selAspect.orb / selAspect.maxOrb) * 100}%`}></i></div>
     {@const reading = readingFor(selAspect, style)}
     {@const mods = modifiersFor(chart, selAspect)}
+    {@const mk = markersFor(selAspect)}
     {#key style + selection.key}
       <div class="reading" in:fade={{ duration: 200 }}>
         <div class="stylenote">{styleLabel} reading</div>
         {reading.text} <span class="src">{reading.source}</span>
       </div>
     {/key}
+    <div class="markers">
+      <span class="k">Markers</span>
+      {#each mk.keywords as kw}<span class="chip">{kw}</span>{/each}
+      <div class="q">Ask: {mk.question}</div>
+    </div>
     {#if mods.length}
       <div class="modhead">Modified by</div>
       {#each mods as m}

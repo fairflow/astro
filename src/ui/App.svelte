@@ -11,6 +11,7 @@
   import TransitsView from './TransitsView.svelte';
   import OverlayInfo from './OverlayInfo.svelte';
   import Glossary from './Glossary.svelte';
+  import { chartSnapshot } from '../interpret/snapshot';
   import SynastryView from './SynastryView.svelte';
   import CompositeView from './CompositeView.svelte';
   import { STYLES, type StyleId } from '../interpret/types';
@@ -28,6 +29,33 @@
   let packs = $state<ChebPack[]>([]);
   let gaz = $state<Gazetteer | null>(null);
   let banner = $state('');
+  let copied = $state(false);
+
+  async function copySnapshot() {
+    if (!chart || !current) return;
+    const text = chartSnapshot(chart, current.meta);
+    try {
+      await navigator.clipboard.writeText(text);
+    } catch {
+      // fallback for contexts where the async clipboard API is blocked
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+      } catch {
+        banner = 'Clipboard unavailable in this browser context.';
+        ta.remove();
+        return;
+      }
+      ta.remove();
+    }
+    copied = true;
+    setTimeout(() => copied = false, 2200);
+  }
   let form = $state<FormState>({
     name: '', date: '', time: '12:00', accuracy: 'exact', place: null,
   });
@@ -119,9 +147,15 @@
 
 <header class="app">
   <div class="brand">
-    <h1>ASTRO</h1>
-    <span class="tag">natal charts · offline ephemeris</span>
+    <h1>ASTRODYNAMICS</h1>
+    <span class="tag">charts · offline ephemeris · interpretations</span>
     <span class="spacer"></span>
+    {#if chart}
+      <button class="copyai" onclick={copySnapshot}
+        title="Copy a raw-factors markdown snapshot of this chart, ready to paste into an AI conversation (e.g. for an IFS-style profile)">
+        {copied ? 'Copied ✓' : 'Copy for AI'}
+      </button>
+    {/if}
     <DisplayControls bind:display />
     <SavedCharts {saveable} onload={loadSaved} />
   </div>
@@ -160,8 +194,6 @@
       <Panel {chart} {selection} meta={current!.meta} style={styleId} onselect={s => selection = s} />
       <AspectList {chart} {selection} onselect={s => selection = s} />
       <div class="legend"><span>tight orb</span><span class="ramp"></span><span>edge of orb</span></div>
-      <Themes {chart} style={styleId} {provider} jdBirth={current!.jdUt} />
-      <Glossary />
     </aside>
   {:else}
     <div class="empty">
@@ -174,6 +206,12 @@
     </div>
   {/if}
 </main>
+{#if chart && current}
+  <section class="widepanels">
+    <Themes {chart} style={styleId} {provider} jdBirth={current.jdUt} />
+    <Glossary />
+  </section>
+{/if}
 {/if}
 
 {#if expanded && chart}

@@ -217,6 +217,28 @@ aside.app { flex: 0 0 372px; padding: 16px 20px 30px 6px; }
 }
 .panel abbr { text-decoration: underline dotted; cursor: help; }
 .aspectlist .hn { color: var(--dim); font-size: 11px; font-style: normal; }
+
+/* Full-width dossiers (user test part 2: "expanded across the window") */
+.widepanels { max-width: 1220px; margin: 4px auto 20px; padding: 0 24px; zoom: var(--ts, 1); }
+.widepanels .sec p, .widepanels .entry p, .widepanels .factors { max-width: 76ch; }
+
+/* Conversation markers under aspect readings */
+.panel .markers { margin-top: 9px; font-size: 12.5px; }
+.panel .markers .k {
+  color: var(--dim); text-transform: uppercase; letter-spacing: .08em;
+  font-size: 10.5px; margin-right: 6px;
+}
+.panel .markers .chip {
+  display: inline-block; background: var(--bg2); border: 1px solid var(--line);
+  border-radius: 10px; padding: 1px 8px; margin: 0 4px 4px 0; color: var(--ink);
+}
+.panel .markers .q { color: var(--gold); font-size: 13px; margin-top: 3px; font-style: italic; }
+
+header.app .copyai {
+  background: var(--bg2); color: var(--sextile); border: 1px solid var(--line);
+  border-radius: 14px; padding: 5px 12px; font-size: 12.5px;
+}
+header.app .copyai:hover { border-color: var(--sextile); }
 .aspect-hit { stroke: transparent; stroke-width: 13; fill: none; }
 .planet { cursor: pointer; }
 .dimmed { opacity: .12 !important; transition: opacity .25s; }
