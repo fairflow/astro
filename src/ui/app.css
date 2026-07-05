@@ -3,6 +3,7 @@
   --ink: #e8e4d8; --dim: #9aa0b5; --gold: #d4af6a; --gold-dim: #8a744a;
   --trine: #4e9df1; --sextile: #46c48f; --square: #e05555; --opp: #e0704e;
   --conj: #d4af6a; --quincunx: #b7a5e0;
+  --transit: #5fd4d0; --syn: #d98fd4;
   --fire: #e07a5f; --earth: #a8b168; --air: #e6c86e; --water: #6fa8dc;
 }
 :root.hc {

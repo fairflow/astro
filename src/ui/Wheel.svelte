@@ -7,16 +7,24 @@
   import type { Selection } from './selection';
   import type { DisplaySettings } from './state';
 
-  let { chart, selection, display, onselect }: {
+  let { chart, selection, display, onselect, outer, outerColor = 'var(--transit)', crossAspects, crossSelected = null, oncross }: {
     chart: Chart;
     selection: Selection;
     display: DisplaySettings;
     onselect: (s: Selection) => void;
+    /** Bi-wheel: outer-ring bodies (transits or partner chart). */
+    outer?: import('../render/wheel').OuterBody[];
+    outerColor?: string;
+    crossAspects?: import('../render/wheel').CrossLike[];
+    crossSelected?: number | null;
+    oncross?: (i: number) => void;
   } = $props();
 
   const geom = $derived(wheelGeometry(chart, {
     glyphScale: display.glyphScale,
     opacityFloor: display.contrast ? 0.45 : 0.25,
+    outer,
+    crossAspects,
   }));
 
   function inSelectedSign(body: BodyKey): boolean {
@@ -33,12 +41,20 @@
   }
 
   function planetDimmed(body: BodyKey): boolean {
+    if (crossSelected !== null && crossAspects) {
+      const x = crossAspects[crossSelected];
+      return x ? x.b !== body : false;
+    }
     if (selection.kind === 'aspect') {
       const sel = geom.aspects.find(x => x.key === selection.key);
       return sel ? sel.aspect.a !== body && sel.aspect.b !== body : false;
     }
     if (selection.kind === 'sign') return !inSelectedSign(body);
     return false;
+  }
+
+  function crossDimmed(i: number): boolean {
+    return crossSelected !== null && crossSelected !== i;
   }
 </script>
 
@@ -132,7 +148,42 @@
     </g>
   {/each}
 
+  <!-- bi-wheel: cross-aspect lines (outer -> natal) -->
+  {#if geom.crossLines.length}
+    {#each geom.crossLines as c (c.index)}
+      <g class="aspect-line" class:dimmed={crossDimmed(c.index)}
+        role="button" tabindex="0" aria-label={`cross aspect ${c.index}`}
+        onclick={() => oncross?.(c.index)}
+        onkeydown={e => e.key === 'Enter' && oncross?.(c.index)}>
+        <line x1={c.from.x} y1={c.from.y} x2={c.to.x} y2={c.to.y}
+          stroke={`var(${c.colorVar})`} stroke-width="1.3" opacity={c.opacity}
+          stroke-dasharray="6 4" />
+        <line class="aspect-hit" x1={c.from.x} y1={c.from.y} x2={c.to.x} y2={c.to.y} />
+      </g>
+    {/each}
+  {/if}
+
+  <!-- bi-wheel: outer ring -->
+  {#if geom.outer.length}
+    <circle cx={geom.cx} cy={geom.cy} r={geom.rZodiacOuter + 8} fill="none"
+      stroke={outerColor} opacity="0.35" />
+    {#each geom.outer as o (o.body)}
+      <line x1={o.tickFrom.x} y1={o.tickFrom.y} x2={o.tickTo.x} y2={o.tickTo.y}
+        stroke={outerColor} stroke-width="1.5" />
+      <use
+        href={`#${bodyGlyphId(o.body)}`}
+        x={o.pos.x - geom.outerGlyphPx / 2} y={o.pos.y - geom.outerGlyphPx / 2}
+        width={geom.outerGlyphPx} height={geom.outerGlyphPx}
+        color={outerColor}
+      />
+      {#if o.retro}
+        <text x={o.pos.x + geom.outerGlyphPx / 2 + 2} y={o.pos.y - geom.outerGlyphPx / 2 + 2}
+          text-anchor="middle" font-size={8 + 2 * display.glyphScale} fill={outerColor}>℞</text>
+      {/if}
+    {/each}
+  {/if}
+
   <text x="14" y="16" class="serif" font-size={12 * display.textScale} fill="var(--dim)">
-    {chart.houses.polarFallback ? 'Porphyry (polar fallback)' : 'Placidus'} · Tropical
+    {chart.houses.polarFallback ? 'Porphyry (polar fallback)' : 'Placidus'} · Tropical{geom.outer.length ? ' · outer ring: second chart' : ''}
   </text>
 </svg>

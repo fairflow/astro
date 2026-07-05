@@ -1,6 +1,7 @@
 <script lang="ts">
   import PartnerPick from './PartnerPick.svelte';
   import CrossAspectList from './CrossAspectList.svelte';
+  import Wheel from './Wheel.svelte';
   import { crossAspects, houseOverlay, midpointContacts } from '../chart/relate';
   import { synastrySnapshot } from '../interpret/snapshot';
   import { contextReading } from '../interpret/contexts';
@@ -12,11 +13,12 @@
   import type { StyleId } from '../interpret/types';
   import type { ChartMeta } from './state';
 
-  let { natal, meta, chartFromSaved, style }: {
+  let { natal, meta, chartFromSaved, style, display }: {
     natal: Chart;
     meta: ChartMeta;
     chartFromSaved: (c: SavedChart) => Chart;
     style: StyleId;
+    display: import('./state').DisplaySettings;
   } = $props();
 
   let partner = $state<SavedChart | null>(null);
@@ -64,6 +66,13 @@
     : null);
 
   const selAspect = $derived(sel !== null ? cross[sel] ?? null : null);
+  // Bi-wheel cross lines want outer(a)=partner, inner(b)=natal — the
+  // cross list is computed natal(a)×partner(b), so swap for display.
+  const crossForWheel = $derived(cross.map(x => ({ ...x, a: x.b, b: x.a })));
+  const outerBodies = $derived(partnerChart
+    ? partnerChart.positions.map(p => ({ body: p.body, lon: p.lon, retro: p.speed < 0 }))
+    : []);
+  let wheelSel = $state<import('./selection').Selection>({ kind: 'none' });
 </script>
 
 <div class="sview">
@@ -78,6 +87,14 @@
   </div>
 
   {#if partnerChart && partner}
+    <div class="wheelrow">
+      <Wheel chart={natal} selection={wheelSel} {display}
+        outer={outerBodies} outerColor="var(--syn)"
+        crossAspects={crossForWheel.slice(0, 30)} crossSelected={sel}
+        oncross={i => { sel = i; wheelSel = { kind: 'none' }; }}
+        onselect={s => { wheelSel = s; sel = null; }} />
+      <div class="hint">Bi-wheel: your chart inside, {partner.name}'s bodies outside (violet). Dashed lines are inter-aspects — tap one for its reading.</div>
+    </div>
     <div class="cols">
       <div>
         {#if selAspect}
@@ -130,6 +147,8 @@
 <style>
   .sview { padding: 0 12px; }
   .pickrow { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
+  .wheelrow { max-width: 720px; margin: 0 auto 10px; }
+  .wheelrow .hint { text-align: center; }
   .copyai {
     background: var(--bg2); color: var(--sextile); border: 1px solid var(--line);
     border-radius: 14px; padding: 5px 12px; font-size: 12.5px; margin-bottom: 12px;

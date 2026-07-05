@@ -3,12 +3,34 @@ import type { Chart, ChartPosition } from '../chart/chart.js';
 import type { Aspect } from '../chart/aspects.js';
 import { ASPECT_COLOR, SIGN_ELEMENT } from './glyphs.js';
 
+export interface OuterBody {
+  body: BodyKey;
+  lon: number;
+  retro?: boolean;
+}
+
+/** Minimal shape shared by Aspect and CrossAspect for cross-lines. */
+export interface CrossLike {
+  a: BodyKey;
+  b: BodyKey;
+  def: Aspect['def'];
+  orb: number;
+  maxOrb: number;
+}
+
 export interface WheelOptions {
   size?: number;
   /** Multiplies planet/sign glyph sizes (display setting). */
   glyphScale?: number;
   /** Minimum aspect-line opacity (raised in high-contrast mode). */
   opacityFloor?: number;
+  /**
+   * Bi-wheel: a second chart's bodies drawn in an outer ring (Solar
+   * Fire style) — transits or a synastry partner. Radii shrink to fit.
+   */
+  outer?: OuterBody[];
+  /** Cross-aspects: outer body (a) to inner natal body (b). */
+  crossAspects?: CrossLike[];
 }
 
 /**
@@ -48,6 +70,17 @@ export interface WheelGeometry {
     colorVar: string; opacity: number; width: number;
     dashed: boolean; partile: boolean;
   }[];
+  /** Bi-wheel outer ring bodies (empty when no outer chart). */
+  outer: {
+    body: BodyKey; retro: boolean;
+    pos: XY; tickFrom: XY; tickTo: XY; degText: string;
+  }[];
+  outerGlyphPx: number;
+  /** Cross-aspect lines from outer bodies to inner positions. */
+  crossLines: {
+    index: number; from: XY; to: XY;
+    colorVar: string; opacity: number;
+  }[];
 }
 
 export function aspectKey(a: Aspect): string {
@@ -83,12 +116,16 @@ export function wheelGeometry(chart: Chart, opts: WheelOptions = {}): WheelGeome
   const floor = opts.opacityFloor ?? 0.25;
   const cx = size / 2, cy = size / 2;
   const s = size / 720; // radii tuned at 720
+  // Bi-wheel: shrink the natal wheel to make room for the outer ring.
+  const k = opts.outer ? 0.855 : 1;
   const R = {
-    zodOut: 348 * s, zodIn: 302 * s, planet: 262 * s,
-    deg: 234 * s, houseNum: 150 * s, hub: 176 * s,
+    zodOut: 348 * s * k, zodIn: 302 * s * k, planet: 262 * s * k,
+    deg: 234 * s * k, houseNum: 150 * s * k, hub: 176 * s * k,
+    outerRing: 332 * s,
   };
-  const glyphPx = 26 * s * glyphScale;
-  const signGlyphPx = 27 * s * Math.min(glyphScale, 1.4);
+  const glyphPx = 26 * s * glyphScale * (opts.outer ? 0.92 : 1);
+  const signGlyphPx = 27 * s * Math.min(glyphScale, 1.4) * k;
+  const outerGlyphPx = 22 * s * glyphScale;
   const asc = chart.houses.asc;
   const pt = (lon: number, r: number): XY => {
     const d = (normDeg(lon) - asc) * Math.PI / 180;
@@ -174,9 +211,35 @@ export function wheelGeometry(chart: Chart, opts: WheelOptions = {}): WheelGeome
     };
   });
 
+  // Bi-wheel outer ring + cross-aspect lines
+  const outerBodies = opts.outer ?? [];
+  const outerLons = nudge(outerBodies.map(o => o.lon), 5.5 + 1.5 * glyphScale);
+  const outer = outerBodies.map((o, i) => ({
+    body: o.body,
+    retro: o.retro ?? false,
+    pos: pt(outerLons[i]!, R.outerRing),
+    tickFrom: pt(o.lon, R.zodOut),
+    tickTo: pt(o.lon, R.zodOut + 7 * s),
+    degText: `${Math.floor(normDeg(o.lon) % 30)}°`,
+  }));
+
+  const crossLines = (opts.crossAspects ?? []).map((x, index) => {
+    const from = outerBodies.find(o => o.body === x.a);
+    const to = shown.find(p => p.body === x.b);
+    if (!from || !to) return null;
+    const tight = 1 - x.orb / x.maxOrb;
+    return {
+      index,
+      from: pt(from.lon, R.zodOut + 2 * s),
+      to: pt(to.lon, R.hub),
+      colorVar: ASPECT_COLOR[x.def.name],
+      opacity: floor + (1 - floor) * tight,
+    };
+  }).filter((x): x is NonNullable<typeof x> => x !== null);
+
   return {
     size, cx, cy, rHub: R.hub, rZodiacOuter: R.zodOut,
-    glyphPx, signGlyphPx,
-    signs, ticks, cusps, houseBands, planets, aspects,
+    glyphPx, signGlyphPx, outerGlyphPx,
+    signs, ticks, cusps, houseBands, planets, aspects, outer, crossLines,
   };
 }

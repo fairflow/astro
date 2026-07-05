@@ -58,10 +58,13 @@
   let wheelSel = $state<Selection>({ kind: 'none' });
   let crossSel = $state<number | null>(null);
 
-  const skySelAspect = $derived(wheelSel.kind === 'aspect' && sky
-    ? sky.aspects.find(a => `${a.a}|${a.def.name}|${a.b}` === wheelSel.key) ?? null
+  const natalSelAspect = $derived(wheelSel.kind === 'aspect'
+    ? natal.aspects.find(a => `${a.a}|${a.def.name}|${a.b}` === wheelSel.key) ?? null
     : null);
   const crossAspect = $derived(crossSel !== null ? crosses[crossSel] ?? null : null);
+  const outerBodies = $derived(sky
+    ? sky.positions.map(p => ({ body: p.body, lon: p.lon, retro: p.speed < 0 }))
+    : []);
 
   function resetToNow() {
     const n = new Date();
@@ -89,7 +92,12 @@
   {#if sky}
     <div class="split">
       <div class="wheelcol">
-        <Wheel chart={sky} selection={wheelSel} {display} onselect={s => { wheelSel = s; crossSel = null; }} />
+        <Wheel chart={natal} selection={wheelSel} {display}
+          outer={outerBodies} outerColor="var(--transit)"
+          crossAspects={crosses.slice(0, 30)} crossSelected={crossSel}
+          oncross={i => { crossSel = i; wheelSel = { kind: 'none' }; }}
+          onselect={s => { wheelSel = s; crossSel = null; }} />
+        <div class="hint" style="padding:2px 6px">Bi-wheel: your natal chart inside, the sky of {dateStr} outside (teal). Dashed lines are transits; solid hub lines are your natal aspects.</div>
       </div>
       <div class="listcol">
         {#if crossAspect}
@@ -101,14 +109,14 @@
             <div class="sub">{fmtDegInSign(t.lon)} → {fmtDegInSign(n.lon)} · orb {fmtOrb(crossAspect.orb)} · {crossAspect.applying ? 'applying (building)' : 'separating (resolving)'}</div>
             <p>{r.text} <span class="src">{r.source}</span></p>
           </div>
-        {:else if skySelAspect}
+        {:else if natalSelAspect}
           <div class="readingcard">
-            <h2 class="serif">{BODY_NAME[skySelAspect.a]} {skySelAspect.def.name} {BODY_NAME[skySelAspect.b]} (in the sky)</h2>
-            <div class="sub">orb {fmtOrb(skySelAspect.orb)}</div>
-            <p>A sky-to-sky aspect is collective weather — mundane astrology reads it for everyone at once, not as personal fate. It becomes personal only where it touches your own chart (see the transits list).</p>
+            <h2 class="serif">natal: {BODY_NAME[natalSelAspect.a]} {natalSelAspect.def.name} {BODY_NAME[natalSelAspect.b]}</h2>
+            <div class="sub">orb {fmtOrb(natalSelAspect.orb)} · your own chart, shown in the hub</div>
+            <p>Natal aspects are read in the Natal tab; here they show which standing patterns today's transits are landing on.</p>
           </div>
         {:else}
-          <div class="readingcard hint">Pick a transit from the list below — or an aspect on the wheel, which shows the sky everyone shares right now.</div>
+          <div class="readingcard hint">Tap a dashed line (a transit to your chart), an outer teal glyph's transit in the list below, or a hub aspect of your natal chart.</div>
         {/if}
 
         <details open>
@@ -118,7 +126,10 @@
         </details>
         <details>
           <summary>Current sky aspects — everyone ({sky.aspects.length})</summary>
-          <div class="hint" style="padding:4px 8px">Collective, not personal (mundane astrology). Click lines on the wheel to inspect.</div>
+          <div class="hint" style="padding:4px 8px">Collective weather (mundane astrology), not personal — listed for context.</div>
+          {#each sky.aspects as a}
+            <div class="skyrow">{BODY_NAME[a.a]} {a.def.name} {BODY_NAME[a.b]} · {fmtOrb(a.orb)}</div>
+          {/each}
         </details>
       </div>
     </div>
@@ -127,6 +138,7 @@
 
 <style>
   .tview { padding: 0 10px; }
+  .skyrow { font-size: 12.5px; color: var(--dim); padding: 2px 8px; }
   .controls { align-items: center; }
   .chip {
     background: var(--bg2); color: var(--gold); border: 1px solid var(--gold-dim);
