@@ -87,6 +87,16 @@ export function aspectKey(a: Aspect): string {
   return `${a.a}|${a.def.name}|${a.b}`;
 }
 
+/** Distance from point p to segment ab (for the aspect-click chooser). */
+export function distToSegment(p: XY, a: XY, b: XY): number {
+  const dx = b.x - a.x, dy = b.y - a.y;
+  const len2 = dx * dx + dy * dy;
+  const t = len2 === 0 ? 0
+    : Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2));
+  const qx = a.x + t * dx, qy = a.y + t * dy;
+  return Math.hypot(p.x - qx, p.y - qy);
+}
+
 const LUMINARIES = new Set<BodyKey>(['sun', 'moon']);
 
 /** Spread crowded display longitudes to at least `minGap` apart. */

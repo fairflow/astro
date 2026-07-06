@@ -17,6 +17,7 @@
   import { loadTexts } from '../interpret/textstore';
   import SynastryView from './SynastryView.svelte';
   import { session, storeSession } from './session.svelte';
+  import { applySkin, skinById } from './skins';
   import CompositeView from './CompositeView.svelte';
   import { STYLES, type StyleId } from '../interpret/types';
   import { fetchPacks, PACK_BODIES } from '../ephemeris/packs';
@@ -88,6 +89,7 @@
     document.documentElement.classList.toggle('chigh', display.contrast === 'high');
     document.documentElement.classList.toggle('light', display.theme === 'light');
     document.documentElement.style.setProperty('--ts', String(display.textScale));
+    applySkin(skinById(display.skin));
   });
 
   // Working state survives refresh: remember the last-cast birth data.

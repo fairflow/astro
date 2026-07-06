@@ -10,6 +10,7 @@
   --on-gold: #12182b;
   /* list-row states + badge surface (light theme overrides these) */
   --rowhover: #1c2340; --rowsel: #232b4d; --badgebg: #2a2440;
+  --header-top: #131a30;
 }
 :root.cmed {
   --bg: #04060c; --bg2: #0b1120; --panel: #0e152a; --line: #45507c;
@@ -38,6 +39,7 @@
   --hub: #ece5d3; --houseband: rgba(60, 45, 10, 0.07);
   --on-gold: #fff;
   --rowhover: #ece5d1; --rowsel: #e4dbc2; --badgebg: #ece4f6;
+  --header-top: #efe9db;
 }
 /* light + medium contrast: darker lines and inks for ageing eyes */
 :root.light.cmed {
@@ -60,7 +62,6 @@
   --hub: #eee5cc; --houseband: rgba(40, 30, 6, 0.16);
 }
 /* light-mode replacements for hardcoded dark surfaces */
-:root.light header.app { background: linear-gradient(180deg, #efe9db, var(--bg)); }
 :root.light .orbbar { background: #e3dcc9; }
 :root.light .overlay { background: rgba(244, 240, 230, 0.97); }
 :root.light .banner { background: #f6e2e0; color: #a13030; border-color: #d8a5a0; }
@@ -74,7 +75,7 @@ button { font: inherit; cursor: pointer; }
 
 header.app {
   padding: 14px 24px 10px; border-bottom: 1px solid var(--line);
-  background: linear-gradient(180deg, #131a30, var(--bg));
+  background: linear-gradient(180deg, var(--header-top), var(--bg));
 }
 header.app .brand { display: flex; align-items: baseline; gap: 12px; }
 header.app h1 { font-size: 22px; letter-spacing: .06em; color: var(--gold); font-weight: 600; }
@@ -121,8 +122,11 @@ main.app { display: flex; align-items: flex-start; max-width: 1220px; margin: 0 
 #wheelwrap { flex: 1 1 640px; min-width: 420px; padding: 10px; position: relative; }
 #wheelwrap svg { display: block; width: 100%; height: auto; }
 .wheelx { position: relative; }
-.wheelx .expand {
+.wheelx .exports {
   position: absolute; top: 16px; right: 16px; z-index: 5;
+  display: flex; gap: 6px;
+}
+.wheelx .expand {
   background: var(--bg2); color: var(--dim); border: 1px solid var(--line);
   border-radius: 14px; padding: 5px 12px; font-size: 12.5px;
 }
@@ -312,6 +316,32 @@ header.app .copyai:hover { border-color: var(--sextile); }
 .outerhit.selouter circle { stroke: var(--gold); stroke-width: 1.5; fill: rgba(212, 175, 106, 0.10); }
 .planet { cursor: pointer; }
 .dimmed { opacity: .12 !important; transition: opacity .25s; }
+
+/* aspect chooser popover: pick between overlapping aspect lines */
+.wheelchooser {
+  position: fixed; z-index: 200; min-width: 230px; max-width: 320px;
+  background: var(--panel); border: 1px solid var(--gold-dim); border-radius: 10px;
+  padding: 6px; box-shadow: 0 10px 30px #0007;
+}
+.wheelchooser .title { color: var(--dim); font-size: 11px; padding: 2px 8px 5px; }
+.wheelchooser button {
+  display: flex; align-items: center; gap: 7px; width: 100%; text-align: left;
+  background: none; border: none; color: var(--ink); font-size: 13px;
+  padding: 5px 8px; border-radius: 6px;
+}
+.wheelchooser button:hover { background: var(--rowhover); }
+.wheelchooser .orb { margin-left: auto; color: var(--dim); font-size: 11.5px; font-variant-numeric: tabular-nums; }
+
+/* print pipeline (issue #4): hide app chrome, print the content as shown */
+@media print {
+  header.app .brand button, header.app .brand .display, header.app .brand .settings,
+  header.app .brand .saved, .form, .modetabs, footer.app,
+  .wheelx .expand, .wheelx .exports, .legend, .banner { display: none !important; }
+  body { background: #fff; }
+  * { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+  main.app, .widepanels { max-width: none; }
+  .overlay, .scrim, .printdlg { display: none !important; }
+}
 svg text { user-select: none; }
 
 footer.app {
