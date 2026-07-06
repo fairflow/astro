@@ -23,6 +23,16 @@
   --fire: #bb4a28; --earth: #66732b; --air: #94781c; --water: #2a6a9e;
   --hub: #ece5d3; --houseband: rgba(60, 45, 10, 0.07);
 }
+/* light + high contrast: much darker lines and inks for ageing eyes */
+:root.light.hc {
+  --bg: #f7f3e9; --bg2: #fffdf7; --panel: #ffffff; --line: #7d7357;
+  --ink: #14100a; --dim: #453f30; --gold: #6b5115; --gold-dim: #7d652f;
+  --trine: #10437f; --sextile: #0a563a; --square: #8f1c1c; --opp: #883d0b;
+  --conj: #6b5115; --quincunx: #4b3596;
+  --transit: #075853; --syn: #722a6d;
+  --fire: #8f351a; --earth: #47521d; --air: #64500e; --water: #1a4d75;
+  --hub: #e9e0c9; --houseband: rgba(50, 38, 8, 0.12);
+}
 /* light-mode replacements for hardcoded dark surfaces */
 :root.light header.app { background: linear-gradient(180deg, #efe9db, var(--bg)); }
 :root.light .aspectlist .row:hover, :root.light .dropdown button:hover,
@@ -232,6 +242,9 @@ aside.app { flex: 0 0 372px; padding: 16px 20px 30px 6px; }
 .aspect-line { cursor: pointer; }
 .signhit { cursor: pointer; }
 .signhit.selsign circle { stroke: var(--gold); stroke-width: 1.5; fill: rgba(212, 175, 106, 0.09); }
+.househit { cursor: pointer; }
+.househit.selhouse circle { stroke: var(--gold); stroke-width: 2; opacity: 1; }
+.househit.selhouse text { fill: var(--ink); }
 :root.hc { --houseband: rgba(255, 255, 255, 0.05); }
 .panel .stylenote {
   font-size: 10.5px; text-transform: uppercase; letter-spacing: .1em;

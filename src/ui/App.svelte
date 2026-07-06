@@ -83,7 +83,7 @@
 
   $effect(() => storeDisplay($state.snapshot(display)));
   $effect(() => {
-    document.documentElement.classList.toggle('hc', display.theme === 'hc');
+    document.documentElement.classList.toggle('hc', display.hc);
     document.documentElement.classList.toggle('light', display.theme === 'light');
     document.documentElement.style.setProperty('--ts', String(display.textScale));
   });

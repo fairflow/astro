@@ -22,7 +22,9 @@
 
   const geom = $derived(wheelGeometry(chart, {
     glyphScale: display.glyphScale,
-    opacityFloor: display.theme === 'hc' ? 0.45 : display.theme === 'light' ? 0.35 : 0.25,
+    opacityFloor: display.hc
+      ? (display.theme === 'light' ? 0.55 : 0.45)
+      : (display.theme === 'light' ? 0.35 : 0.25),
     outer,
     crossAspects,
   }));
@@ -33,10 +35,17 @@
     return p !== undefined && signIndex(p.lon) === selection.index;
   }
 
+  function inSelectedHouse(body: BodyKey): boolean {
+    if (selection.kind !== 'house') return false;
+    const p = chart.positions.find(x => x.body === body);
+    return p !== undefined && p.house === selection.num;
+  }
+
   function aspectDimmed(key: string, a: BodyKey, b: BodyKey): boolean {
     if (selection.kind === 'aspect') return key !== selection.key;
     if (selection.kind === 'body') return a !== selection.body && b !== selection.body;
     if (selection.kind === 'sign') return !inSelectedSign(a) && !inSelectedSign(b);
+    if (selection.kind === 'house') return !inSelectedHouse(a) && !inSelectedHouse(b);
     return false;
   }
 
@@ -50,6 +59,7 @@
       return sel ? sel.aspect.a !== body && sel.aspect.b !== body : false;
     }
     if (selection.kind === 'sign') return !inSelectedSign(body);
+    if (selection.kind === 'house') return !inSelectedHouse(body);
     return false;
   }
 
@@ -99,12 +109,17 @@
       font-size={10.5 * display.textScale} fill="var(--ink)" opacity="0.9">{c.degText}</text>
   {/each}
   <circle cx={geom.cx} cy={geom.cy} r={geom.rHub} fill="var(--hub, #10162a)" stroke="var(--line)" />
-  <!-- house numerals sit on top of the hub disc -->
+  <!-- house numerals sit on top of the hub disc; clicking one lights its tenants -->
   {#each geom.cusps as c}
-    <circle cx={c.numPos.x} cy={c.numPos.y} r={11 * Math.min(display.textScale, 1.3)}
-      fill="var(--bg2)" stroke="var(--gold-dim)" stroke-width="1" opacity="0.92" />
-    <text x={c.numPos.x} y={c.numPos.y} text-anchor="middle" dominant-baseline="central"
-      font-size={14.5 * display.textScale} fill="var(--gold)" opacity="0.95">{c.num}</text>
+    <g class="househit" role="button" tabindex="0" aria-label={`house ${c.num}`}
+      class:selhouse={selection.kind === 'house' && selection.num === c.num}
+      onclick={() => onselect({ kind: 'house', num: c.num })}
+      onkeydown={e => e.key === 'Enter' && onselect({ kind: 'house', num: c.num })}>
+      <circle cx={c.numPos.x} cy={c.numPos.y} r={11 * Math.min(display.textScale, 1.3)}
+        fill="var(--bg2)" stroke="var(--gold-dim)" stroke-width="1" opacity="0.92" />
+      <text x={c.numPos.x} y={c.numPos.y} text-anchor="middle" dominant-baseline="central"
+        font-size={14.5 * display.textScale} fill="var(--gold)" opacity="0.95">{c.num}</text>
+    </g>
   {/each}
 
   <!-- aspects -->

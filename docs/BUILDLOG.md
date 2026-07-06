@@ -138,6 +138,21 @@ updated at the end of each working session.
   total arc-minutes first (24°00′, rolls sign/360° correctly);
   regression tests in `test/format.spec.ts`. 157 tests green.
 
+## Later again on 2026-07-06 (contrast axis + house selection)
+
+- High contrast made an independent axis: Display menu now has Theme
+  (Dark/Light) + Contrast (Normal/High) rows. `display.hc` boolean;
+  storage migrates both the original `contrast` flag and the interim
+  `theme:'hc'` value. New `:root.light.hc` palette — much darker lines
+  (#7d7357), near-black ink, deeper aspect colours for ageing eyes;
+  per-theme+contrast aspect-opacity floors.
+- House selection: clicking a house numeral on the wheel selects the
+  house (`{kind:'house', num}`), lighting its tenant bodies and only
+  the aspects touching them (analogous to sign selection); panel shows
+  cusp degree, HOUSE_ARENA text, tenants, and the touching aspects;
+  expanded-wheel flyout gets the same. Sign/body/aspect selection
+  regressions checked in the browser.
+
 ## How to resume
 
 ```bash

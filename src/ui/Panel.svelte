@@ -13,7 +13,7 @@
   } from '../interpret/composer';
   import { bodyIntro } from '../interpret/textstore';
   import { markersFor } from '../interpret/markers';
-  import { SIGN_TONE } from '../interpret/vocab';
+  import { HOUSE_ARENA, SIGN_TONE } from '../interpret/vocab';
   import { STYLES, type StyleId } from '../interpret/types';
   import type { Selection } from './selection';
   import type { ChartMeta } from './state';
@@ -35,11 +35,19 @@
     ? chart.positions.find(p => p.body === selection.body) ?? null
     : null);
   const selSign = $derived(selection.kind === 'sign' ? selection.index : null);
+  const selHouse = $derived(selection.kind === 'house' ? selection.num : null);
   const bodyAspects = $derived(selBody
     ? chart.aspects.filter(a => a.a === selBody.body || a.b === selBody.body)
     : []);
   const signTenants = $derived(selSign !== null
     ? chart.positions.filter(p => signIndex(p.lon) === selSign)
+    : []);
+  const houseTenants = $derived(selHouse !== null
+    ? chart.positions.filter(p => p.house === selHouse)
+    : []);
+  const houseAspects = $derived(selHouse !== null
+    ? chart.aspects.filter(a =>
+        houseTenants.some(t => t.body === a.a || t.body === a.b))
     : []);
 
   function pos(body: string) {
@@ -125,6 +133,34 @@
         </button>
       {/each}
     {/if}
+  {:else if selHouse !== null}
+    <h2 class="serif">House {selHouse}</h2>
+    <div class="sub">cusp {fmtDegInSign(chart.houses.cusps[selHouse - 1]!)}</div>
+    <div class="reading" style="margin-top:6px">
+      Arena: {HOUSE_ARENA[selHouse - 1]}. The house is the <i>where</i> of the
+      chart — planets placed here bring their function to this area of life.
+    </div>
+    {#if houseTenants.length}
+      <div class="sub" style="margin-top:10px">in this house</div>
+      {#each houseTenants as t (t.body)}
+        <button class="row" style="background:none;border:none;color:inherit;display:block;text-align:left;padding:0 0 2px"
+          onclick={() => onselect({ kind: 'body', body: t.body })}>
+          <Glyph body={t.body} size={14} /> {BODY_NAME[t.body]} · {fmtDegInSign(t.lon)}
+        </button>
+      {/each}
+    {:else}
+      <div class="hint" style="margin-top:8px">No bodies in this house in this chart.</div>
+    {/if}
+    {#if houseAspects.length}
+      <div class="sub" style="margin-top:10px">aspects touching this house</div>
+      {#each houseAspects as a (aspectKey(a))}
+        <button class="row" style="background:none;border:none;color:inherit;display:block;text-align:left;padding:0 0 2px"
+          onclick={() => onselect({ kind: 'aspect', key: aspectKey(a) })}>
+          <Glyph body={a.a} size={14} /> <Glyph aspect={a.def.name} size={13} /> <Glyph body={a.b} size={14} />
+          {BODY_NAME[a.a]}–{BODY_NAME[a.b]} · {fmtOrb(a.orb)}
+        </button>
+      {/each}
+    {/if}
   {:else if selSign !== null}
     <h2 class="serif"><Glyph sign={selSign} size={18} /> {SIGN_NAMES[selSign]}</h2>
     <div class="sub">{SIGN_ELEMENT[selSign]} · {SIGN_MODALITY[selSign]} · ruled by {BODY_NAME[SIGN_RULER[selSign]!]}</div>
@@ -164,7 +200,7 @@
       <div class="warn">Not covered at this date: {chart.missing.map(b => BODY_NAME[b]).join(', ')}.</div>
     {/if}
     <div class="hint" style="margin-top:10px">
-      Tap an aspect line, a planet, a sign glyph, or a row in the aspect list.
+      Tap an aspect line, a planet, a sign glyph, a house number, or a row in the aspect list.
     </div>
   {/if}
 </div>

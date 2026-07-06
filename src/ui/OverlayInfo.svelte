@@ -6,7 +6,7 @@
     fmtDegInSign, fmtOrb,
   } from '../render/glyphs';
   import { readingFor } from '../interpret/composer';
-  import { SIGN_TONE } from '../interpret/vocab';
+  import { HOUSE_ARENA, SIGN_TONE } from '../interpret/vocab';
   import type { StyleId } from '../interpret/types';
   import type { Selection } from './selection';
 
@@ -42,6 +42,10 @@
   <h3 class="serif">{SIGN_NAMES[selection.index]}</h3>
   <div class="facts">{SIGN_ELEMENT[selection.index]} · {SIGN_MODALITY[selection.index]}</div>
   <p>{SIGN_TONE[selection.index]} — planets in this sign (lit on the wheel) take on this manner.</p>
+{:else if selection.kind === 'house'}
+  <h3 class="serif">House {selection.num}</h3>
+  <div class="facts">cusp {fmtDegInSign(chart.houses.cusps[selection.num - 1]!)}</div>
+  <p>{HOUSE_ARENA[selection.num - 1]} — planets in this house (lit on the wheel) act in this arena.</p>
 {/if}
 
 <style>
