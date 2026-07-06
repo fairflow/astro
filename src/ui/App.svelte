@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import ChartForm from './ChartForm.svelte';
-  import Wheel from './Wheel.svelte';
+  import ExpandableWheel from './ExpandableWheel.svelte';
   import Panel from './Panel.svelte';
   import AspectList from './AspectList.svelte';
   import SavedCharts from './SavedCharts.svelte';
@@ -21,7 +21,7 @@
   import { fetchPacks, PACK_BODIES } from '../ephemeris/packs';
   import { fetchGazetteer, type Gazetteer } from '../store/gazetteer';
   import { computeChart, defaultProvider } from '../chart/chart';
-  import { localToUt } from '../chart/civil';
+  import { fmtOffset, localToUt } from '../chart/civil';
   import type { ChebPack } from '../ephemeris/chebyshev';
   import type { SavedChart } from '../store/db';
   import type { Selection } from './selection';
@@ -67,7 +67,6 @@
   /** id of the saved chart the form was loaded from (enables Update). */
   let loadedId = $state<number | null>(null);
   let display = $state(loadDisplay());
-  let expanded = $state(false);
   let styleId = $state<StyleId>(loadStyle());
   let mode = $state<'natal' | 'transits' | 'synastry' | 'composite'>('natal');
   const MODES = [
@@ -145,6 +144,15 @@
     cast();
   }
 
+  /** Expanded-wheel caption: who, birth data, place. */
+  const caption = $derived(current
+    ? [
+        current.meta.name || current.meta.place.name,
+        `born ${current.meta.date} ${current.meta.time} (${fmtOffset(current.meta.offsetMinutes)})`,
+        `${current.meta.place.name}, ${current.meta.place.country}`,
+      ]
+    : []);
+
   // $state.snapshot: IndexedDB structured clone rejects $state proxies.
   const saveable = $derived(current
     ? $state.snapshot({
@@ -157,7 +165,6 @@
     : null);
 </script>
 
-<svelte:window onkeydown={e => { if (e.key === 'Escape') expanded = false; }} />
 <GlyphDefs style={{ weight: display.weight, slant: display.slant }} />
 
 <header class="app">
@@ -203,8 +210,15 @@
 <main class="app">
   {#if chart}
     <div id="wheelwrap">
-      <button class="expand" title="Expand chart" onclick={() => expanded = true}>⤢ Expand</button>
-      <Wheel {chart} {selection} {display} onselect={s => selection = s} />
+      <ExpandableWheel {chart} {selection} {display} {caption} onselect={s => selection = s}>
+        {#snippet flyout()}
+          {#if selection.kind !== 'none'}
+            <div class="flyout">
+              <OverlayInfo {chart} {selection} style={styleId} />
+            </div>
+          {/if}
+        {/snippet}
+      </ExpandableWheel>
     </div>
     <aside class="app">
       <Panel {chart} {selection} meta={current!.meta} style={styleId} onselect={s => selection = s} />
@@ -228,20 +242,6 @@
     <Glossary />
   </section>
 {/if}
-{/if}
-
-{#if expanded && chart}
-  <div class="overlay" role="dialog" aria-label="Expanded chart">
-    <button class="close" onclick={() => expanded = false}>✕ Close</button>
-    <div class="bigwheel">
-      <Wheel {chart} {selection} {display} onselect={s => selection = s} />
-    </div>
-    {#if selection.kind !== 'none'}
-      <div class="flyout">
-        <OverlayInfo {chart} {selection} style={styleId} />
-      </div>
-    {/if}
-  </div>
 {/if}
 
 <footer class="app">

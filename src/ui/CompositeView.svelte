@@ -1,6 +1,6 @@
 <script lang="ts">
   import PartnerPick from './PartnerPick.svelte';
-  import Wheel from './Wheel.svelte';
+  import ExpandableWheel from './ExpandableWheel.svelte';
   import { compositeChart } from '../chart/relate';
   import { contextReading } from '../interpret/contexts';
   import { aspectKey } from '../render/wheel';
@@ -31,6 +31,15 @@
     : null);
   const compSun = $derived(comp?.positions.find(p => p.body === 'sun'));
   const compMoon = $derived(comp?.positions.find(p => p.body === 'moon'));
+
+  const caption = $derived(session.partner
+    ? [
+        `Composite: ${meta.name || meta.place.name} + ${session.partner.name}`,
+        'midpoint chart of the relationship itself',
+        `${meta.name || 'you'}: born ${meta.date} ${meta.time} · ${meta.place.name}`,
+        `${session.partner.name}: born ${session.partner.date} ${session.partner.time} · ${session.partner.place.name}`,
+      ]
+    : []);
 </script>
 
 <div class="cview">
@@ -40,7 +49,7 @@
   {#if comp && session.partner}
     <div class="split">
       <div class="wheelcol">
-        <Wheel chart={comp} selection={sel} {display} onselect={s => sel = s} />
+        <ExpandableWheel chart={comp} selection={sel} {display} {caption} onselect={s => sel = s} />
       </div>
       <div class="listcol">
         <details open>

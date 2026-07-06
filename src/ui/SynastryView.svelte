@@ -1,7 +1,7 @@
 <script lang="ts">
   import PartnerPick from './PartnerPick.svelte';
   import CrossAspectList from './CrossAspectList.svelte';
-  import Wheel from './Wheel.svelte';
+  import ExpandableWheel from './ExpandableWheel.svelte';
   import { crossAspects, houseOverlay, midpointContacts } from '../chart/relate';
   import { synastrySnapshot } from '../interpret/snapshot';
   import { contextReading } from '../interpret/contexts';
@@ -75,6 +75,14 @@
     ? partnerChart.positions.map(p => ({ body: p.body, lon: p.lon, retro: p.speed < 0 }))
     : []);
   let wheelSel = $state<import('./selection').Selection>({ kind: 'none' });
+
+  const caption = $derived(session.partner
+    ? [
+        `Synastry: ${meta.name || meta.place.name} + ${session.partner.name}`,
+        `${meta.name || 'you'} (inner): born ${meta.date} ${meta.time} · ${meta.place.name}`,
+        `${session.partner.name} (outer): born ${session.partner.date} ${session.partner.time} · ${session.partner.place.name}`,
+      ]
+    : []);
 </script>
 
 <div class="sview">
@@ -91,7 +99,7 @@
 
   {#if partnerChart && session.partner}
     <div class="wheelrow">
-      <Wheel chart={natal} selection={wheelSel} {display}
+      <ExpandableWheel chart={natal} selection={wheelSel} {display} {caption}
         outer={outerBodies} outerColor="var(--syn)"
         crossAspects={crossForWheel.slice(0, 30)} crossSelected={sel}
         oncross={i => { sel = i; wheelSel = { kind: 'none' }; }}

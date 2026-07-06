@@ -153,6 +153,22 @@ updated at the end of each working session.
   expanded-wheel flyout gets the same. Sign/body/aspect selection
   regressions checked in the browser.
 
+## Later still on 2026-07-06 (three minors)
+
+- `--on-gold` variable (dark navy on light gold in dark themes, white
+  on dark gold in light themes) replaces every hardcoded on-gold text
+  colour — selected buttons (Theme/Contrast pickers, mode tabs, style
+  picker, "Your chart"/"The couple", Cast chart, print dialog) are now
+  readable in all four theme×contrast combinations.
+- New `ExpandableWheel.svelte` wraps Wheel with the ⤢ Expand button,
+  the fullscreen overlay, and a caption card; used by the natal view
+  (keeps its OverlayInfo flyout via snippet), TransitsView (both
+  wheels), SynastryView, CompositeView — expand now available on every
+  wheel.
+- Expanded wheels show a caption: name, born date/time, place, and a
+  freshly-stamped "cast <date time>" line; transits add the sky date,
+  synastry/composite name both people with their birth data.
+
 ## How to resume
 
 ```bash

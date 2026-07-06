@@ -71,7 +71,7 @@
     background: var(--bg2); color: var(--dim); border: 1px solid var(--line);
     border-radius: 10px; padding: 3px 9px; font-size: 11.5px;
   }
-  .themes button.on { color: #12182b; background: var(--gold); border-color: var(--gold); font-weight: 600; }
+  .themes button.on { color: var(--on-gold); background: var(--gold); border-color: var(--gold); font-weight: 600; }
   .printbtn {
     background: none; border: 1px solid var(--gold-dim); color: var(--gold);
     border-radius: 12px; padding: 5px 12px; font-size: 12.5px; align-self: flex-start;
@@ -92,7 +92,7 @@
   .printdlg .fine { color: var(--dim); font-size: 12px; }
   .printdlg a { color: var(--gold); }
   .printdlg button {
-    background: var(--gold); color: #1a1408; border: none; font-weight: 600;
+    background: var(--gold); color: var(--on-gold); border: none; font-weight: 600;
     padding: 6px 16px; border-radius: 6px;
   }
 </style>

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Wheel from './Wheel.svelte';
+  import ExpandableWheel from './ExpandableWheel.svelte';
   import CrossAspectList from './CrossAspectList.svelte';
   import PartnerPick from './PartnerPick.svelte';
   import { computeChart, type Chart } from '../chart/chart';
@@ -99,6 +99,19 @@
     return { x, chart, label };
   });
 
+  const captionYou = $derived([
+    meta.name || meta.place.name,
+    `born ${meta.date} ${meta.time} · ${meta.place.name}, ${meta.place.country}`,
+    `sky of ${session.transitDate} ${session.transitTime}`,
+  ]);
+  const captionCouple = $derived(session.partner
+    ? [
+        `Composite: ${meta.name || 'you'} + ${session.partner.name}`,
+        'midpoint chart of the relationship itself',
+        `sky of ${session.transitDate} ${session.transitTime}`,
+      ]
+    : []);
+
   function resetToNow() {
     const n = new Date();
     session.transitDate = n.toISOString().slice(0, 10);
@@ -130,7 +143,7 @@
     {#if sky}
       <div class="split">
         <div class="wheelcol">
-          <Wheel chart={natal} selection={wheelSel} {display}
+          <ExpandableWheel chart={natal} selection={wheelSel} {display} caption={captionYou}
             outer={outerBodies} outerColor="var(--transit)"
             crossAspects={crosses.slice(0, 30)} crossSelected={crossSel}
             oncross={i => { crossSel = i; wheelSel = { kind: 'none' }; }}
@@ -178,7 +191,7 @@
     {#if sky && partnerChart && comp && session.partner}
       <div class="split">
         <div class="wheelcol">
-          <Wheel chart={comp} selection={{ kind: 'none' }} {display}
+          <ExpandableWheel chart={comp} selection={{ kind: 'none' }} {display} caption={captionCouple}
             outer={outerBodies} outerColor="var(--transit)"
             crossAspects={crossesC.slice(0, 30)}
             crossSelected={coupleSel?.list === 'C' ? coupleSel.i : null}
@@ -250,7 +263,7 @@
     background: var(--bg2); color: var(--dim); border: 1px solid var(--line);
     border-radius: 14px; padding: 5px 12px; font-size: 12.5px;
   }
-  .target button.on { color: #12182b; background: var(--gold); border-color: var(--gold); font-weight: 600; }
+  .target button.on { color: var(--on-gold); background: var(--gold); border-color: var(--gold); font-weight: 600; }
   .hint { color: var(--dim); font-size: 12.5px; }
   .landmarks { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 8px; }
   .badge {
