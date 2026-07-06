@@ -48,8 +48,8 @@
     border-radius: 6px; cursor: pointer; font-size: 13.5px; width: 100%;
     background: none; border: none; color: var(--ink); text-align: left;
   }
-  .row:hover { background: #1c2340; }
-  .row.sel { background: #232b4d; outline: 1px solid var(--gold-dim); }
+  .row:hover { background: var(--rowhover); }
+  .row.sel { background: var(--rowsel); outline: 1px solid var(--gold-dim); }
   .g { font-size: 16px; width: 20px; text-align: center; }
   .a { width: 22px; text-align: center; }
   .right { margin-left: auto; display: flex; align-items: center; gap: 7px; }

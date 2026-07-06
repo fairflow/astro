@@ -197,6 +197,11 @@ updated at the end of each working session.
   tri-state group checkbox (all/none/indeterminate; Sun/Moon stay
   locked).
 
+- Fix: selected/hover rows in CrossAspectList (and dropdown/saved-item
+  hovers, transit landmark badges) had hardcoded dark backgrounds —
+  illegible dark-on-dark in light mode. New `--rowhover`/`--rowsel`/
+  `--badgebg` variables per theme replace all hardcoded surfaces.
+
 ## How to resume
 
 ```bash

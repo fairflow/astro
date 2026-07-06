@@ -277,7 +277,7 @@
   .hint { color: var(--dim); font-size: 12.5px; }
   .landmarks { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 8px; }
   .badge {
-    background: #2a2440; color: var(--quincunx); border: 1px solid var(--quincunx);
+    background: var(--badgebg); color: var(--quincunx); border: 1px solid var(--quincunx);
     border-radius: 12px; padding: 3px 10px; font-size: 12px;
   }
   .split { display: flex; gap: 12px; align-items: flex-start; }

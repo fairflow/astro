@@ -8,6 +8,8 @@
   --houseband: rgba(255, 255, 255, 0.045);
   /* text on gold-filled buttons: dark on light gold, white on dark gold */
   --on-gold: #12182b;
+  /* list-row states + badge surface (light theme overrides these) */
+  --rowhover: #1c2340; --rowsel: #232b4d; --badgebg: #2a2440;
 }
 :root.cmed {
   --bg: #04060c; --bg2: #0b1120; --panel: #0e152a; --line: #45507c;
@@ -35,6 +37,7 @@
   --fire: #bb4a28; --earth: #66732b; --air: #94781c; --water: #2a6a9e;
   --hub: #ece5d3; --houseband: rgba(60, 45, 10, 0.07);
   --on-gold: #fff;
+  --rowhover: #ece5d1; --rowsel: #e4dbc2; --badgebg: #ece4f6;
 }
 /* light + medium contrast: darker lines and inks for ageing eyes */
 :root.light.cmed {
@@ -58,9 +61,6 @@
 }
 /* light-mode replacements for hardcoded dark surfaces */
 :root.light header.app { background: linear-gradient(180deg, #efe9db, var(--bg)); }
-:root.light .aspectlist .row:hover, :root.light .dropdown button:hover,
-:root.light .saved .item:hover { background: #ece5d1; }
-:root.light .aspectlist .row.sel { background: #e4dbc2; }
 :root.light .orbbar { background: #e3dcc9; }
 :root.light .overlay { background: rgba(244, 240, 230, 0.97); }
 :root.light .banner { background: #f6e2e0; color: #a13030; border-color: #d8a5a0; }
@@ -113,7 +113,7 @@ header.app .brand .spacer { flex: 1; }
   color: var(--ink); padding: 7px 10px; font-size: 13.5px; text-transform: none;
   letter-spacing: normal;
 }
-.dropdown button:hover { background: #1c2340; }
+.dropdown button:hover { background: var(--rowhover); }
 .dropdown .cc { color: var(--dim); margin-left: 6px; font-size: 12px; }
 
 /* ---- layout ---- */
@@ -231,8 +231,8 @@ aside.app { flex: 0 0 372px; padding: 16px 20px 30px 6px; }
   border-radius: 6px; cursor: pointer; font-size: 14px; width: 100%;
   background: none; border: none; color: var(--ink); text-align: left;
 }
-.aspectlist .row:hover { background: #1c2340; }
-.aspectlist .row.sel { background: #232b4d; outline: 1px solid var(--gold-dim); }
+.aspectlist .row:hover { background: var(--rowhover); }
+.aspectlist .row.sel { background: var(--rowsel); outline: 1px solid var(--gold-dim); }
 .aspectlist .g { font-size: 16px; width: 20px; text-align: center; }
 .aspectlist .a { width: 22px; text-align: center; font-weight: 600; }
 .aspectlist .right { margin-left: auto; display: flex; align-items: center; gap: 7px; }
@@ -257,7 +257,7 @@ aside.app { flex: 0 0 372px; padding: 16px 20px 30px 6px; }
   padding: 8px; box-shadow: 0 8px 24px #0009;
 }
 .saved .item { display: flex; align-items: center; gap: 8px; padding: 5px 6px; border-radius: 6px; }
-.saved .item:hover { background: #1c2340; }
+.saved .item:hover { background: var(--rowhover); }
 .saved .item .who { flex: 1; min-width: 0; }
 .saved .item .who b { display: block; font-size: 13.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .saved .item .who span { color: var(--dim); font-size: 11.5px; }
