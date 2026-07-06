@@ -9,7 +9,7 @@
   } from '../chart/relate';
   import { contextReading, LANDMARKS } from '../interpret/contexts';
   import { BODY_NAME, fmtDegInSign, fmtOrb } from '../render/glyphs';
-  import { degDiff, type EphemerisProvider } from '../ephemeris/types';
+  import { degDiff, type BodyKey, type EphemerisProvider } from '../ephemeris/types';
   import type { StyleId } from '../interpret/types';
   import type { SavedChart } from '../store/db';
   import type { Selection } from './selection';
@@ -78,6 +78,12 @@
   let wheelSel = $state<Selection>({ kind: 'none' });
   let crossSel = $state<number | null>(null);
   let coupleSel = $state<{ list: 'A' | 'B' | 'C'; i: number } | null>(null);
+  /** Selected transiting (outer-ring) body — its transits stay lit. */
+  let outerSel = $state<BodyKey | null>(null);
+
+  /** House of a body within a given chart, for the aspect lists. */
+  const houseIn = (c: Chart) => (b: BodyKey) =>
+    c.positions.find(p => p.body === b)?.house;
 
   const natalSelAspect = $derived(wheelSel.kind === 'aspect'
     ? natal.aspects.find(a => `${a.a}|${a.def.name}|${a.b}` === wheelSel.key) ?? null
@@ -146,8 +152,10 @@
           <ExpandableWheel chart={natal} selection={wheelSel} {display} caption={captionYou}
             outer={outerBodies} outerColor="var(--transit)"
             crossAspects={crosses.slice(0, 30)} crossSelected={crossSel}
-            oncross={i => { crossSel = i; wheelSel = { kind: 'none' }; }}
-            onselect={s => { wheelSel = s; crossSel = null; }} />
+            oncross={i => { crossSel = i; wheelSel = { kind: 'none' }; outerSel = null; }}
+            onselect={s => { wheelSel = s; crossSel = null; outerSel = null; }}
+            outerSelected={outerSel}
+            onouter={b => { outerSel = outerSel === b ? null : b; crossSel = null; wheelSel = { kind: 'none' }; }} />
           <div class="hint" style="padding:2px 6px">Bi-wheel: your natal chart inside, the sky of {session.transitDate} outside (teal). Dashed lines are transits; solid hub lines are your natal aspects.</div>
         </div>
         <div class="listcol">
@@ -172,7 +180,7 @@
 
           <details open>
             <summary>Transits to your natal chart ({crosses.length})</summary>
-            <CrossAspectList items={crosses} aLabel="t" bLabel="natal"
+            <CrossAspectList items={crosses} aLabel="t" bLabel="natal" bHouse={houseIn(natal)}
               selectedIndex={crossSel} onselect={i => { crossSel = i; wheelSel = { kind: 'none' }; }} />
           </details>
           <details>
@@ -195,8 +203,10 @@
             outer={outerBodies} outerColor="var(--transit)"
             crossAspects={crossesC.slice(0, 30)}
             crossSelected={coupleSel?.list === 'C' ? coupleSel.i : null}
-            oncross={i => coupleSel = { list: 'C', i }}
-            onselect={() => {}} />
+            oncross={i => { coupleSel = { list: 'C', i }; outerSel = null; }}
+            onselect={() => {}}
+            outerSelected={outerSel}
+            onouter={b => { outerSel = outerSel === b ? null : b; coupleSel = null; }} />
           <div class="hint" style="padding:2px 6px">Bi-wheel: the couple's midpoint composite inside, the sky of {session.transitDate} outside (teal). Dashed lines are transits to the relationship itself.</div>
         </div>
         <div class="listcol">
@@ -228,19 +238,19 @@
 
           <details open>
             <summary>To the composite — the relationship itself ({crossesC.length})</summary>
-            <CrossAspectList items={crossesC} aLabel="t" bLabel="comp"
+            <CrossAspectList items={crossesC} aLabel="t" bLabel="comp" bHouse={houseIn(comp)}
               selectedIndex={coupleSel?.list === 'C' ? coupleSel.i : null}
               onselect={i => coupleSel = { list: 'C', i }} />
           </details>
           <details>
             <summary>To {meta.name || 'you'} ({crosses.length})</summary>
-            <CrossAspectList items={crosses} aLabel="t" bLabel="natal"
+            <CrossAspectList items={crosses} aLabel="t" bLabel="natal" bHouse={houseIn(natal)}
               selectedIndex={coupleSel?.list === 'A' ? coupleSel.i : null}
               onselect={i => coupleSel = { list: 'A', i }} />
           </details>
           <details>
             <summary>To {session.partner.name} ({crossesB.length})</summary>
-            <CrossAspectList items={crossesB} aLabel="t" bLabel="natal"
+            <CrossAspectList items={crossesB} aLabel="t" bLabel="natal" bHouse={houseIn(partnerChart)}
               selectedIndex={coupleSel?.list === 'B' ? coupleSel.i : null}
               onselect={i => coupleSel = { list: 'B', i }} />
           </details>
@@ -267,7 +277,7 @@
   .hint { color: var(--dim); font-size: 12.5px; }
   .landmarks { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 8px; }
   .badge {
-    background: #2a2440; color: var(--quincunx); border: 1px solid var(--quincunx);
+    background: var(--badgebg); color: var(--quincunx); border: 1px solid var(--quincunx);
     border-radius: 12px; padding: 3px 10px; font-size: 12px;
   }
   .split { display: flex; gap: 12px; align-items: flex-start; }

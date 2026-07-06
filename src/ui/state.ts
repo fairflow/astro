@@ -22,14 +22,15 @@ export interface DisplaySettings {
   slant: number;
   /** Colour theme. */
   theme: 'dark' | 'light';
-  /** High contrast — an independent axis, applies to either theme. */
-  hc: boolean;
+  /** Contrast level — independent of theme; 'high' is as strong as
+   *  possible while colours remain distinguishable. */
+  contrast: 'low' | 'medium' | 'high';
   /** Multiplies text sizes (wheel labels and reading panels). */
   textScale: number;
 }
 
 export const DEFAULT_DISPLAY: DisplaySettings = {
-  glyphScale: 1.25, weight: 7, slant: 0, theme: 'dark', hc: false, textScale: 1,
+  glyphScale: 1.25, weight: 7, slant: 0, theme: 'dark', contrast: 'low', textScale: 1,
 };
 
 const DISPLAY_KEY = 'astro-display';
@@ -38,19 +39,19 @@ export function loadDisplay(): DisplaySettings {
   try {
     const raw = localStorage.getItem(DISPLAY_KEY);
     if (raw) {
-      type Stored = Partial<Omit<DisplaySettings, 'theme'>>
-        & { contrast?: boolean; theme?: 'dark' | 'hc' | 'light' };
-      const saved = JSON.parse(raw) as Stored;
-      // migrate the old boolean high-contrast flag, then the interim 'hc' theme
-      if (saved.theme === undefined && saved.contrast !== undefined) {
-        saved.theme = saved.contrast ? 'hc' : 'dark';
-      }
-      delete saved.contrast;
-      if (saved.theme === 'hc') {
-        saved.theme = 'dark';
-        saved.hc = true;
-      }
-      return { ...DEFAULT_DISPLAY, ...(saved as Partial<DisplaySettings>) };
+      // migration chain: contrast boolean (v1) -> theme 'hc' (v2)
+      //   -> hc boolean (v3) -> contrast level string (v4, current)
+      type Stored = Partial<Omit<DisplaySettings, 'theme' | 'contrast'>> & {
+        contrast?: boolean | DisplaySettings['contrast'];
+        theme?: 'dark' | 'hc' | 'light';
+        hc?: boolean;
+      };
+      const { contrast: c, theme: t, hc, ...rest } = JSON.parse(raw) as Stored;
+      const contrast: DisplaySettings['contrast'] =
+        c === 'low' || c === 'medium' || c === 'high' ? c
+          : (c === true || t === 'hc' || hc === true) ? 'medium' : 'low';
+      const theme: DisplaySettings['theme'] = t === 'light' ? 'light' : 'dark';
+      return { ...DEFAULT_DISPLAY, ...(rest as Partial<DisplaySettings>), theme, contrast };
     }
   } catch { /* fresh defaults */ }
   return { ...DEFAULT_DISPLAY };

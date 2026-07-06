@@ -75,6 +75,11 @@
     ? partnerChart.positions.map(p => ({ body: p.body, lon: p.lon, retro: p.speed < 0 }))
     : []);
   let wheelSel = $state<import('./selection').Selection>({ kind: 'none' });
+  /** Selected outer-ring (partner) body — its inter-aspects stay lit. */
+  let outerSel = $state<import('../ephemeris/types').BodyKey | null>(null);
+
+  const houseIn = (c: Chart) => (b: import('../ephemeris/types').BodyKey) =>
+    c.positions.find(p => p.body === b)?.house;
 
   const caption = $derived(session.partner
     ? [
@@ -102,8 +107,10 @@
       <ExpandableWheel chart={natal} selection={wheelSel} {display} {caption}
         outer={outerBodies} outerColor="var(--syn)"
         crossAspects={crossForWheel.slice(0, 30)} crossSelected={sel}
-        oncross={i => { sel = i; wheelSel = { kind: 'none' }; }}
-        onselect={s => { wheelSel = s; sel = null; }} />
+        oncross={i => { sel = i; wheelSel = { kind: 'none' }; outerSel = null; }}
+        onselect={s => { wheelSel = s; sel = null; outerSel = null; }}
+        outerSelected={outerSel}
+        onouter={b => { outerSel = outerSel === b ? null : b; sel = null; wheelSel = { kind: 'none' }; }} />
       <div class="hint">Bi-wheel: your chart inside, {session.partner.name}'s bodies outside (violet). Dashed lines are inter-aspects — tap one for its reading.</div>
     </div>
     <div class="cols">
@@ -123,7 +130,8 @@
         <details open>
           <summary>Inter-aspects ({cross.length})</summary>
           <CrossAspectList items={cross} aLabel="your" bLabel="their"
-            selectedIndex={sel} onselect={i => sel = i} />
+            aHouse={houseIn(natal)} bHouse={partnerChart ? houseIn(partnerChart) : undefined}
+            selectedIndex={sel} onselect={i => { sel = i; outerSel = null; }} />
         </details>
         <details>
           <summary>House overlays — where their planets land in your houses</summary>

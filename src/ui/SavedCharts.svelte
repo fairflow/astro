@@ -63,6 +63,51 @@
     confirmDelete = null;
     await refresh();
   }
+
+  // Backup & portability: charts as a JSON file the user controls.
+  let fileInput = $state<HTMLInputElement | null>(null);
+
+  function exportCharts() {
+    const data = JSON.stringify(
+      { app: 'astrodynamics', version: 1, charts: charts.map(({ id: _, ...c }) => c) },
+      null, 2);
+    const url = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `astrodynamics-charts-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function importFile(e: Event) {
+    const input = e.target as HTMLInputElement;
+    const f = input.files?.[0];
+    input.value = '';
+    if (!f) return;
+    try {
+      const parsed = JSON.parse(await f.text());
+      const list = Array.isArray(parsed) ? parsed : parsed?.charts;
+      if (!Array.isArray(list)) throw new Error('no charts array');
+      let added = 0;
+      let skipped = 0;
+      for (const c of list) {
+        if (!c || typeof c.name !== 'string' || typeof c.date !== 'string'
+          || !c.place || typeof c.place.zone !== 'string') { skipped++; continue; }
+        const cand = {
+          name: c.name, date: c.date, time: c.time ?? '12:00',
+          accuracy: c.accuracy ?? 'unknown', place: c.place, notes: c.notes,
+        };
+        if (charts.some(x => samePerson(cand, x))) { skipped++; continue; }
+        await saveChart(cand);
+        added++;
+      }
+      await refresh();
+      flash = `Imported ${added} chart${added === 1 ? '' : 's'}${skipped ? ` (${skipped} skipped)` : ''}`;
+    } catch {
+      flash = 'Import failed — not an ASTRODYNAMICS charts file';
+    }
+    setTimeout(() => flash = '', 3500);
+  }
 </script>
 
 <div class="saved">
@@ -103,9 +148,17 @@
           {/if}
         </div>
       {/each}
+      <div class="tools">
+        <button title="Download all saved charts as a JSON file — your backup, and the way to move charts to another browser or device"
+          onclick={exportCharts} disabled={charts.length === 0}>Export…</button>
+        <button title="Add charts from a previously exported file (duplicates are skipped)"
+          onclick={() => fileInput?.click()}>Import…</button>
+        <input type="file" accept="application/json,.json" bind:this={fileInput}
+          onchange={importFile} style="display:none">
+      </div>
       <div class="fine">Saving stores birth data only; the wheel is recomputed on
-        load, so saved charts benefit from ephemeris improvements. Display
-        settings save automatically and separately.</div>
+        load, so saved charts benefit from ephemeris improvements. Charts live in
+        this browser's local database — Export makes a backup file you control.</div>
     </div>
   {/if}
 </div>
@@ -116,5 +169,11 @@
     border-radius: 6px; padding: 4px 8px; font-size: 12.5px; margin-bottom: 6px;
   }
   .danger { color: #ff8b8b !important; border-color: #7a4a4a !important; }
+  .tools { display: flex; gap: 6px; padding: 6px 4px 2px; }
+  .tools button {
+    background: none; border: 1px solid var(--gold-dim); color: var(--gold);
+    border-radius: 10px; padding: 3px 12px; font-size: 12px;
+  }
+  .tools button:disabled { opacity: 0.4; cursor: not-allowed; }
   .fine { color: var(--dim); font-size: 11px; line-height: 1.4; padding: 6px 6px 2px; }
 </style>

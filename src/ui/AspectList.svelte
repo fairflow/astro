@@ -27,9 +27,12 @@
       <span class="g"><Glyph body={a.a} size={17} /></span>
       <span class="a"><Glyph aspect={a.def.name} size={15} color={`var(${ASPECT_COLOR[a.def.name]})`} /></span>
       <span class="g"><Glyph body={a.b} size={17} /></span>
-      <span>{BODY_NAME[a.a]} <i class="hn">H{house(a.a)}</i> – {BODY_NAME[a.b]} <i class="hn">H{house(a.b)}</i></span>
-      <span class="as">{a.applying ? 'a' : 's'}</span>
-      <span class="orb">{fmtOrb(a.orb)}</span>
+      <span>{BODY_NAME[a.a]} – {BODY_NAME[a.b]}</span>
+      <span class="right">
+        <i class="hn">H{house(a.a)}·H{house(a.b)}</i>
+        <span class="as">{a.applying ? 'a' : 's'}</span>
+        <span class="orb">{fmtOrb(a.orb)}</span>
+      </span>
     </button>
   {/each}
 </div>
