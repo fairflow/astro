@@ -29,8 +29,9 @@
       </div>
       <div class="themes">
         <span class="tlabel">Contrast</span>
-        <button class:on={!display.hc} onclick={() => display.hc = false}>Normal</button>
-        <button class:on={display.hc} onclick={() => display.hc = true}>High</button>
+        <button class:on={display.contrast === 'low'} onclick={() => display.contrast = 'low'}>Low</button>
+        <button class:on={display.contrast === 'medium'} onclick={() => display.contrast = 'medium'}>Medium</button>
+        <button class:on={display.contrast === 'high'} onclick={() => display.contrast = 'high'}>High</button>
       </div>
       <button class="printbtn" onclick={() => { printOpen = true; open = false; }}>Print chart…</button>
       <div class="note">Settings save automatically in this browser and are used as your defaults.</div>

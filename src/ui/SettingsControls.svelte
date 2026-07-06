@@ -23,7 +23,15 @@
     <div class="menu">
       <h3>Bodies in charts & readings</h3>
       {#each BODY_GROUPS as g (g.label)}
-        <div class="group">{g.label}</div>
+        {@const unlocked = g.bodies.filter(b => !LOCKED_BODIES.includes(b))}
+        {@const allOn = unlocked.every(b => prefs.bodies[b])}
+        {@const someOn = unlocked.some(b => prefs.bodies[b])}
+        <label class="group">
+          <input type="checkbox" checked={allOn} indeterminate={someOn && !allOn}
+            title={`Toggle the whole “${g.label}” group`}
+            onchange={() => { for (const b of unlocked) prefs.bodies[b] = !allOn; }}>
+          {g.label}
+        </label>
         <div class="grid">
           {#each g.bodies as b (b)}
             <label class:locked={LOCKED_BODIES.includes(b)}
@@ -73,7 +81,10 @@
     font-family: -apple-system, sans-serif;
   }
   h3:first-child { margin-top: 0; }
-  .group { color: var(--dim); font-size: 11px; margin: 6px 0 2px; }
+  .group {
+    color: var(--gold); font-size: 13.5px; font-weight: 600;
+    margin: 8px 0 3px; display: flex; align-items: center; gap: 7px;
+  }
   .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 10px; }
   label {
     display: flex; align-items: center; gap: 6px; font-size: 13px;

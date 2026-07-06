@@ -16,6 +16,7 @@
   import { chartSnapshot } from '../interpret/snapshot';
   import { loadTexts } from '../interpret/textstore';
   import SynastryView from './SynastryView.svelte';
+  import { session, storeSession } from './session.svelte';
   import CompositeView from './CompositeView.svelte';
   import { STYLES, type StyleId } from '../interpret/types';
   import { fetchPacks, PACK_BODIES } from '../ephemeris/packs';
@@ -81,11 +82,37 @@
   $effect(() => localStorage.setItem('astro-style', styleId));
 
   $effect(() => storeDisplay($state.snapshot(display)));
+  $effect(() => storeSession($state.snapshot(session)));
   $effect(() => {
-    document.documentElement.classList.toggle('hc', display.hc);
+    document.documentElement.classList.toggle('cmed', display.contrast === 'medium');
+    document.documentElement.classList.toggle('chigh', display.contrast === 'high');
     document.documentElement.classList.toggle('light', display.theme === 'light');
     document.documentElement.style.setProperty('--ts', String(display.textScale));
   });
+
+  // Working state survives refresh: remember the last-cast birth data.
+  const FORM_KEY = 'astro-last-cast';
+  $effect(() => {
+    if (!current) return;
+    try {
+      localStorage.setItem(FORM_KEY, JSON.stringify($state.snapshot(current.meta)));
+    } catch { /* private mode */ }
+  });
+
+  function restoreLastCast() {
+    try {
+      const raw = localStorage.getItem(FORM_KEY);
+      if (!raw) return;
+      const m = JSON.parse(raw) as ChartMeta;
+      if (!m.place || !m.date) return;
+      form.name = m.name;
+      form.date = m.date;
+      form.time = m.time;
+      form.accuracy = m.accuracy;
+      form.place = m.place;
+      cast();
+    } catch { /* ignore corrupt state */ }
+  }
 
   const provider = $derived(defaultProvider(packs));
   const chart = $derived(current
@@ -97,6 +124,9 @@
     : null);
 
   onMount(async () => {
+    // ask the browser to exempt our IndexedDB/localStorage from eviction
+    navigator.storage?.persist?.().catch(() => {});
+    restoreLastCast();
     try {
       const [p, g] = await Promise.all([fetchPacks(), fetchGazetteer(), loadTexts()]);
       packs = p;

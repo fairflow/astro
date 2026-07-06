@@ -7,7 +7,7 @@
   import type { Selection } from './selection';
   import type { DisplaySettings } from './state';
 
-  let { chart, selection, display, onselect, outer, outerColor = 'var(--transit)', crossAspects, crossSelected = null, oncross }: {
+  let { chart, selection, display, onselect, outer, outerColor = 'var(--transit)', crossAspects, crossSelected = null, oncross, outerSelected = null, onouter }: {
     chart: Chart;
     selection: Selection;
     display: DisplaySettings;
@@ -18,13 +18,17 @@
     crossAspects?: import('../render/wheel').CrossLike[];
     crossSelected?: number | null;
     oncross?: (i: number) => void;
+    /** Selected outer-ring body: its cross aspects stay lit. */
+    outerSelected?: BodyKey | null;
+    onouter?: (b: BodyKey) => void;
   } = $props();
+
+  const FLOOR = { low: 0.25, medium: 0.45, high: 0.62 };
+  const FLOOR_LIGHT = { low: 0.35, medium: 0.55, high: 0.72 };
 
   const geom = $derived(wheelGeometry(chart, {
     glyphScale: display.glyphScale,
-    opacityFloor: display.hc
-      ? (display.theme === 'light' ? 0.55 : 0.45)
-      : (display.theme === 'light' ? 0.35 : 0.25),
+    opacityFloor: (display.theme === 'light' ? FLOOR_LIGHT : FLOOR)[display.contrast],
     outer,
     crossAspects,
   }));
@@ -54,6 +58,9 @@
       const x = crossAspects[crossSelected];
       return x ? x.b !== body : false;
     }
+    if (outerSelected !== null && crossAspects) {
+      return !crossAspects.some(x => x.a === outerSelected && x.b === body);
+    }
     if (selection.kind === 'aspect') {
       const sel = geom.aspects.find(x => x.key === selection.key);
       return sel ? sel.aspect.a !== body && sel.aspect.b !== body : false;
@@ -64,7 +71,23 @@
   }
 
   function crossDimmed(i: number): boolean {
-    return crossSelected !== null && crossSelected !== i;
+    if (crossSelected !== null) return crossSelected !== i;
+    const x = crossAspects?.[i];
+    if (!x) return false;
+    if (outerSelected !== null) return x.a !== outerSelected;
+    if (selection.kind === 'body') return x.b !== selection.body;
+    if (selection.kind === 'house') return !inSelectedHouse(x.b);
+    if (selection.kind === 'sign') return !inSelectedSign(x.b);
+    return false;
+  }
+
+  function outerDimmed(body: BodyKey): boolean {
+    return outerSelected !== null && outerSelected !== body;
+  }
+
+  /** The selected planet's aspects get widened hit areas (esp. conjunctions). */
+  function aspectFocused(a: BodyKey, b: BodyKey): boolean {
+    return selection.kind === 'body' && (a === selection.body || b === selection.body);
   }
 </script>
 
@@ -109,18 +132,6 @@
       font-size={10.5 * display.textScale} fill="var(--ink)" opacity="0.9">{c.degText}</text>
   {/each}
   <circle cx={geom.cx} cy={geom.cy} r={geom.rHub} fill="var(--hub, #10162a)" stroke="var(--line)" />
-  <!-- house numerals sit on top of the hub disc; clicking one lights its tenants -->
-  {#each geom.cusps as c}
-    <g class="househit" role="button" tabindex="0" aria-label={`house ${c.num}`}
-      class:selhouse={selection.kind === 'house' && selection.num === c.num}
-      onclick={() => onselect({ kind: 'house', num: c.num })}
-      onkeydown={e => e.key === 'Enter' && onselect({ kind: 'house', num: c.num })}>
-      <circle cx={c.numPos.x} cy={c.numPos.y} r={11 * Math.min(display.textScale, 1.3)}
-        fill="var(--bg2)" stroke="var(--gold-dim)" stroke-width="1" opacity="0.92" />
-      <text x={c.numPos.x} y={c.numPos.y} text-anchor="middle" dominant-baseline="central"
-        font-size={14.5 * display.textScale} fill="var(--gold)" opacity="0.95">{c.num}</text>
-    </g>
-  {/each}
 
   <!-- aspects -->
   {#each geom.aspects as a (a.key)}
@@ -135,7 +146,8 @@
       <line x1={a.from.x} y1={a.from.y} x2={a.to.x} y2={a.to.y}
         stroke={`var(${a.colorVar})`} stroke-width={a.width} opacity={a.opacity}
         stroke-dasharray={a.dashed ? '5 4' : undefined} />
-      <line class="aspect-hit" x1={a.from.x} y1={a.from.y} x2={a.to.x} y2={a.to.y} />
+      <line class="aspect-hit" class:big={aspectFocused(a.aspect.a, a.aspect.b)}
+        x1={a.from.x} y1={a.from.y} x2={a.to.x} y2={a.to.y} />
     </g>
   {/each}
 
@@ -183,25 +195,46 @@
     {/each}
   {/if}
 
-  <!-- bi-wheel: outer ring -->
+  <!-- bi-wheel: outer ring (glyphs clickable: light up that body's cross aspects) -->
   {#if geom.outer.length}
     <circle cx={geom.cx} cy={geom.cy} r={geom.rZodiacOuter + 8} fill="none"
       stroke={outerColor} opacity="0.35" />
     {#each geom.outer as o (o.body)}
       <line x1={o.tickFrom.x} y1={o.tickFrom.y} x2={o.tickTo.x} y2={o.tickTo.y}
         stroke={outerColor} stroke-width="1.5" />
-      <use
-        href={`#${bodyGlyphId(o.body)}`}
-        x={o.pos.x - geom.outerGlyphPx / 2} y={o.pos.y - geom.outerGlyphPx / 2}
-        width={geom.outerGlyphPx} height={geom.outerGlyphPx}
-        color={outerColor}
-      />
-      {#if o.retro}
-        <text x={o.pos.x + geom.outerGlyphPx / 2 + 2} y={o.pos.y - geom.outerGlyphPx / 2 + 2}
-          text-anchor="middle" font-size={8 + 2 * display.glyphScale} fill={outerColor}>℞</text>
-      {/if}
+      <g class="outerhit" class:dimmed={outerDimmed(o.body)}
+        class:selouter={outerSelected === o.body}
+        role="button" tabindex="0" aria-label={`outer ${o.body}`}
+        onclick={() => onouter?.(o.body)}
+        onkeydown={e => e.key === 'Enter' && onouter?.(o.body)}>
+        <circle cx={o.pos.x} cy={o.pos.y} r={geom.outerGlyphPx * 0.72} fill="transparent" />
+        <use
+          href={`#${bodyGlyphId(o.body)}`}
+          x={o.pos.x - geom.outerGlyphPx / 2} y={o.pos.y - geom.outerGlyphPx / 2}
+          width={geom.outerGlyphPx} height={geom.outerGlyphPx}
+          color={outerColor}
+        />
+        {#if o.retro}
+          <text x={o.pos.x + geom.outerGlyphPx / 2 + 2} y={o.pos.y - geom.outerGlyphPx / 2 + 2}
+            text-anchor="middle" font-size={8 + 2 * display.glyphScale} fill={outerColor}>℞</text>
+        {/if}
+      </g>
     {/each}
   {/if}
+
+  <!-- house numerals paint LAST so their discs are clickable above the
+       aspect lines radiating through an inhabited house -->
+  {#each geom.cusps as c}
+    <g class="househit" role="button" tabindex="0" aria-label={`house ${c.num}`}
+      class:selhouse={selection.kind === 'house' && selection.num === c.num}
+      onclick={() => onselect({ kind: 'house', num: c.num })}
+      onkeydown={e => e.key === 'Enter' && onselect({ kind: 'house', num: c.num })}>
+      <circle cx={c.numPos.x} cy={c.numPos.y} r={11 * Math.min(display.textScale, 1.3)}
+        fill="var(--bg2)" stroke="var(--gold-dim)" stroke-width="1" opacity="0.92" />
+      <text x={c.numPos.x} y={c.numPos.y} text-anchor="middle" dominant-baseline="central"
+        font-size={14.5 * display.textScale} fill="var(--gold)" opacity="0.95">{c.num}</text>
+    </g>
+  {/each}
 
   <text x="14" y="16" class="serif" font-size={12 * display.textScale} fill="var(--dim)">
     {chart.houses.polarFallback ? 'Porphyry (polar fallback)' : 'Placidus'} · Tropical{geom.outer.length ? ' · outer ring: second chart' : ''}

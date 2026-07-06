@@ -169,6 +169,34 @@ updated at the end of each working session.
   freshly-stamped "cast <date time>" line; transits add the sky date,
   synastry/composite name both people with their birth data.
 
+## 2026-07-06 afternoon (persistence + UX batch)
+
+- Persistence: last-cast birth data + session (partner, transit
+  date/target) survive refresh via localStorage — the app re-casts on
+  load; `navigator.storage.persist()` requested (eviction protection);
+  Export…/Import… buttons in the Saved menu write/read a JSON backup
+  file (duplicates skipped on import) — the cross-browser/device path.
+  Saved charts were already permanent (IndexedDB via Dexie).
+- Contrast now three levels (Low/Medium/High) × theme: root classes
+  cmed/chigh; new dark-high and light-high palettes (light-high =
+  near-black hued lines, ink #000); per-level aspect opacity floors;
+  storage migration chain v1 contrast-bool → v2 theme:'hc' → v3
+  hc-bool → v4 contrast level.
+- Aspect pick UX: selecting a planet widens ITS aspects' hit strokes
+  to 30px (round caps; dimmed aspects shrink to 7px) — conjunctions
+  clickable at last; house numerals painted last so their discs sit
+  above radiating aspect lines (inhabited-house clicks no longer
+  steal); outer-ring (transit/partner) glyphs clickable — lights that
+  body's cross aspects and the natal bodies it touches (wired in
+  Transits both wheels + Synastry); cross lines also dim to match
+  body/house/sign selection.
+- Lists: natal aspect list gains H-column (H1·H10) before orb;
+  CrossAspectList gains aHouse/bHouse lookups (synastry both sides,
+  transits natal side).
+- Settings flyout: group headers larger (gold, 13.5px) each with a
+  tri-state group checkbox (all/none/indeterminate; Sun/Moon stay
+  locked).
+
 ## How to resume
 
 ```bash

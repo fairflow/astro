@@ -9,12 +9,22 @@
   /* text on gold-filled buttons: dark on light gold, white on dark gold */
   --on-gold: #12182b;
 }
-:root.hc {
+:root.cmed {
   --bg: #04060c; --bg2: #0b1120; --panel: #0e152a; --line: #45507c;
   --ink: #f7f4ea; --dim: #c6cbdc; --gold: #eac67e; --gold-dim: #b0965e;
   --trine: #6fb3ff; --sextile: #5ee3a6; --square: #ff6b6b; --opp: #ff8b5e;
   --quincunx: #cbb8ff; --hub: #070b16;
   --houseband: rgba(255, 255, 255, 0.07);
+}
+/* dark + high: as strong as possible while colours stay tellable-apart */
+:root.chigh {
+  --bg: #000000; --bg2: #0a0f1e; --panel: #0b1124; --line: #6273b3;
+  --ink: #ffffff; --dim: #dfe3f0; --gold: #ffd98f; --gold-dim: #cfa963;
+  --trine: #8ec4ff; --sextile: #6dffb8; --square: #ff7a7a; --opp: #ffa170;
+  --conj: #ffd98f; --quincunx: #dcccff;
+  --transit: #7ff0ea; --syn: #ff9df5;
+  --fire: #ff9d7e; --earth: #cdd97e; --air: #ffe08a; --water: #92c6f5;
+  --hub: #04070f; --houseband: rgba(255, 255, 255, 0.11);
 }
 :root.light {
   --bg: #f4f0e6; --bg2: #fbf8f1; --panel: #ffffff; --line: #c9c0aa;
@@ -26,8 +36,8 @@
   --hub: #ece5d3; --houseband: rgba(60, 45, 10, 0.07);
   --on-gold: #fff;
 }
-/* light + high contrast: much darker lines and inks for ageing eyes */
-:root.light.hc {
+/* light + medium contrast: darker lines and inks for ageing eyes */
+:root.light.cmed {
   --bg: #f7f3e9; --bg2: #fffdf7; --panel: #ffffff; --line: #7d7357;
   --ink: #14100a; --dim: #453f30; --gold: #6b5115; --gold-dim: #7d652f;
   --trine: #10437f; --sextile: #0a563a; --square: #8f1c1c; --opp: #883d0b;
@@ -35,6 +45,16 @@
   --transit: #075853; --syn: #722a6d;
   --fire: #8f351a; --earth: #47521d; --air: #64500e; --water: #1a4d75;
   --hub: #e9e0c9; --houseband: rgba(50, 38, 8, 0.12);
+}
+/* light + high: near-black hued lines — maximum contrast short of pure B/W */
+:root.light.chigh {
+  --bg: #fbf8ef; --bg2: #ffffff; --panel: #ffffff; --line: #4a4430;
+  --ink: #000000; --dim: #2e2a1e; --gold: #4f3c0b; --gold-dim: #5f4d1e;
+  --trine: #082e5c; --sextile: #003d27; --square: #6e0f0f; --opp: #5f2a06;
+  --conj: #4f3c0b; --quincunx: #33235f;
+  --transit: #003f3b; --syn: #551f52;
+  --fire: #6e2812; --earth: #333d13; --air: #4a3a08; --water: #123a59;
+  --hub: #eee5cc; --houseband: rgba(40, 30, 6, 0.16);
 }
 /* light-mode replacements for hardcoded dark surfaces */
 :root.light header.app { background: linear-gradient(180deg, #efe9db, var(--bg)); }
@@ -215,7 +235,8 @@ aside.app { flex: 0 0 372px; padding: 16px 20px 30px 6px; }
 .aspectlist .row.sel { background: #232b4d; outline: 1px solid var(--gold-dim); }
 .aspectlist .g { font-size: 16px; width: 20px; text-align: center; }
 .aspectlist .a { width: 22px; text-align: center; font-weight: 600; }
-.aspectlist .orb { margin-left: auto; color: var(--dim); font-size: 12px; font-variant-numeric: tabular-nums; }
+.aspectlist .right { margin-left: auto; display: flex; align-items: center; gap: 7px; }
+.aspectlist .orb { color: var(--dim); font-size: 12px; font-variant-numeric: tabular-nums; }
 .aspectlist .as { color: var(--dim); font-size: 11px; width: 12px; }
 .legend { display: flex; align-items: center; gap: 10px; margin-top: 14px; color: var(--dim); font-size: 11.5px; }
 .legend .ramp {
@@ -254,7 +275,6 @@ aside.app { flex: 0 0 372px; padding: 16px 20px 30px 6px; }
 .househit { cursor: pointer; }
 .househit.selhouse circle { stroke: var(--gold); stroke-width: 2; opacity: 1; }
 .househit.selhouse text { fill: var(--ink); }
-:root.hc { --houseband: rgba(255, 255, 255, 0.05); }
 .panel .stylenote {
   font-size: 10.5px; text-transform: uppercase; letter-spacing: .1em;
   color: var(--gold-dim); margin-bottom: 3px;
@@ -283,7 +303,13 @@ header.app .copyai {
   border-radius: 14px; padding: 5px 12px; font-size: 12.5px;
 }
 header.app .copyai:hover { border-color: var(--sextile); }
-.aspect-hit { stroke: transparent; stroke-width: 13; fill: none; }
+.aspect-hit { stroke: transparent; stroke-width: 13; fill: none; stroke-linecap: round; }
+/* selecting a planet widens the hit area of ITS aspects (conjunctions
+   especially are near-impossible to click otherwise) and shrinks the rest */
+.aspect-hit.big { stroke-width: 30; }
+.aspect-line.dimmed .aspect-hit { stroke-width: 7; }
+.outerhit { cursor: pointer; }
+.outerhit.selouter circle { stroke: var(--gold); stroke-width: 1.5; fill: rgba(212, 175, 106, 0.10); }
 .planet { cursor: pointer; }
 .dimmed { opacity: .12 !important; transition: opacity .25s; }
 svg text { user-select: none; }
