@@ -59,17 +59,20 @@ export function signIndex(lon: number): number {
 
 /** "17°30′ ♓ Pisces" */
 export function fmtDegInSign(lon: number): string {
-  const l = normDeg(lon);
-  const s = signIndex(l);
-  const within = l - s * 30;
-  const d = Math.floor(within);
-  const m = Math.round((within - d) * 60);
+  // round to whole arc-minutes first so 23°59.6′ carries to 24°00′ (never x°60′),
+  // rolling into the next sign (or past 360°) when the boundary is crossed
+  const totalMin = Math.round(normDeg(lon) * 60) % (360 * 60);
+  const s = Math.floor(totalMin / (30 * 60));
+  const within = totalMin - s * 30 * 60;
+  const d = Math.floor(within / 60);
+  const m = within % 60;
   return `${d}°${String(m).padStart(2, '0')}′ ${SIGN_GLYPHS[s]}${VS} ${SIGN_NAMES[s]}`;
 }
 
 /** "5°03′" */
 export function fmtOrb(orb: number): string {
-  const d = Math.floor(orb);
-  const m = Math.round((orb - d) * 60);
+  const totalMin = Math.round(orb * 60);
+  const d = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
   return `${d}°${String(m).padStart(2, '0')}′`;
 }

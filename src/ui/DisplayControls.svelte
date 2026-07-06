@@ -22,9 +22,12 @@
       <label>Text size <span>{Math.round(display.textScale * 100)}%</span>
         <input type="range" min="0.85" max="1.6" step="0.05" bind:value={display.textScale}>
       </label>
-      <label class="check">
-        <input type="checkbox" bind:checked={display.contrast}> High contrast
-      </label>
+      <div class="themes">
+        <span class="tlabel">Theme</span>
+        <button class:on={display.theme === 'dark'} onclick={() => display.theme = 'dark'}>Dark</button>
+        <button class:on={display.theme === 'hc'} onclick={() => display.theme = 'hc'}>High contrast</button>
+        <button class:on={display.theme === 'light'} onclick={() => display.theme = 'light'}>Light</button>
+      </div>
       <button class="printbtn" onclick={() => { printOpen = true; open = false; }}>Print chart…</button>
       <div class="note">Settings save automatically in this browser and are used as your defaults.</div>
     </div>
@@ -37,7 +40,8 @@
     <h2>Printing — planned, not built yet</h2>
     <p>The print pipeline will switch the chart to a <b>black-on-white</b> skin,
     show a preview, and warn when large dark areas would be printed. Until then,
-    browser printing of the current dark theme will waste ink and lose contrast.</p>
+    browser printing of the dark theme will waste ink — switch Theme to Light
+    first if you must print today.</p>
     <p class="fine">Tracked as <a href="https://github.com/fairflow/astro/issues/4" target="_blank" rel="noreferrer">issue #4</a>.</p>
     <button onclick={() => printOpen = false}>Close</button>
   </div>
@@ -57,7 +61,13 @@
   }
   label { font-size: 12px; color: var(--dim); display: flex; flex-direction: column; gap: 4px; }
   label span { color: var(--ink); float: right; }
-  label.check { flex-direction: row; align-items: center; gap: 8px; }
+  .themes { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
+  .tlabel { font-size: 12px; color: var(--dim); margin-right: 2px; }
+  .themes button {
+    background: var(--bg2); color: var(--dim); border: 1px solid var(--line);
+    border-radius: 10px; padding: 3px 9px; font-size: 11.5px;
+  }
+  .themes button.on { color: #12182b; background: var(--gold); border-color: var(--gold); font-weight: 600; }
   .printbtn {
     background: none; border: 1px solid var(--gold-dim); color: var(--gold);
     border-radius: 12px; padding: 5px 12px; font-size: 12.5px; align-self: flex-start;

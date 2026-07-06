@@ -5,13 +5,34 @@
   --conj: #d4af6a; --quincunx: #b7a5e0;
   --transit: #5fd4d0; --syn: #d98fd4;
   --fire: #e07a5f; --earth: #a8b168; --air: #e6c86e; --water: #6fa8dc;
+  --houseband: rgba(255, 255, 255, 0.045);
 }
 :root.hc {
   --bg: #04060c; --bg2: #0b1120; --panel: #0e152a; --line: #45507c;
   --ink: #f7f4ea; --dim: #c6cbdc; --gold: #eac67e; --gold-dim: #b0965e;
   --trine: #6fb3ff; --sextile: #5ee3a6; --square: #ff6b6b; --opp: #ff8b5e;
   --quincunx: #cbb8ff; --hub: #070b16;
+  --houseband: rgba(255, 255, 255, 0.07);
 }
+:root.light {
+  --bg: #f4f0e6; --bg2: #fbf8f1; --panel: #ffffff; --line: #c9c0aa;
+  --ink: #2c2820; --dim: #6d6656; --gold: #8f6f2f; --gold-dim: #b39a63;
+  --trine: #2160b8; --sextile: #187a55; --square: #bd2f2f; --opp: #b85618;
+  --conj: #8f6f2f; --quincunx: #6d4fb8;
+  --transit: #0d7f7a; --syn: #9c3f96;
+  --fire: #bb4a28; --earth: #66732b; --air: #94781c; --water: #2a6a9e;
+  --hub: #ece5d3; --houseband: rgba(60, 45, 10, 0.07);
+}
+/* light-mode replacements for hardcoded dark surfaces */
+:root.light header.app { background: linear-gradient(180deg, #efe9db, var(--bg)); }
+:root.light .aspectlist .row:hover, :root.light .dropdown button:hover,
+:root.light .saved .item:hover { background: #ece5d1; }
+:root.light .aspectlist .row.sel { background: #e4dbc2; }
+:root.light .orbbar { background: #e3dcc9; }
+:root.light .overlay { background: rgba(244, 240, 230, 0.97); }
+:root.light .stylepick button.on, :root.light .modetabs > button.on { color: #fff; }
+:root.light .form .go { color: #fff; }
+:root.light .banner { background: #f6e2e0; color: #a13030; border-color: #d8a5a0; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 body {
   background: var(--bg); color: var(--ink);

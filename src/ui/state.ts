@@ -20,14 +20,14 @@ export interface DisplaySettings {
   weight: number;
   /** Glyph slant (italic) in degrees. */
   slant: number;
-  /** High-contrast theme. */
-  contrast: boolean;
+  /** Colour theme. */
+  theme: 'dark' | 'hc' | 'light';
   /** Multiplies text sizes (wheel labels and reading panels). */
   textScale: number;
 }
 
 export const DEFAULT_DISPLAY: DisplaySettings = {
-  glyphScale: 1.25, weight: 7, slant: 0, contrast: false, textScale: 1,
+  glyphScale: 1.25, weight: 7, slant: 0, theme: 'dark', textScale: 1,
 };
 
 const DISPLAY_KEY = 'astro-display';
@@ -35,7 +35,15 @@ const DISPLAY_KEY = 'astro-display';
 export function loadDisplay(): DisplaySettings {
   try {
     const raw = localStorage.getItem(DISPLAY_KEY);
-    if (raw) return { ...DEFAULT_DISPLAY, ...JSON.parse(raw) as Partial<DisplaySettings> };
+    if (raw) {
+      const saved = JSON.parse(raw) as Partial<DisplaySettings> & { contrast?: boolean };
+      // migrate the old boolean high-contrast flag to the theme field
+      if (saved.theme === undefined && saved.contrast !== undefined) {
+        saved.theme = saved.contrast ? 'hc' : 'dark';
+      }
+      delete saved.contrast;
+      return { ...DEFAULT_DISPLAY, ...saved };
+    }
   } catch { /* fresh defaults */ }
   return { ...DEFAULT_DISPLAY };
 }

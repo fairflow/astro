@@ -115,6 +115,29 @@ updated at the end of each working session.
   active, second visit fully cached (JS/CSS/packs/gazetteer/texts) —
   installable, offline from second visit.
 
+## Later on 2026-07-06 (usability + themes)
+
+- Usability trio (commit 6d3709c): cross-tab session persistence
+  (`ui/session.svelte.ts` — partner + transit date/time/target survive
+  mode switches); Settings flyout (`ui/prefs.svelte.ts` +
+  `SettingsControls.svelte` — body groups Inner/Outer/Minors with
+  Sun/Moon locked, aspect toggles e.g. drop quincunx, applied through
+  every compute path incl. transits/synastry/composite; dossiers
+  degrade gracefully when a body is off); edit saved people in place
+  (`updateChart` + Update/Save-new buttons with dirty detection).
+- House prominence + themes: house numerals now drawn on gold-ringed
+  discs on top of the hub circle (they were painted underneath it);
+  cusp degree labels on the wheel; intermediate cusp lines heavier
+  (gold-dim 1.3/0.8); `--houseband` alternating fills. Theme picker
+  (Dark / High contrast / Light) replaces the high-contrast checkbox —
+  `display.theme` with localStorage migration from the old `contrast`
+  boolean; `:root.light` palette in app.css (parchment bg, darker
+  aspect colours, light hub/bands).
+- Bug fix: degree-minute formatting carried wrongly at rounding
+  boundaries — ASC showed `23°60′`. `fmtDegInSign`/`fmtOrb` now round
+  total arc-minutes first (24°00′, rolls sign/360° correctly);
+  regression tests in `test/format.spec.ts`. 157 tests green.
+
 ## How to resume
 
 ```bash
