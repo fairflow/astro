@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { pairText } from '../src/interpret/templates.js';
-import { LIBRARY } from '../src/interpret/library.js';
-import { BODY_INTRO } from '../src/interpret/bodyintro.js';
+import { getBodyIntros, getNatalLibrary } from '../src/interpret/textstore.js';
 import { STYLES } from '../src/interpret/types.js';
 import type { AspectClass } from '../src/chart/aspects.js';
 import type { BodyKey } from '../src/ephemeris/types.js';
@@ -50,7 +49,7 @@ describe('styles are genuinely distinct', () => {
   });
 
   it('authored library entries share no sentence between styles', () => {
-    for (const [key, entry] of Object.entries(LIBRARY)) {
+    for (const [key, entry] of Object.entries(getNatalLibrary())) {
       for (const [klass, texts] of Object.entries(entry)) {
         assertDistinct(STYLES.map(s => texts[s.id]), `${key} ${klass}`);
       }
@@ -59,8 +58,9 @@ describe('styles are genuinely distinct', () => {
 
   it('body introductions exist for every body and differ by style', () => {
     for (const b of BODIES) {
-      const intro = BODY_INTRO[b];
+      const intro = getBodyIntros()[b];
       expect(intro, b).toBeDefined();
+      if (!intro) continue;
       assertDistinct(STYLES.map(s => intro[s.id]), `intro ${b}`);
       // minimal style is legitimately terse; others should have substance
       for (const s of STYLES) {

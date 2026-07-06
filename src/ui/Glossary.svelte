@@ -1,12 +1,22 @@
 <script lang="ts">
-  import { GLOSSARY } from '../interpret/glossary';
+  import { onMount } from 'svelte';
+  import {
+    getGlossary, loadTexts, type GlossaryEntry,
+  } from '../interpret/textstore';
 
   let query = $state('');
+  let items = $state<GlossaryEntry[]>(getGlossary());
+
+  onMount(async () => {
+    await loadTexts();
+    items = getGlossary();
+  });
+
   const shown = $derived(query.trim().length >= 2
-    ? GLOSSARY.filter(g =>
+    ? items.filter(g =>
         g.term.toLowerCase().includes(query.toLowerCase())
         || g.text.toLowerCase().includes(query.toLowerCase()))
-    : GLOSSARY);
+    : items);
 </script>
 
 <div class="glossary">

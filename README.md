@@ -1,56 +1,56 @@
-# Astro
+# Astrodynamics
 
-A personal astrology application: accurate offline chart calculation (planets,
-Pluto, Chiron, Ceres, Pallas, Juno, Vesta, Eris), interactive SVG chart wheels,
-Placidus houses, synastry & transits, locally saved charts, and psychological
-interpretations in four switchable styles (Jungian, Mundane, Energy-patterns,
-Minimalist).
+A local-first astrology application: accurate offline chart calculation
+(planets, Pluto, Chiron, Ceres, Pallas, Juno, Vesta, Eris), interactive SVG
+chart wheels and bi-wheels, Placidus houses, transits, synastry, midpoint
+composites, locally saved charts, and psychological interpretations in four
+switchable styles (Psychological, Mundane, Energy, Minimal) with plain-language
+glossary, conversation markers, and AI-snapshot export. Installable as a PWA;
+fully offline after the second visit. No server, no accounts — nothing leaves
+the device.
 
-**Status: M1 (compute core) done** — ephemeris providers, asteroid Chebyshev
-packs, Placidus houses, aspects; 111 golden tests green. UI next (M2).
-
-- 📄 **[Design proposal](docs/DESIGN.md)** — platform review (web / iPadOS /
-  Android), ephemeris & licensing strategy, graphics, interpretation engine
-  with aspect-combination logic, themes, architecture, milestones.
-- 🎡 **[Interactive mock-up](mockup/chart.html)** — chart wheel demonstrator
-  with live aspect detection, orb→opacity shading, clickable aspects/planets,
-  style-switchable sample interpretations, and a transit overlay.
-
-## Viewing the mock-up locally
-
-No build step; any static server works:
-
-```bash
-python3 -m http.server 8321
-# then open http://localhost:8321/mockup/chart.html
-```
-
-(Or simply open `mockup/chart.html` directly in a browser — it has no external
-dependencies.)
+**Status: M1–M4 built (branch `m4-draft`); interpretation content pipeline
+(stage 1c) is next.** See `docs/BUILDLOG.md` for the session-by-session state,
+`docs/DESIGN.md` for the design of record, and
+`docs/reports/2026-07-05-implementation-and-deployment.md` for the stack
+explained, licences and deployment options.
 
 ## Development
 
 ```bash
-npm install          # TS deps (astronomy-engine, vitest, typescript)
-npm test             # golden tests: planets/houses vs Swiss Ephemeris,
-                     # asteroid packs vs held-out JPL Horizons samples
+npm install
+npm test             # golden tests vs Swiss Ephemeris + held-out JPL Horizons
 npm run typecheck
+npm run dev          # dev server on :8322
+npm run build        # deployable static dist/ (~3.8 MB incl. all data)
+npm run preview      # serve dist/ (service worker active here, not in dev)
 
 # Python tooling (one-off / regeneration):
-python3 -m venv .venv && .venv/bin/pip install pyswisseph numpy
-.venv/bin/python tools/golden_refs.py   # regenerate golden references
-.venv/bin/python tools/make_packs.py    # rebuild asteroid packs from Horizons
+python3 -m venv .venv && .venv/bin/pip install pyswisseph numpy pillow
+.venv/bin/python tools/golden_refs.py     # golden references
+.venv/bin/python tools/make_packs.py      # asteroid packs from Horizons
+.venv/bin/python tools/make_gazetteer.py  # place index from GeoNames
+.venv/bin/python tools/make_icons.py      # PWA icons
 ```
 
-Layout: `src/ephemeris/` (providers: astronomy-engine core, Chebyshev packs,
-analytic Node/Lilith), `src/chart/` (time, Placidus/Porphyry houses, aspects,
-chart assembly), `data/packs/` (committed asteroid ephemeris packs,
-1900–2100), `test/golden/` (committed reference values), `tools/` (Python
-generators; pyswisseph is dev-only and never ships).
+## Layout
 
-## Planned stack
+- `src/ephemeris/` — providers: astronomy-engine (Sun–Pluto), Chebyshev packs
+  (asteroids), analytic Node/Lilith
+- `src/chart/` — time/civil, houses, aspects, cross-chart maths (transits,
+  synastry, composites, Ebertin midpoints)
+- `src/interpret/` — composer, per-context voices, dossiers, markers,
+  snapshots; **texts load from `data/texts/*.json` at runtime** (edit texts
+  without rebuilding)
+- `src/render/` + `src/ui/` — wheel geometry, tunable SVG glyph kit
+  (`/?glyphs`), Svelte 5 components
+- `data/` — served at the site root: ephemeris packs, gazetteer, text packs,
+  PWA manifest/icons/service worker
+- `tools/` — Python generators (pyswisseph is dev-only, never ships)
+- `mockup/` — the original static demonstrator from the design phase
 
-TypeScript + Vite + Svelte PWA · hand-rolled SVG rendering · `astronomy-engine`
-(MIT) + Chebyshev packs built from JPL Horizons data for asteroids ·
-IndexedDB (Dexie) storage · Python tooling (`tools/`) for ephemeris pack
-generation and golden-test references. See the design doc for the reasoning.
+## Deployment
+
+`dist/` is plain static files: copy to any web host (subdirectory fine — set
+Vite `base` if not at the root). HTTPS required for the service worker.
+Details and options: the implementation report in `docs/reports/`.

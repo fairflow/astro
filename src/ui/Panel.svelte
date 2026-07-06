@@ -11,7 +11,7 @@
   import {
     modifiersFor, modifierSentence, readingFor,
   } from '../interpret/composer';
-  import { BODY_INTRO } from '../interpret/bodyintro';
+  import { bodyIntro } from '../interpret/textstore';
   import { markersFor } from '../interpret/markers';
   import { SIGN_TONE } from '../interpret/vocab';
   import { STYLES, type StyleId } from '../interpret/types';
@@ -108,7 +108,7 @@
     {#key style + selBody.body}
       <div class="reading" in:fade={{ duration: 200 }} style="margin:4px 0 10px">
         <div class="stylenote">{styleLabel} introduction</div>
-        {BODY_INTRO[selBody.body][style]}
+        {bodyIntro(selBody.body, style)}
       </div>
     {/key}
     <div class="row">{fmtDegInSign(selBody.lon)} · H{selBody.house}</div>

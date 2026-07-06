@@ -2,7 +2,8 @@ import type { Aspect, AspectClass } from '../chart/aspects.js';
 import type { Chart } from '../chart/chart.js';
 import type { BodyKey } from '../ephemeris/types.js';
 import { BODY_NAME } from '../render/glyphs.js';
-import { LIBRARY, pairKey } from './library.js';
+import { pairKey } from './library.js';
+import { getNatalLibrary } from './textstore.js';
 import { pairText } from './templates.js';
 import { PLANET_PROFILE } from './vocab.js';
 import {
@@ -78,7 +79,7 @@ export function modifierSentence(m: Modifier, style: StyleId): string {
 
 /** Library text if authored, template otherwise. */
 export function readingFor(a: Aspect, style: StyleId): Reading {
-  const entry = LIBRARY[pairKey(a.a, a.b)]?.[a.def.klass];
+  const entry = getNatalLibrary()[pairKey(a.a, a.b)]?.[a.def.klass];
   if (entry) return { text: entry[style], source: 'authored' };
   return { text: pairText(a.a, a.b, a.def.klass, style), source: 'template' };
 }

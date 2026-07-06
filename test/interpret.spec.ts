@@ -9,7 +9,7 @@ import {
   jdToDateString,
 } from '../src/interpret/dossiers.js';
 import { STYLES } from '../src/interpret/types.js';
-import { LIBRARY } from '../src/interpret/library.js';
+import { getNatalLibrary } from '../src/interpret/textstore.js';
 import { findAspects, type ChartPoint } from '../src/chart/aspects.js';
 import { computeChart, defaultProvider } from '../src/chart/chart.js';
 import { CoreProvider } from '../src/ephemeris/core.js';
@@ -31,7 +31,7 @@ function miniChart(points: ChartPoint[]) {
 
 describe('composer', () => {
   it('library covers every style for every entry', () => {
-    for (const [key, entry] of Object.entries(LIBRARY)) {
+    for (const [key, entry] of Object.entries(getNatalLibrary())) {
       for (const texts of Object.values(entry)) {
         for (const s of STYLES) {
           expect(texts[s.id], `${key} ${s.id}`).toBeTruthy();

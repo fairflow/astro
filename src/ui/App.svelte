@@ -12,6 +12,7 @@
   import OverlayInfo from './OverlayInfo.svelte';
   import Glossary from './Glossary.svelte';
   import { chartSnapshot } from '../interpret/snapshot';
+  import { loadTexts } from '../interpret/textstore';
   import SynastryView from './SynastryView.svelte';
   import CompositeView from './CompositeView.svelte';
   import { STYLES, type StyleId } from '../interpret/types';
@@ -89,7 +90,7 @@
 
   onMount(async () => {
     try {
-      const [p, g] = await Promise.all([fetchPacks(), fetchGazetteer()]);
+      const [p, g] = await Promise.all([fetchPacks(), fetchGazetteer(), loadTexts()]);
       packs = p;
       gaz = g;
       if (p.length < PACK_BODIES.length) {

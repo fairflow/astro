@@ -98,6 +98,19 @@ updated at the end of each working session.
   headline actions: move interpretation texts to fetched JSON packs
   before phase-B authoring volume; add service worker (M5)).
 
+## 2026-07-06
+
+- Report follow-ups done: (1) interpretation texts moved out of the JS
+  bundle into fetched packs `data/texts/*.json` (library.natal,
+  library.transit, bodyintro, glossary) via `interpret/textstore.ts`
+  (template fallbacks until loaded; tests validate the shipped JSON via
+  `test/setup.ts`); bundle 131→116 KB gz. (2) PWA layer: manifest,
+  icons (tools/make_icons.py, Pillow), hand-rolled service worker
+  (`data/sw.js`: network-first navigations, cache-first assets/data),
+  registered in prod builds only. Verified on `vite preview`: SW
+  active, second visit fully cached (JS/CSS/packs/gazetteer/texts) —
+  installable, offline from second visit.
+
 ## How to resume
 
 ```bash

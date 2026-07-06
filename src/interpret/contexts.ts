@@ -3,7 +3,8 @@ import type { BodyKey } from '../ephemeris/types.js';
 import { BODY_NAME } from '../render/glyphs.js';
 import { PLANET_PROFILE } from './vocab.js';
 import { cap } from './templates.js';
-import type { Reading, StyleId, StyleTexts } from './types.js';
+import { getTransitLibrary } from './textstore.js';
+import type { Reading, StyleId } from './types.js';
 import { pairKey } from './library.js';
 
 /**
@@ -109,78 +110,6 @@ function themeWords(b: BodyKey): string {
   return Object.keys(PLANET_PROFILE[b].themes).slice(0, 2).join(' and ');
 }
 
-/* ---------------- authored context libraries ---------------- */
-
-type CtxEntry = Partial<Record<AspectClass, StyleTexts>>;
-
-/**
- * Authored transit texts, keyed `${transiting}-${natal}`. Order matters
- * here (unlike natal pairs): transiting Saturn to natal Sun is not natal
- * Sun-Saturn. Conventions per contemporary practice (see
- * docs/research/transits.md).
- */
-export const TRANSIT_LIBRARY: Record<string, CtxEntry> = {
-  'saturn-sun': {
-    challenge: {
-      jungian: 'The senex audits the ego: for some weeks per pass, identity claims are tested against what has actually been built. What is structurally sound is confirmed; what is borrowed is repossessed. Meet the judge consciously and this transit confers authority.',
-      mundane: 'Responsibility peaks and recognition lags: extra duties, slower progress, authority figures in the way. Finish, consolidate, cut what cannot be carried — launches wait better than they fail.',
-      energy: 'Maximum impedance in the vital current: output per effort drops, but everything completed under this compression is load-bearing afterwards. Three passes: pressure, review, resolution.',
-      minimal: 'Saturn tests the self-image. Low energy, high demands, real results. Finish things; start later.',
-    },
-    neutral: {
-      jungian: 'A Saturn conjunction to the Sun begins a new thirty-year identity curriculum: the previous self-definition is graded and a sterner, truer one is commissioned.',
-      mundane: 'A career and life-structure reset over some months (three passes): roles end, roles consolidate. Decisions made now set the frame for years.',
-      energy: 'The identity current is re-channelled at its source — narrow now, deeper for decades.',
-      minimal: 'New thirty-year chapter of self-definition. Serious season; choose deliberately.',
-    },
-    flowing: {
-      jungian: 'The senex assists rather than audits: structures accept the ego’s intent, elders open doors. Quietly one of the best times to formalise who you are becoming.',
-      mundane: 'Steady, unglamorous progress: contracts, qualifications, positions gained without drama. Bank it.',
-      energy: 'The vital current runs through well-fitted channels: modest amplitude, excellent efficiency.',
-      minimal: 'Saturn supports the self quietly. Formalise things now.',
-    },
-  },
-  'saturn-moon': {
-    challenge: {
-      jungian: 'The stern witness visits the feeling nature: for a season moods run low and needs feel inadmissible. This is not depression arriving from nowhere — it is the psyche auditing its emotional contracts. Renegotiate them consciously.',
-      mundane: 'Home, family and the body ask for maintenance at once; comfort is scarce and duty plentiful. Simplify the household, tend health early, and let feelings be facts.',
-      energy: 'The lunar current runs compressed: intake shrinks while demands rise. Schedule genuine replenishment as infrastructure, not indulgence.',
-      minimal: 'Feelings compressed, duties up. Not permanent (~weeks per pass, 3 passes). Maintain the basics.',
-    },
-  },
-  'jupiter-sun': {
-    neutral: {
-      jungian: 'The principle of meaning returns to the ego — the ~12-yearly Jupiter conjunction: confidence, visibility and opportunity expand together. Inflation is the shadow; genuine growth needs a container.',
-      mundane: 'A few lucky-feeling weeks: openings, invitations, generosity received. Say yes selectively — the wave rewards direction more than volume.',
-      energy: 'An expansion wave through the identity current: amplitude up, boundaries soft. Aim it.',
-      minimal: 'Jupiter over the Sun: expansion, optimism, some overreach. Choose the best opening, decline the rest.',
-    },
-  },
-  'uranus-sun': {
-    challenge: {
-      jungian: 'The awakener destabilises the self-definition: whatever in the identity is merely habitual gets shaken until it breaks or wakes. Sudden exits and arrivals are the outer form; the inner task is to choose the freedom before it is imposed.',
-      mundane: 'Months of upheaval in role and direction across three passes: jobs, image, alliances rearrange abruptly. Make the change you have postponed, or a cruder version arrives unbidden.',
-      energy: 'High-frequency interference through the identity current: surges, cutouts, genuine novelty. Ground often; decide fast but implement slowly.',
-      minimal: 'Uranus shakes the self-image. Volatile, liberating. Jump before being pushed.',
-    },
-  },
-  'pluto-sun': {
-    challenge: {
-      jungian: 'The depths contend with the ego over the course of a year or more: power, control and buried material surface for reprocessing. The self-image is not destroyed — its dead parts are. What survives is denser and truer.',
-      mundane: 'Power struggles and structural endings in career or standing, in slow motion with three or more exact passes. Do not cling to the shell; negotiate the transformation openly.',
-      energy: 'Deep-cycle overhaul of the identity current: long compression, then regeneration from below. The output state carries far more load than the input state.',
-      minimal: 'Pluto vs the self-image, in slow motion. Let the dead parts go; keep the core.',
-    },
-  },
-  'chiron-sun': {
-    neutral: {
-      jungian: 'The wounded teacher crosses the identity: old injuries to being-seen surface with unusual clarity — not to hurt again, but to be tended with adult resources the child never had.',
-      mundane: 'Confidence dips and old insecurities revisit; mentoring received or given marks the season. Gentle exposure beats retreat.',
-      energy: 'The wound signature and identity current phase-lock for a while: tender, and unusually available for repair.',
-      minimal: 'Old wounds to being-seen resurface, repairably. Tend, don’t flee.',
-    },
-  },
-};
 
 /** Landmark passages surfaced by name in the transit view. */
 export const LANDMARKS: { t: BodyKey; n: BodyKey; angle: number; name: string; ages: string }[] = [
@@ -199,7 +128,8 @@ export function contextReading(
   context: ReadingContext,
 ): Reading {
   if (context === 'transit') {
-    const entry = TRANSIT_LIBRARY[`${a.a}-${a.b}`]?.[a.def.klass];
+    // authored transit texts arrive via the fetched text packs
+    const entry = getTransitLibrary()[`${a.a}-${a.b}`]?.[a.def.klass];
     if (entry) return { text: entry[style], source: 'authored' };
     return { text: transitTemplate(a.a, a.b, a.def.klass, style), source: 'template' };
   }
