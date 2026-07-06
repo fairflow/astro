@@ -7,6 +7,8 @@
   import SavedCharts from './SavedCharts.svelte';
   import GlyphDefs from './GlyphDefs.svelte';
   import DisplayControls from './DisplayControls.svelte';
+  import SettingsControls from './SettingsControls.svelte';
+  import { enabledAspectDefs, enabledBodies } from './prefs.svelte';
   import Themes from './Themes.svelte';
   import TransitsView from './TransitsView.svelte';
   import OverlayInfo from './OverlayInfo.svelte';
@@ -62,6 +64,8 @@
   });
   let current = $state<{ jdUt: number; lat: number; lon: number; meta: ChartMeta } | null>(null);
   let selection = $state<Selection>({ kind: 'none' });
+  /** id of the saved chart the form was loaded from (enables Update). */
+  let loadedId = $state<number | null>(null);
   let display = $state(loadDisplay());
   let expanded = $state(false);
   let styleId = $state<StyleId>(loadStyle());
@@ -85,7 +89,11 @@
 
   const provider = $derived(defaultProvider(packs));
   const chart = $derived(current
-    ? computeChart(provider, { jdUt: current.jdUt, lat: current.lat, lon: current.lon })
+    ? computeChart(provider, {
+        jdUt: current.jdUt, lat: current.lat, lon: current.lon,
+        bodies: enabledBodies(),
+        aspectOptions: { defs: enabledAspectDefs() },
+      })
     : null);
 
   onMount(async () => {
@@ -119,10 +127,15 @@
     const [y, mo, d] = c.date.split('-').map(Number);
     const [h, mi] = (c.time || '12:00').split(':').map(Number);
     const { jdUt } = localToUt(y!, mo!, d!, h ?? 12, mi ?? 0, c.place.zone);
-    return computeChart(provider, { jdUt, lat: c.place.lat, lon: c.place.lon });
+    return computeChart(provider, {
+      jdUt, lat: c.place.lat, lon: c.place.lon,
+      bodies: enabledBodies(),
+      aspectOptions: { defs: enabledAspectDefs() },
+    });
   }
 
   function loadSaved(c: SavedChart) {
+    loadedId = c.id ?? null;
     form.name = c.name;
     form.date = c.date;
     form.time = c.time;
@@ -157,8 +170,9 @@
         {copied ? 'Copied ✓' : 'Copy for AI'}
       </button>
     {/if}
+    <SettingsControls />
     <DisplayControls bind:display />
-    <SavedCharts {saveable} onload={loadSaved} />
+    <SavedCharts {saveable} {loadedId} onload={loadSaved} onsaved={id => loadedId = id} />
   </div>
   {#if banner}<div class="banner">{banner}</div>{/if}
   <ChartForm bind:form {gaz} onsubmit={cast} />

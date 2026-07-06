@@ -12,6 +12,8 @@
   import type { SavedChart } from '../store/db';
   import type { StyleId } from '../interpret/types';
   import type { ChartMeta } from './state';
+  import { session } from './session.svelte';
+  import { enabledAspectDefs } from './prefs.svelte';
 
   let { natal, meta, chartFromSaved, style, display }: {
     natal: Chart;
@@ -21,15 +23,15 @@
     display: import('./state').DisplaySettings;
   } = $props();
 
-  let partner = $state<SavedChart | null>(null);
-  let sel = $state<number | null>(null);
+    let sel = $state<number | null>(null);
 
-  const partnerChart = $derived(partner ? chartFromSaved(partner) : null);
+  const partnerChart = $derived(session.partner ? chartFromSaved(session.partner) : null);
 
   const cross = $derived(partnerChart
     ? crossAspects(
         natal.positions.map(p => ({ body: p.body, state: p })),
         partnerChart.positions.map(p => ({ body: p.body, state: p })),
+        { defs: enabledAspectDefs() },
       )
     : []);
 
@@ -41,9 +43,9 @@
 
   let copied = $state(false);
   async function copySynastry() {
-    if (!partnerChart || !partner) return;
+    if (!partnerChart || !session.partner) return;
     const text = synastrySnapshot(
-      natal, meta, partnerChart, partner.name, cross, overlays, mids, midsRev);
+      natal, meta, partnerChart, session.partner.name, cross, overlays, mids, midsRev);
     try {
       await navigator.clipboard.writeText(text);
     } catch {
@@ -59,9 +61,9 @@
     setTimeout(() => copied = false, 2200);
   }
 
-  const dossier = $derived(partnerChart && partner
+  const dossier = $derived(partnerChart && session.partner
     ? relationshipsDossier(natal, style, {
-        otherName: partner.name, cross, overlays, midpoints: mids,
+        otherName: session.partner.name, cross, overlays, midpoints: mids,
       })
     : null);
 
@@ -77,8 +79,9 @@
 
 <div class="sview">
   <div class="pickrow">
-    <PartnerPick excludeName={meta.name} onpick={c => { partner = c; sel = null; }} />
-    {#if partnerChart && partner}
+    <PartnerPick excludeName={meta.name} selectedId={session.partner?.id ?? null}
+      onpick={c => { session.partner = c; sel = null; }} />
+    {#if partnerChart && session.partner}
       <button class="copyai" onclick={copySynastry}
         title="Copy both charts + inter-aspects, overlays and midpoint contacts as markdown for an AI conversation">
         {copied ? 'Copied ✓' : 'Copy for AI (synastry)'}
@@ -86,14 +89,14 @@
     {/if}
   </div>
 
-  {#if partnerChart && partner}
+  {#if partnerChart && session.partner}
     <div class="wheelrow">
       <Wheel chart={natal} selection={wheelSel} {display}
         outer={outerBodies} outerColor="var(--syn)"
         crossAspects={crossForWheel.slice(0, 30)} crossSelected={sel}
         oncross={i => { sel = i; wheelSel = { kind: 'none' }; }}
         onselect={s => { wheelSel = s; sel = null; }} />
-      <div class="hint">Bi-wheel: your chart inside, {partner.name}'s bodies outside (violet). Dashed lines are inter-aspects — tap one for its reading.</div>
+      <div class="hint">Bi-wheel: your chart inside, {session.partner.name}'s bodies outside (violet). Dashed lines are inter-aspects — tap one for its reading.</div>
     </div>
     <div class="cols">
       <div>
@@ -107,7 +110,7 @@
             <p>{r.text} <span class="src">{r.source}</span></p>
           </div>
         {:else}
-          <div class="readingcard hint">Inter-aspects between your chart and {partner.name}'s, strongest first. Tap one for its reading.</div>
+          <div class="readingcard hint">Inter-aspects between your chart and {session.partner.name}'s, strongest first. Tap one for its reading.</div>
         {/if}
         <details open>
           <summary>Inter-aspects ({cross.length})</summary>

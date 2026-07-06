@@ -115,7 +115,18 @@ const SATURN_FRAME: Record<StyleId, string> = {
 export function saturnDossier(
   chart: Chart, style: StyleId, provider?: EphemerisProvider, jdBirth?: number,
 ): Dossier {
-  const sa = pos(chart, 'saturn')!;
+  const sa = pos(chart, 'saturn');
+  if (!sa) {
+    return {
+      id: 'saturn', title: 'Saturnal teachings',
+      factors: 'Saturn (disabled in Settings)',
+      sections: [{
+        heading: 'Saturn is switched off',
+        text: 'Enable Saturn in Settings → Bodies to read this dossier.',
+        source: 'computed',
+      }],
+    };
+  }
   const sections: DossierSection[] = [
     { heading: 'The curriculum', text: SATURN_FRAME[style], source: 'authored' },
     {
@@ -209,7 +220,18 @@ export function lunationPhase(sunLon: number, moonLon: number): { index: number;
 }
 
 export function sunMoonDossier(chart: Chart, style: StyleId): Dossier {
-  const sun = pos(chart, 'sun')!, moon = pos(chart, 'moon')!;
+  const sun = pos(chart, 'sun'), moon = pos(chart, 'moon');
+  if (!sun || !moon) {
+    return {
+      id: 'sunmoon', title: 'Sun–Moon dialogue',
+      factors: 'Sun and Moon',
+      sections: [{
+        heading: 'Not available',
+        text: 'The luminaries are required for this dossier.',
+        source: 'computed',
+      }],
+    };
+  }
   const sections: DossierSection[] = [];
 
   const aspect = chart.aspects.find(a =>

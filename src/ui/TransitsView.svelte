@@ -14,6 +14,8 @@
   import type { SavedChart } from '../store/db';
   import type { Selection } from './selection';
   import type { ChartMeta, DisplaySettings } from './state';
+  import { session } from './session.svelte';
+  import { enabledAspectDefs, enabledBodies } from './prefs.svelte';
 
   let { natal, meta, provider, display, style, chartFromSaved }: {
     natal: Chart;
@@ -24,19 +26,24 @@
     chartFromSaved: (c: SavedChart) => Chart;
   } = $props();
 
-  const now = new Date();
-  let dateStr = $state(now.toISOString().slice(0, 10));
-  let timeStr = $state(`${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`);
-  let target = $state<'you' | 'couple'>('you');
-  let partner = $state<SavedChart | null>(null);
+  // Cross-tab persistence (session survives the tabs destroying views).
+  if (!session.transitDate) {
+    const now = new Date();
+    session.transitDate = now.toISOString().slice(0, 10);
+    session.transitTime = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  }
 
   const sky = $derived.by<Chart | null>(() => {
-    if (!dateStr) return null;
-    const [y, mo, d] = dateStr.split('-').map(Number);
-    const [h, mi] = (timeStr || '12:00').split(':').map(Number);
+    if (!session.transitDate) return null;
+    const [y, mo, d] = session.transitDate.split('-').map(Number);
+    const [h, mi] = (session.transitTime || '12:00').split(':').map(Number);
     try {
       const { jdUt } = localToUt(y!, mo!, d!, h ?? 12, mi ?? 0, meta.place.zone);
-      return computeChart(provider, { jdUt, lat: meta.place.lat, lon: meta.place.lon });
+      return computeChart(provider, {
+        jdUt, lat: meta.place.lat, lon: meta.place.lon,
+        bodies: enabledBodies(),
+        aspectOptions: { defs: enabledAspectDefs() },
+      });
     } catch {
       return null;
     }
@@ -44,13 +51,14 @@
 
   const pts = (c: Chart) => c.positions.map(p => ({ body: p.body, state: p }));
   const skyPts = $derived(sky ? pts(sky) : []);
+  const enabledNames = $derived(new Set(enabledAspectDefs().map(d => d.name as string)));
 
-  const crosses = $derived(sky ? transitAspects(skyPts, pts(natal)) : []);
+  const crosses = $derived(sky ? transitAspects(skyPts, pts(natal), enabledNames) : []);
 
-  const partnerChart = $derived(partner ? chartFromSaved(partner) : null);
-  const comp = $derived(partnerChart ? compositeChart(natal, partnerChart) : null);
-  const crossesB = $derived(sky && partnerChart ? transitAspects(skyPts, pts(partnerChart)) : []);
-  const crossesC = $derived(sky && comp ? transitAspects(skyPts, pts(comp)) : []);
+  const partnerChart = $derived(session.partner ? chartFromSaved(session.partner) : null);
+  const comp = $derived(partnerChart ? compositeChart(natal, partnerChart, enabledAspectDefs()) : null);
+  const crossesB = $derived(sky && partnerChart ? transitAspects(skyPts, pts(partnerChart), enabledNames) : []);
+  const crossesC = $derived(sky && comp ? transitAspects(skyPts, pts(comp), enabledNames) : []);
   const smHitsA = $derived(sky ? sunMoonMidpointHits(skyPts, natal) : []);
   const smHitsB = $derived(sky && partnerChart ? sunMoonMidpointHits(skyPts, partnerChart) : []);
 
@@ -87,30 +95,30 @@
     const chart = coupleSel.list === 'A' ? natal
       : coupleSel.list === 'B' ? partnerChart! : comp!;
     const label = coupleSel.list === 'A' ? (meta.name || 'your chart')
-      : coupleSel.list === 'B' ? (partner?.name ?? 'partner') : 'the composite (the relationship itself)';
+      : coupleSel.list === 'B' ? (session.partner?.name ?? 'partner') : 'the composite (the relationship itself)';
     return { x, chart, label };
   });
 
   function resetToNow() {
     const n = new Date();
-    dateStr = n.toISOString().slice(0, 10);
-    timeStr = `${String(n.getHours()).padStart(2, '0')}:${String(n.getMinutes()).padStart(2, '0')}`;
+    session.transitDate = n.toISOString().slice(0, 10);
+    session.transitTime = `${String(n.getHours()).padStart(2, '0')}:${String(n.getMinutes()).padStart(2, '0')}`;
   }
 </script>
 
 <div class="tview">
   <div class="controls form">
-    <label>Date<input type="date" bind:value={dateStr}></label>
-    <label>Time<input type="time" bind:value={timeStr}></label>
+    <label>Date<input type="date" bind:value={session.transitDate}></label>
+    <label>Time<input type="time" bind:value={session.transitTime}></label>
     <button class="chip" onclick={resetToNow}>Now</button>
     <span class="target" role="radiogroup" aria-label="Transit target">
-      <button class:on={target === 'you'} onclick={() => { target = 'you'; coupleSel = null; }}>Your chart</button>
-      <button class:on={target === 'couple'} onclick={() => { target = 'couple'; crossSel = null; }}>The couple</button>
+      <button class:on={session.transitTarget === 'you'} onclick={() => { session.transitTarget = 'you'; coupleSel = null; }}>Your chart</button>
+      <button class:on={session.transitTarget === 'couple'} onclick={() => { session.transitTarget = 'couple'; crossSel = null; }}>The couple</button>
     </span>
     <span class="hint">Sky computed for {meta.place.name} ({meta.place.zone}). Tight transit orbs (≤3–4°).</span>
   </div>
 
-  {#if target === 'you'}
+  {#if session.transitTarget === 'you'}
     {#if landmarks.length}
       <div class="landmarks">
         {#each landmarks as L}
@@ -127,7 +135,7 @@
             crossAspects={crosses.slice(0, 30)} crossSelected={crossSel}
             oncross={i => { crossSel = i; wheelSel = { kind: 'none' }; }}
             onselect={s => { wheelSel = s; crossSel = null; }} />
-          <div class="hint" style="padding:2px 6px">Bi-wheel: your natal chart inside, the sky of {dateStr} outside (teal). Dashed lines are transits; solid hub lines are your natal aspects.</div>
+          <div class="hint" style="padding:2px 6px">Bi-wheel: your natal chart inside, the sky of {session.transitDate} outside (teal). Dashed lines are transits; solid hub lines are your natal aspects.</div>
         </div>
         <div class="listcol">
           {#if crossAspect}
@@ -165,8 +173,9 @@
       </div>
     {/if}
   {:else}
-    <PartnerPick excludeName={meta.name} onpick={c => { partner = c; coupleSel = null; }} />
-    {#if sky && partnerChart && comp && partner}
+    <PartnerPick excludeName={meta.name} selectedId={session.partner?.id ?? null}
+      onpick={c => { session.partner = c; coupleSel = null; }} />
+    {#if sky && partnerChart && comp && session.partner}
       <div class="split">
         <div class="wheelcol">
           <Wheel chart={comp} selection={{ kind: 'none' }} {display}
@@ -175,7 +184,7 @@
             crossSelected={coupleSel?.list === 'C' ? coupleSel.i : null}
             oncross={i => coupleSel = { list: 'C', i }}
             onselect={() => {}} />
-          <div class="hint" style="padding:2px 6px">Bi-wheel: the couple's midpoint composite inside, the sky of {dateStr} outside (teal). Dashed lines are transits to the relationship itself.</div>
+          <div class="hint" style="padding:2px 6px">Bi-wheel: the couple's midpoint composite inside, the sky of {session.transitDate} outside (teal). Dashed lines are transits to the relationship itself.</div>
         </div>
         <div class="listcol">
           {#if coupleAspect}
@@ -199,7 +208,7 @@
                 <div class="skyrow">transiting {BODY_NAME[h.body]} on {meta.name || 'your'} Sun/Moon midpoint · orb {fmtOrb(h.orb)}</div>
               {/each}
               {#each smHitsB as h}
-                <div class="skyrow">transiting {BODY_NAME[h.body]} on {partner.name}'s Sun/Moon midpoint · orb {fmtOrb(h.orb)}</div>
+                <div class="skyrow">transiting {BODY_NAME[h.body]} on {session.partner.name}'s Sun/Moon midpoint · orb {fmtOrb(h.orb)}</div>
               {/each}
             </div>
           {/if}
@@ -217,7 +226,7 @@
               onselect={i => coupleSel = { list: 'A', i }} />
           </details>
           <details>
-            <summary>To {partner.name} ({crossesB.length})</summary>
+            <summary>To {session.partner.name} ({crossesB.length})</summary>
             <CrossAspectList items={crossesB} aLabel="t" bLabel="natal"
               selectedIndex={coupleSel?.list === 'B' ? coupleSel.i : null}
               onselect={i => coupleSel = { list: 'B', i }} />

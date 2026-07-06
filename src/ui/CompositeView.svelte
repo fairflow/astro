@@ -10,6 +10,8 @@
   import type { StyleId } from '../interpret/types';
   import type { Selection } from './selection';
   import type { ChartMeta, DisplaySettings } from './state';
+  import { session } from './session.svelte';
+  import { enabledAspectDefs } from './prefs.svelte';
 
   let { natal, meta, chartFromSaved, display, style }: {
     natal: Chart;
@@ -19,10 +21,11 @@
     style: StyleId;
   } = $props();
 
-  let partner = $state<SavedChart | null>(null);
-  let sel = $state<Selection>({ kind: 'none' });
+    let sel = $state<Selection>({ kind: 'none' });
 
-  const comp = $derived(partner ? compositeChart(natal, chartFromSaved(partner)) : null);
+  const comp = $derived(session.partner
+    ? compositeChart(natal, chartFromSaved(session.partner), enabledAspectDefs())
+    : null);
   const selAspect = $derived(sel.kind === 'aspect' && comp
     ? comp.aspects.find(a => aspectKey(a) === sel.key) ?? null
     : null);
@@ -31,9 +34,10 @@
 </script>
 
 <div class="cview">
-  <PartnerPick excludeName={meta.name} onpick={c => { partner = c; sel = { kind: 'none' }; }} />
+  <PartnerPick excludeName={meta.name} selectedId={session.partner?.id ?? null}
+    onpick={c => { session.partner = c; sel = { kind: 'none' }; }} />
 
-  {#if comp && partner}
+  {#if comp && session.partner}
     <div class="split">
       <div class="wheelcol">
         <Wheel chart={comp} selection={sel} {display} onselect={s => sel = s} />
@@ -43,7 +47,7 @@
           <summary>How to read a composite (midpoint) chart</summary>
           <div class="help">
             <p>This is the chart of the <b>relationship itself</b> — a third entity,
-            computed as the midpoint of each pair of like planets ({meta.name || 'you'} + {partner.name}).
+            computed as the midpoint of each pair of like planets ({meta.name || 'you'} + {session.partner.name}).
             It describes what the <i>couple</i> does, not what either person feels about the other
             (that is the Synastry tab).</p>
             <p><b>Composite Sun</b> ({compSun ? fmtDegInSign(compSun.lon) : '—'}): the relationship's purpose, what it is <i>for</i>.

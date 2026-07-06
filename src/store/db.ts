@@ -44,3 +44,10 @@ export async function saveChart(c: Omit<SavedChart, 'id' | 'createdAt'>) {
 export async function deleteChart(id: number): Promise<void> {
   return db.charts.delete(id);
 }
+
+/** Edit a saved person in place (user request 2026-07-06 #3). */
+export async function updateChart(
+  id: number, c: Omit<SavedChart, 'id' | 'createdAt'>,
+): Promise<void> {
+  await db.charts.update(id, { ...c });
+}

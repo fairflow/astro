@@ -2,13 +2,15 @@
   import { onMount } from 'svelte';
   import { listCharts, type SavedChart } from '../store/db';
 
-  let { excludeName, onpick }: {
+  let { excludeName, onpick, selectedId = null }: {
     excludeName?: string;
     onpick: (c: SavedChart) => void;
+    /** Preselect (session keeps the partner across tab switches). */
+    selectedId?: number | null;
   } = $props();
 
   let charts = $state<SavedChart[]>([]);
-  let chosen = $state('');
+  let chosen = $state(selectedId !== null ? String(selectedId) : '');
 
   onMount(async () => {
     charts = await listCharts();

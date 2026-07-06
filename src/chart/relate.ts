@@ -67,12 +67,15 @@ export function crossAspects(
  */
 export function transitAspects(
   sky: ChartPoint[], natal: ChartPoint[],
+  enabled?: ReadonlySet<string>,
 ): CrossAspect[] {
-  const defs = DEFAULT_ASPECTS.map(d => ({
-    ...d,
-    baseOrb: d.name === 'quincunx' ? 1.5 : 3,
-    luminaryOrb: d.name === 'quincunx' ? 2 : 4,
-  }));
+  const defs = DEFAULT_ASPECTS
+    .filter(d => !enabled || enabled.has(d.name))
+    .map(d => ({
+      ...d,
+      baseOrb: d.name === 'quincunx' ? 1.5 : 3,
+      luminaryOrb: d.name === 'quincunx' ? 2 : 4,
+    }));
   const out = crossAspects(sky, natal, { defs, orbFactor: 1, minorBodyOrbCap: 2 });
   return out.filter(x => x.a !== 'moon' || x.orb <= 1);
 }
@@ -100,7 +103,7 @@ export function circularMidpoint(a: number, b: number): number {
  * The composite is not a sky that ever existed — houses are indicative
  * (cusp-midpoint method, as astro.com defaults to for composite houses).
  */
-export function compositeChart(a: Chart, b: Chart): Chart {
+export function compositeChart(a: Chart, b: Chart, aspectDefs?: AspectDef[]): Chart {
   const positions: ChartPosition[] = [];
   const cusps = a.houses.cusps.map((c, i) =>
     circularMidpoint(c, b.houses.cusps[i]!));
@@ -115,6 +118,7 @@ export function compositeChart(a: Chart, b: Chart): Chart {
   }
   const aspects = findAspects(
     positions.map(p => ({ body: p.body, state: p })),
+    aspectDefs ? { defs: aspectDefs } : {},
   );
   return {
     jdUt: (a.jdUt + b.jdUt) / 2,

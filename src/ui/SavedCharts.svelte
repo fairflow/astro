@@ -1,12 +1,14 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import {
-    deleteChart, listCharts, saveChart, type SavedChart,
+    deleteChart, listCharts, saveChart, updateChart, type SavedChart,
   } from '../store/db';
 
-  let { saveable, onload }: {
+  let { saveable, onload, loadedId = null, onsaved }: {
     saveable: Omit<SavedChart, 'id' | 'createdAt'> | null;
     onload: (c: SavedChart) => void;
+    loadedId?: number | null;
+    onsaved?: (id: number) => void;
   } = $props();
 
   let charts = $state<SavedChart[]>([]);
@@ -26,12 +28,27 @@
 
   const alreadySaved = $derived(
     saveable !== null && charts.some(c => samePerson(saveable, c)));
+  const loaded = $derived(loadedId !== null
+    ? charts.find(c => c.id === loadedId) ?? null : null);
+  /** Loaded person's data differs from the form -> offer Update. */
+  const dirty = $derived(saveable !== null && loaded !== null
+    && !samePerson(saveable, loaded));
 
   async function save() {
     if (!saveable || alreadySaved) return;
-    await saveChart(saveable);
+    const id = await saveChart(saveable);
     await refresh();
     flash = `Saved “${saveable.name}”`;
+    open = true;
+    if (typeof id === 'number') onsaved?.(id);
+    setTimeout(() => flash = '', 2500);
+  }
+
+  async function update() {
+    if (!saveable || loadedId === null) return;
+    await updateChart(loadedId, saveable);
+    await refresh();
+    flash = `Updated “${saveable.name}”`;
     open = true;
     setTimeout(() => flash = '', 2500);
   }
@@ -49,11 +66,18 @@
 </script>
 
 <div class="saved">
-  <button class="primary" disabled={!saveable || alreadySaved}
-    title={alreadySaved ? 'This chart is already saved' : 'Save the current birth data (positions are recomputed on load)'}
-    onclick={save}>
-    {alreadySaved ? 'Saved ✓' : 'Save chart'}
-  </button>
+  {#if dirty}
+    <button class="primary" title={`Update “${loaded?.name}” in place with the current form data`}
+      onclick={update}>Update</button>
+    <button class="primary" title="Keep the original and save this as a new person"
+      disabled={alreadySaved} onclick={save}>Save new</button>
+  {:else}
+    <button class="primary" disabled={!saveable || alreadySaved}
+      title={alreadySaved ? 'This chart is already saved' : 'Save the current birth data (positions are recomputed on load)'}
+      onclick={save}>
+      {alreadySaved ? 'Saved ✓' : 'Save chart'}
+    </button>
+  {/if}
   <button onclick={() => { open = !open; confirmDelete = null; }}
     title="Show saved charts">Saved ({charts.length})</button>
   {#if open}
