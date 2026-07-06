@@ -54,7 +54,7 @@ export function bodyIntro(body: BodyKey, style: StyleId): string {
 let loading: Promise<void> | null = null;
 
 /** Fetch the text packs once (browser). Failures leave template fallbacks. */
-export function loadTexts(base = '/texts/'): Promise<void> {
+export function loadTexts(base = 'texts/'): Promise<void> {
   loading ??= (async () => {
     const get = async (name: string) => {
       const res = await fetch(`${base}${name}.json`);

@@ -8,7 +8,7 @@ export interface Gazetteer {
   cities: [string, string, number, number, number][];
 }
 
-export async function fetchGazetteer(url = '/gazetteer.json'): Promise<Gazetteer> {
+export async function fetchGazetteer(url = 'gazetteer.json'): Promise<Gazetteer> {
   const res = await fetch(url);
   if (!res.ok) throw new Error(`gazetteer: HTTP ${res.status}`);
   return await res.json() as Gazetteer;

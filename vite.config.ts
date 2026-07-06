@@ -2,6 +2,8 @@ import { defineConfig } from 'vitest/config';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 
 export default defineConfig({
+  // relative base so dist/ works from any subdirectory (e.g. /astro/)
+  base: './',
   plugins: [svelte()],
   // data/ holds the committed ephemeris packs, gazetteer, text packs and
   // web-app files (manifest, service worker, icons); serving it as

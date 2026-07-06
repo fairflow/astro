@@ -9,7 +9,7 @@ export const PACK_BODIES = [
  * Missing/broken packs are skipped: the chart degrades to `missing`
  * bodies rather than failing.
  */
-export async function fetchPacks(base = '/packs/'): Promise<ChebPack[]> {
+export async function fetchPacks(base = 'packs/'): Promise<ChebPack[]> {
   const results = await Promise.allSettled(
     PACK_BODIES.map(async body => {
       const res = await fetch(`${base}${body}.json`);
