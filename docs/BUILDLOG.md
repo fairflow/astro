@@ -4,13 +4,17 @@ Purpose: enough context for a fresh session (human, chat or agent) to
 continue this project without re-reading the whole history. Keep this
 updated at the end of each working session.
 
-## Snapshot (2026-07-05)
+## Snapshot (2026-07-06)
 
 - **Repo**: `~/Projects/private/astro`, remote `github.com/fairflow/astro`
-  (private). Branch `main` = user-test baseline; branch `m4-draft`
-  (worktree `~/Projects/private/astro-m4`) = M3/M4 draft awaiting review.
+  (private). **`m4-draft` merged into `main` 2026-07-06** after field
+  verification (Comet, offline included); the branches are level — new
+  drafts can reuse the `~/Projects/private/astro-m4` worktree.
+- **Deployed**: https://fairflow.co.uk/astro/ (Krystal, SFTP via
+  `tools/deploy_sftp.py`; credentials external to the repo). Redeploy:
+  `npm run build` then the deploy tool — see README.
 - **Run**: `npm install && npm run dev` (:8322). Tests: `npm test`
-  (138 green) + `npm run typecheck` (clean). Preview configs in
+  (147 green) + `npm run typecheck` (clean). Preview configs in
   `.claude/launch.json`.
 - **Tracker**: GitHub issues #1–5 (users/sync, skins, skin builder,
   print, wheel export). bd/beads on this machine binds to the Finance
