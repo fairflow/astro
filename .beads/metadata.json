@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "astro",
+  "project_id": "d54bd995-2282-40c0-b5c1-c7dd9ed06d05"
+}
