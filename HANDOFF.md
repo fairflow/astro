@@ -74,7 +74,7 @@ Top five — full list in `docs/PITFALLS.md`:
 - **Symptom:** UI change invisible / stale behaviour despite rebuild → **Cause:** `vite preview` serves new dist but the open tab still runs the old bundle → **Fix:** reload the tab; confirm bundle hash matches `dist/assets/`.
 - **Symptom:** dark-on-dark (or invisible) text in light theme → **Cause:** hardcoded colour inside a component's scoped styles → **Fix:** theme variable (see Invariants); grep for `#1c2340`-style hexes in `.svelte` files.
 - **Symptom:** degrees shown as `23°60′` → **Cause:** rounding minutes without carrying into degrees → **Fix:** round total arc-minutes first (`fmtDegInSign`/`fmtOrb` do this; don't add new formatters).
-- **Symptom:** `bd` (beads) commands act on the wrong project → **Cause:** bd binds to the Finance workspace from ANY directory on this machine → **Fix:** astro uses GitHub issues (`gh issue list`), never bd.
+- **Symptom:** `bd` (beads) acts on the Finance project's issues → **Cause:** Finance-rooted Claude sessions export `BEADS_DIR=…/Finance/.beads`, pinning bd regardless of cwd (NOT global binding — normal terminals discover per-repo `.beads/`) → **Fix:** `env -u BEADS_DIR bd …` from such sessions; astro has its own workspace (prefix `astro`) since 2026-07-07. Details + worktree caveat in PITFALLS.
 
 ## 7. Next actions (each sized for ONE session by a weaker model)
 
@@ -85,7 +85,7 @@ Top five — full list in `docs/PITFALLS.md`:
 5. [ ] *(Fable session, not Sonnet)* Wave 0 drafting: replace batch-00 straw-man texts with authored kernels/renderings per the batch loop.
 6. [ ] *(Fable session, not Sonnet)* Interlingua experiment as specified in `docs/research/2026-07-07-interlingua.md`.
 
-(Tracking: GitHub issues, not beads — see Pitfalls. Issues #1–#5 already exist for users/skins/builder/print/export; print (#4) and export (#5) shipped 2026-07-07 and can be closed after PR #8 merges.)
+(Tracking: **beads, prefix `astro`** — workspace initialized 2026-07-07 in the MAIN checkout `~/Projects/private/astro`; the open actions above are filed as astro-b6k (rem), astro-nhf (tone tips), plus the wave-0 drafting and interlingua issues. GitHub issues #1–#5 predate beads and remain until migrated; print (#4) and export (#5) shipped 2026-07-07 and can be closed. From a Finance-rooted session use `env -u BEADS_DIR` — see Pitfalls.)
 
 ## 8. Out of scope / deferred (so the model doesn't wander)
 
