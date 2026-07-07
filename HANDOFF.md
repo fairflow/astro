@@ -1,8 +1,8 @@
 # HANDOFF — ASTRODYNAMICS (fairflow/astro)
 
-**Last updated:** 2026-07-07 by Fable 5 (afternoon: §7 actions 1–2 done)
-**Repo state:** m4-draft @ HEAD — builds clean, `tsc` clean, 165/165 tests green
-**Deployed:** https://fairflow.co.uk/astro/ @ PR #8 state (authoring tab NOT yet deployed — it is flag-gated and can ship whenever)
+**Last updated:** 2026-07-07 by Fable 5 (evening: wave-0 sign batch authored, PR #10 merged)
+**Repo state:** main @ PR #10 — builds clean, `tsc` clean, 165/165 tests green. m4-draft is merged (PR #9); sessions now branch off main (Claude worktree or astro-m4, see §3).
+**Deployed:** https://fairflow.co.uk/astro/ @ PR #8 state (main is ahead: authoring tab + authored batch-00 NOT yet deployed — flag-gated, can ship whenever)
 
 ## 1. What this project is (3 sentences max)
 
@@ -18,7 +18,7 @@ ASTRODYNAMICS is an offline-first astrology web app (Svelte 5 + TypeScript + Vit
   - Display: dark/light × contrast low/medium/high × skins (B/W print); print pipeline; wheel export SVG/PNG (self-contained files).
   - PWA offline from second visit; deployed via SFTP to Krystal.
 - **What is in progress:**
-  - Stage 1c Phase A: scope at `docs/plans/2026-07-06-stage-1c-phase-a-scope.md` (v2 — read it before touching interpretation content). **Built 2026-07-07:** Authoring tab (`AuthoringView.svelte`, flag: `?author` or `localStorage astro-author=1`), `tools/authoring_sheet.py` (generates wave-0 batch: 18 slots, straw-man texts), `tools/authoring_ingest.py --validate` (schema + register lint; pack-merge still TODO). Wave 0 texts are straw men awaiting the drafting session.
+  - Stage 1c Phase A: scope at `docs/plans/2026-07-06-stage-1c-phase-a-scope.md` (v2 — read it before touching interpretation content). **Built 2026-07-07:** Authoring tab (`AuthoringView.svelte`, flag: `?author` or `localStorage astro-author=1`), `tools/authoring_sheet.py` (generates wave-0 batch: 18 slots), `tools/authoring_ingest.py --validate` (schema + register lint; pack-merge still TODO). **Batch-00 texts are AUTHORED** (PR #10, all four registers, slot ids preserved) — next step is B's reaction session via `?author`, then M's arbitration, then ingest. The house half of wave 0 (batch-01) is not yet generated: `authoring_sheet.py` only implements the sign half, and `AuthoringView.svelte` hardcodes `batch-00.json`.
   - Interlingua experiment: designed in `docs/research/2026-07-07-interlingua.md`, not run.
 - **What is broken / known-bad:**
   - Font sizes are px throughout; the rem refactor (needed before the skin builder, issue #2/#3) is not done.
@@ -28,10 +28,13 @@ ASTRODYNAMICS is an offline-first astrology web app (Svelte 5 + TypeScript + Vit
 ## 3. Verification commands (run these FIRST, before changing anything)
 
 ```bash
-cd /Users/matthew/Projects/private/astro-m4     # the m4-draft worktree — work here
-npx tsc --noEmit                                 # expect: silence (clean)
-npx vitest run                                   # expect: "Tests  161 passed (161)" — 14 files
-npm run build                                    # expect: "✓ built in <1s", dist/ updated
+pwd              # work in YOUR session checkout: main (~/Projects/private/astro),
+                 # a Claude worktree (.claude/worktrees/*), or astro-m4 — all branch off main now
+npm install      # REQUIRED once in a fresh worktree/clone — Vite will NOT load modules
+                 # from a parent checkout's node_modules (see PITFALLS, Tooling)
+npx tsc --noEmit # expect: silence (clean)
+npx vitest run   # expect: "Tests  165 passed (165)" — 15 files
+npm run build    # expect: "✓ built in <1s", dist/ updated
 ```
 
 - **NOTE:** `tsc` does NOT check `.svelte` files — a green `tsc` + green tests does not prove Svelte markup; the build catches syntax, only the browser catches behaviour. Verify UI changes in the preview.
@@ -40,7 +43,7 @@ npm run build                                    # expect: "✓ built in <1s", d
   - m4-draft preview: `npm run preview --prefix ~/Projects/private/astro-m4 -- --port 8325 --strictPort`; dev server: port 8323.
   - After any rebuild, **reload the browser tab** — `vite preview` serves dist live but an open tab keeps the old bundle (see PITFALLS).
 - Deploy (only when asked): `cd ~/Projects/private/astro-m4 && .venv/bin/python tools/deploy_sftp.py --secrets /Users/matthew/Software/working/miolingo/.streamlit/secrets.toml --remote /home/fairtlou/fairflow.co.uk/astro --delete` then `curl -s https://fairflow.co.uk/astro/ | grep -o 'index-[A-Za-z0-9_-]*\.js'` and compare against `dist/assets/`. NEVER print or commit the secrets file's contents.
-- Git flow: work on `m4-draft` (this worktree), push, `gh pr create --base main`; Matthew merges; then ff-sync both checkouts. Local `main` lives at `~/Projects/private/astro`.
+- Git flow: branch off `main`, push, `gh pr create --base main`; Matthew merges; then ff-sync the checkouts. Local `main` lives at `~/Projects/private/astro`; `astro-m4` (branch `m4-draft`) is the long-lived draft worktree; Claude sessions typically get an ephemeral `.claude/worktrees/*` worktree — after its PR merges, remove it wholesale (`git worktree remove --force <path> && git branch -d <branch>`) so no node_modules cruft accumulates.
 
 ## 4. Decisions and rationale (DO NOT RE-LITIGATE)
 
@@ -68,24 +71,28 @@ Longer log: `docs/DECISIONS.md`. Do not re-open anything there without Matthew's
 
 ## 6. Pitfalls already hit (don't rediscover these)
 
-Top five — full list in `docs/PITFALLS.md`:
+Top six — full list in `docs/PITFALLS.md`:
 
 - **Symptom:** group/bulk mutation in a Svelte handler only affects the first item → **Cause:** `{@const}` values are *reactive*; a captured `!allOn` flips mid-loop → **Fix:** compute the target into a plain local once inside the handler.
 - **Symptom:** UI change invisible / stale behaviour despite rebuild → **Cause:** `vite preview` serves new dist but the open tab still runs the old bundle → **Fix:** reload the tab; confirm bundle hash matches `dist/assets/`.
 - **Symptom:** dark-on-dark (or invisible) text in light theme → **Cause:** hardcoded colour inside a component's scoped styles → **Fix:** theme variable (see Invariants); grep for `#1c2340`-style hexes in `.svelte` files.
 - **Symptom:** degrees shown as `23°60′` → **Cause:** rounding minutes without carrying into degrees → **Fix:** round total arc-minutes first (`fmtDegInSign`/`fmtOrb` do this; don't add new formatters).
 - **Symptom:** `bd` (beads) acts on the Finance project's issues → **Cause:** Finance-rooted Claude sessions export `BEADS_DIR=…/Finance/.beads`, pinning bd regardless of cwd (NOT global binding — normal terminals discover per-repo `.beads/`) → **Fix:** `env -u BEADS_DIR bd …` from such sessions; astro has its own workspace (prefix `astro`) since 2026-07-07. Details + worktree caveat in PITFALLS.
+- **Symptom:** in a fresh worktree, vitest fails to load a package the main checkout has → **Cause:** the worktree has no `node_modules`; Node resolution walks up to the parent checkout's copy but Vite refuses modules above the worktree root → **Fix:** `npm install` in the worktree; remove the whole worktree after merge.
 
 ## 7. Next actions (each sized for ONE session by a weaker model)
 
-1. [x] **Authoring tab skeleton** — done 2026-07-07 (Fable): flag-gated `AuthoringView.svelte`; verified in browser: tab appears with flag, 18 slots, reactions + comments persist across reload, export downloads annotated JSON. (Deviation from spec: no 2-slot dummy — action 2's real batch was generated first and the tab loads that.)
-2. [x] **`tools/authoring_sheet.py`** — done 2026-07-07 (Fable): `--wave 0` writes `authoring/batch-00.md` + `data/authoring/batch-00.json` (18 slots, straw-man texts from SIGN_TONE); `authoring_ingest.py --validate` passes; schema locked by `test/authoring.spec.ts`.
-3. [ ] **rem refactor** (unblocks skin builder): convert `app.css` font-sizes to rem with a single root size, keep `--ts` scaling working. — *Done when:* visual spot-check at textScale 100%/130% matches before/after screenshots, tests green.
-4. [ ] **Tone-word tooltips**: add `data-tip` for the three SIGN_TONE keywords per sign (needs a 36-entry tip table in `vocab.ts`). — *Done when:* hovering each tone word in the sign panel shows a tip; tests green.
-5. [ ] *(Fable session, not Sonnet)* Wave 0 drafting: replace batch-00 straw-man texts with authored kernels/renderings per the batch loop.
-6. [ ] *(Fable session, not Sonnet)* Interlingua experiment as specified in `docs/research/2026-07-07-interlingua.md`.
+1. [x] **Authoring tab skeleton** — done 2026-07-07 (Fable): flag-gated `AuthoringView.svelte`; verified in browser: tab appears with flag, 18 slots, reactions + comments persist across reload, export downloads annotated JSON.
+2. [x] **`tools/authoring_sheet.py`** — done 2026-07-07 (Fable): `--wave 0` writes the sign half of wave 0; `authoring_ingest.py --validate` passes; schema locked by `test/authoring.spec.ts`.
+3. [x] **Wave 0 sign drafting (batch-00)** — done 2026-07-07 (Fable, PR #10): all 18 slots authored in four registers, straw-man flags removed, slot ids preserved so B's saved reactions stay valid. Register recipe that worked: psychological = archetype + how the disowned pole returns; mundane = concrete life, corrective as observation not sermon; energy = element × modality as current metaphor; minimal = two fragments. **Awaiting B's reaction session** (human-in-loop, not agent work) → M arbitration → ingest.
+4. [ ] **rem refactor** (astro-b6k, unblocks skin builder): convert `app.css` font-sizes to rem with a single root size, keep `--ts` scaling working. — *Done when:* visual spot-check at textScale 100%/130% matches before/after screenshots, tests green.
+5. [ ] **Tone-word tooltips** (astro-nhf): add `data-tip` for the three SIGN_TONE keywords per sign (needs a 36-entry tip table in `vocab.ts`). — *Done when:* hovering each tone word in the sign panel shows a tip; tests green.
+6. [ ] **Batch-01 generation** (house half of wave 0): extend `authoring_sheet.py` (6 house axes + 12 inflections, straw men from HOUSE_ARENA), extend `test/authoring.spec.ts`, give `AuthoringView.svelte` batch selection (it hardcodes `batch-00.json`). Generation is any-model work; the *drafting* that follows is Fable-only.
+7. [ ] **`authoring_ingest.py` pack-merge**: merge accepted texts into `data/texts/*` with provenance; needs a decision on where sign-axis/inflection texts render in the app (no surface consumes them yet).
+8. [ ] *(Fable session, not Sonnet)* Batch-01 house drafting, after action 6.
+9. [ ] *(Fable session, not Sonnet)* Interlingua experiment as specified in `docs/research/2026-07-07-interlingua.md`.
 
-(Tracking: **beads, prefix `astro`** — workspace initialized 2026-07-07 in the MAIN checkout `~/Projects/private/astro`; the open actions above are filed as astro-b6k (rem), astro-nhf (tone tips), plus the wave-0 drafting and interlingua issues. GitHub issues #1–#5 predate beads and remain until migrated; print (#4) and export (#5) shipped 2026-07-07 and can be closed. From a Finance-rooted session use `env -u BEADS_DIR` — see Pitfalls.)
+(Tracking: **beads, prefix `astro`** — workspace in the MAIN checkout `~/Projects/private/astro`; worktrees resolve it automatically when `BEADS_DIR` is unset. astro-0de = the batch-00 loop (in progress, drafting done, closes after ingest); astro-b6k (rem), astro-nhf (tone tips), astro-484 (batch-01 generation, action 6), astro-36p (pack-merge, action 7 — blocks astro-0de), astro-vel (interlingua). GitHub issues #1–#5 predate beads and remain until migrated; print (#4) and export (#5) shipped 2026-07-07 and can be closed. From a Finance-rooted session use `env -u BEADS_DIR` — see Pitfalls.)
 
 ## 8. Out of scope / deferred (so the model doesn't wander)
 
