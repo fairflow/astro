@@ -13,7 +13,9 @@
   } from '../interpret/composer';
   import { bodyIntro } from '../interpret/textstore';
   import { markersFor } from '../interpret/markers';
-  import { HOUSE_ARENA, SIGN_TONE } from '../interpret/vocab';
+  import {
+    ELEMENT_TIP, HOUSE_ARENA, MODALITY_TIP, RULER_TIP, SIGN_TONE,
+  } from '../interpret/vocab';
   import { STYLES, type StyleId } from '../interpret/types';
   import type { Selection } from './selection';
   import type { ChartMeta } from './state';
@@ -81,8 +83,8 @@
     </h2>
     <div class="sub">
       {selAspect.def.name} ({selAspect.def.angle}°) ·
-      <abbr title={GLOSS[selAspect.def.klass]}>{selAspect.def.klass}</abbr> ·
-      <abbr title={GLOSS[selAspect.applying ? 'applying' : 'separating']}>{selAspect.applying ? 'applying' : 'separating'}</abbr>
+      <span data-tip={GLOSS[selAspect.def.klass]}>{selAspect.def.klass}</span> ·
+      <span data-tip={GLOSS[selAspect.applying ? 'applying' : 'separating']}>{selAspect.applying ? 'applying' : 'separating'}</span>
     </div>
     <div class="row"><Glyph body={selAspect.a} size={15} /> {fmtDegInSign(A.lon)} · H{A.house}</div>
     <div class="row"><Glyph body={selAspect.b} size={15} /> {fmtDegInSign(B.lon)} · H{B.house}</div>
@@ -163,7 +165,11 @@
     {/if}
   {:else if selSign !== null}
     <h2 class="serif"><Glyph sign={selSign} size={18} /> {SIGN_NAMES[selSign]}</h2>
-    <div class="sub">{SIGN_ELEMENT[selSign]} · {SIGN_MODALITY[selSign]} · ruled by {BODY_NAME[SIGN_RULER[selSign]!]}</div>
+    <div class="sub">
+      <span data-tip={ELEMENT_TIP[SIGN_ELEMENT[selSign]!]}>{SIGN_ELEMENT[selSign]}</span> ·
+      <span data-tip={MODALITY_TIP[SIGN_MODALITY[selSign]!]}>{SIGN_MODALITY[selSign]}</span> ·
+      <span data-tip={RULER_TIP}>ruled by {BODY_NAME[SIGN_RULER[selSign]!]}</span>
+    </div>
     <div class="reading" style="margin-top:6px">
       Tone: {SIGN_TONE[selSign]}. Planets placed here take on this manner of
       expression — the sign is the <i>how</i>, the house the <i>where</i>.
