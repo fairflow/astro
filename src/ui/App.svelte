@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import AuthoringView from './AuthoringView.svelte';
   import ChartForm from './ChartForm.svelte';
   import ExpandableWheel from './ExpandableWheel.svelte';
   import Panel from './Panel.svelte';
@@ -70,11 +71,15 @@
   let loadedId = $state<number | null>(null);
   let display = $state(loadDisplay());
   let styleId = $state<StyleId>(loadStyle());
-  let mode = $state<'natal' | 'transits' | 'synastry' | 'composite'>('natal');
+  let mode = $state<'natal' | 'transits' | 'synastry' | 'composite' | 'authoring'>('natal');
   const MODES = [
     ['natal', 'Natal'], ['transits', 'Transits'],
     ['synastry', 'Synastry'], ['composite', 'Composite'],
   ] as const;
+  /** Stage 1c authoring form — flag-gated (admin-only before public deploys). */
+  const authorEnabled = typeof location !== 'undefined'
+    && (new URLSearchParams(location.search).has('author')
+      || localStorage.getItem('astro-author') === '1');
 
   function loadStyle(): StyleId {
     const s = localStorage.getItem('astro-style');
@@ -218,11 +223,14 @@
   <ChartForm bind:form {gaz} onsubmit={cast} />
 </header>
 
-{#if chart}
+{#if chart || authorEnabled}
   <nav class="modetabs">
     {#each MODES as [id, label] (id)}
       <button class:on={mode === id} onclick={() => mode = id}>{label}</button>
     {/each}
+    {#if authorEnabled}
+      <button class:on={mode === 'authoring'} onclick={() => mode = 'authoring'}>Authoring</button>
+    {/if}
     <span class="stylepick" role="radiogroup" aria-label="Interpretation style">
       <span>Style</span>
       {#each STYLES as s (s.id)}
@@ -232,7 +240,9 @@
   </nav>
 {/if}
 
-{#if chart && current && mode === 'transits'}
+{#if authorEnabled && mode === 'authoring'}
+  <AuthoringView />
+{:else if chart && current && mode === 'transits'}
   <TransitsView natal={chart} meta={current.meta} {provider} {display} style={styleId} {chartFromSaved} />
 {:else if chart && current && mode === 'synastry'}
   <SynastryView natal={chart} meta={current.meta} {chartFromSaved} style={styleId} {display} />

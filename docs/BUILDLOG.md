@@ -258,6 +258,26 @@ updated at the end of each working session.
   (also the cause of yesterday's "random body" test artifacts). Fix:
   compute the target once inside the handler.
 
+## 2026-07-07 afternoon (handoff stress test: §7 actions 1–2 executed)
+
+- HANDOFF.md convention applied (PR #8) and then STRESS-TESTED by
+  executing its own next-actions 1–2 exactly as written:
+  - `tools/authoring_sheet.py --wave 0` → `authoring/batch-00.md` +
+    `data/authoring/batch-00.json` (6 sign axes + 12 inflections,
+    straw-man texts extracted from SIGN_TONE); `tools/
+    authoring_ingest.py --validate` (schema + register lint; pack
+    merge TODO); schema locked by test/authoring.spec.ts (165 tests).
+  - `AuthoringView.svelte`: flag-gated Authoring tab (?author /
+    localStorage astro-author=1) — slot-per-screen, ✓/~/✗ + comment,
+    Next/Back + progress dots, reactions persist in localStorage,
+    Export downloads annotated JSON. Browser-verified end to end.
+- Two fresh pitfalls hit and logged: render-time lazy state creation
+  throws uncaught state_unsafe_mutation (component stuck on loading,
+  nothing in console); bind:value cannot target a function call
+  (vite-build-only error). HANDOFF/PITFALLS updated; template at
+  ~/claude/HANDOFF-template.md genericised (named tracker, Deployed
+  line, document-reality naming rule).
+
 ## How to resume
 
 ```bash

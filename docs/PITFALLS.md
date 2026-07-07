@@ -10,6 +10,8 @@ re-derive it.
 - **Symptom:** `tsc --noEmit` green but the app breaks at runtime after a `.svelte` edit. → **Cause:** `tsc` does not check `.svelte` files; only `vite build` (syntax) and the browser (behaviour) do. → **Fix:** treat browser verification as part of "tests green" for any Svelte change.
 - **Symptom:** `DataCloneError` when saving to IndexedDB. → **Cause:** Svelte `$state` proxies are not structured-cloneable. → **Fix:** `$state.snapshot(value)` before `db.*.add/put`.
 - **Symptom:** a menu/dialog "did not open" when scripted, or double-toggles. → **Cause:** Svelte flushes DOM asynchronously — code that clicks and then queries in the same tick reads the pre-flush DOM. → **Fix:** separate the click and the assertion (two evals / await a tick).
+- **Symptom:** a component sticks on its loading state with NO console error, though its data fetch returns 200. → **Cause:** an uncaught `state_unsafe_mutation` aborts the render — a template expression called a helper that lazily *created* missing state (`obj[id] ??= {…}`); renders must not write state. → **Fix:** split read/write helpers — reads return a shared immutable default; only event handlers materialise entries. Instrument with `window.addEventListener('error', …)`; these errors don't show in normal console logs. (Hit in AuthoringView 2026-07-07.)
+- **Symptom:** build error `bind_invalid_expression` on an `<input bind:value={…}>`. → **Cause:** `bind:` targets must be identifiers/member expressions — not a function call like `rx(id).comment`. → **Fix:** `value={…}` + `oninput` handler (or a `{get, set}` pair). Caught only by `vite build`, not tsc or vitest.
 
 ## Formatting & maths
 

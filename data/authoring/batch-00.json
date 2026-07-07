@@ -1,0 +1,331 @@
+{
+  "batch": 0,
+  "wave": 0,
+  "title": "Wave 0 — sign axes & inflections (the frame)",
+  "slots": [
+    {
+      "id": "axis-aries-libra",
+      "kind": "sign-axis",
+      "label": "Aries–Libra axis",
+      "kernel": "Aries (direct, pioneering, quick to ignite) and Libra (relational, balancing, fairness-seeking) are one axis: each pole implies and needs the other.",
+      "texts": {
+        "jungian": "Aries (direct, pioneering, quick to ignite) and Libra (relational, balancing, fairness-seeking) are one axis: each pole implies and needs the other. Consciously held, this polarity becomes a dialogue rather than a tug-of-war.",
+        "mundane": "Aries (direct, pioneering, quick to ignite) and Libra (relational, balancing, fairness-seeking) are one axis: each pole implies and needs the other. In practical life this shows as swings between the two styles.",
+        "energy": "Aries (direct, pioneering, quick to ignite) and Libra (relational, balancing, fairness-seeking) are one axis: each pole implies and needs the other. The energy oscillates between the two poles until it finds a rhythm.",
+        "minimal": "Aries (direct, pioneering, quick to ignite) and Libra (relational, balancing, fairness-seeking) are one axis: each pole implies and needs the other."
+      },
+      "markers": [
+        "direct",
+        "relational"
+      ],
+      "ask": "Where does life pull you toward the Libra pole when you lead with Aries — and the reverse?",
+      "strawman": true
+    },
+    {
+      "id": "axis-taurus-scorpio",
+      "kind": "sign-axis",
+      "label": "Taurus–Scorpio axis",
+      "kernel": "Taurus (steady, embodied, attached to the tangible) and Scorpio (intense, guarded, all-or-nothing) are one axis: each pole implies and needs the other.",
+      "texts": {
+        "jungian": "Taurus (steady, embodied, attached to the tangible) and Scorpio (intense, guarded, all-or-nothing) are one axis: each pole implies and needs the other. Consciously held, this polarity becomes a dialogue rather than a tug-of-war.",
+        "mundane": "Taurus (steady, embodied, attached to the tangible) and Scorpio (intense, guarded, all-or-nothing) are one axis: each pole implies and needs the other. In practical life this shows as swings between the two styles.",
+        "energy": "Taurus (steady, embodied, attached to the tangible) and Scorpio (intense, guarded, all-or-nothing) are one axis: each pole implies and needs the other. The energy oscillates between the two poles until it finds a rhythm.",
+        "minimal": "Taurus (steady, embodied, attached to the tangible) and Scorpio (intense, guarded, all-or-nothing) are one axis: each pole implies and needs the other."
+      },
+      "markers": [
+        "steady",
+        "intense"
+      ],
+      "ask": "Where does life pull you toward the Scorpio pole when you lead with Taurus — and the reverse?",
+      "strawman": true
+    },
+    {
+      "id": "axis-gemini-sagittarius",
+      "kind": "sign-axis",
+      "label": "Gemini–Sagittarius axis",
+      "kernel": "Gemini (curious, versatile, spoken aloud) and Sagittarius (far-ranging, candid, meaning-hungry) are one axis: each pole implies and needs the other.",
+      "texts": {
+        "jungian": "Gemini (curious, versatile, spoken aloud) and Sagittarius (far-ranging, candid, meaning-hungry) are one axis: each pole implies and needs the other. Consciously held, this polarity becomes a dialogue rather than a tug-of-war.",
+        "mundane": "Gemini (curious, versatile, spoken aloud) and Sagittarius (far-ranging, candid, meaning-hungry) are one axis: each pole implies and needs the other. In practical life this shows as swings between the two styles.",
+        "energy": "Gemini (curious, versatile, spoken aloud) and Sagittarius (far-ranging, candid, meaning-hungry) are one axis: each pole implies and needs the other. The energy oscillates between the two poles until it finds a rhythm.",
+        "minimal": "Gemini (curious, versatile, spoken aloud) and Sagittarius (far-ranging, candid, meaning-hungry) are one axis: each pole implies and needs the other."
+      },
+      "markers": [
+        "curious",
+        "far-ranging"
+      ],
+      "ask": "Where does life pull you toward the Sagittarius pole when you lead with Gemini — and the reverse?",
+      "strawman": true
+    },
+    {
+      "id": "axis-cancer-capricorn",
+      "kind": "sign-axis",
+      "label": "Cancer–Capricorn axis",
+      "kernel": "Cancer (protective, tidal, family-rooted) and Capricorn (ambitious, enduring, responsibility-bound) are one axis: each pole implies and needs the other.",
+      "texts": {
+        "jungian": "Cancer (protective, tidal, family-rooted) and Capricorn (ambitious, enduring, responsibility-bound) are one axis: each pole implies and needs the other. Consciously held, this polarity becomes a dialogue rather than a tug-of-war.",
+        "mundane": "Cancer (protective, tidal, family-rooted) and Capricorn (ambitious, enduring, responsibility-bound) are one axis: each pole implies and needs the other. In practical life this shows as swings between the two styles.",
+        "energy": "Cancer (protective, tidal, family-rooted) and Capricorn (ambitious, enduring, responsibility-bound) are one axis: each pole implies and needs the other. The energy oscillates between the two poles until it finds a rhythm.",
+        "minimal": "Cancer (protective, tidal, family-rooted) and Capricorn (ambitious, enduring, responsibility-bound) are one axis: each pole implies and needs the other."
+      },
+      "markers": [
+        "protective",
+        "ambitious"
+      ],
+      "ask": "Where does life pull you toward the Capricorn pole when you lead with Cancer — and the reverse?",
+      "strawman": true
+    },
+    {
+      "id": "axis-leo-aquarius",
+      "kind": "sign-axis",
+      "label": "Leo–Aquarius axis",
+      "kernel": "Leo (expressive, proud, heart-led) and Aquarius (independent, systemic, future-facing) are one axis: each pole implies and needs the other.",
+      "texts": {
+        "jungian": "Leo (expressive, proud, heart-led) and Aquarius (independent, systemic, future-facing) are one axis: each pole implies and needs the other. Consciously held, this polarity becomes a dialogue rather than a tug-of-war.",
+        "mundane": "Leo (expressive, proud, heart-led) and Aquarius (independent, systemic, future-facing) are one axis: each pole implies and needs the other. In practical life this shows as swings between the two styles.",
+        "energy": "Leo (expressive, proud, heart-led) and Aquarius (independent, systemic, future-facing) are one axis: each pole implies and needs the other. The energy oscillates between the two poles until it finds a rhythm.",
+        "minimal": "Leo (expressive, proud, heart-led) and Aquarius (independent, systemic, future-facing) are one axis: each pole implies and needs the other."
+      },
+      "markers": [
+        "expressive",
+        "independent"
+      ],
+      "ask": "Where does life pull you toward the Aquarius pole when you lead with Leo — and the reverse?",
+      "strawman": true
+    },
+    {
+      "id": "axis-virgo-pisces",
+      "kind": "sign-axis",
+      "label": "Virgo–Pisces axis",
+      "kernel": "Virgo (precise, useful, self-critical) and Pisces (porous, compassionate, boundary-blurring) are one axis: each pole implies and needs the other.",
+      "texts": {
+        "jungian": "Virgo (precise, useful, self-critical) and Pisces (porous, compassionate, boundary-blurring) are one axis: each pole implies and needs the other. Consciously held, this polarity becomes a dialogue rather than a tug-of-war.",
+        "mundane": "Virgo (precise, useful, self-critical) and Pisces (porous, compassionate, boundary-blurring) are one axis: each pole implies and needs the other. In practical life this shows as swings between the two styles.",
+        "energy": "Virgo (precise, useful, self-critical) and Pisces (porous, compassionate, boundary-blurring) are one axis: each pole implies and needs the other. The energy oscillates between the two poles until it finds a rhythm.",
+        "minimal": "Virgo (precise, useful, self-critical) and Pisces (porous, compassionate, boundary-blurring) are one axis: each pole implies and needs the other."
+      },
+      "markers": [
+        "precise",
+        "porous"
+      ],
+      "ask": "Where does life pull you toward the Pisces pole when you lead with Virgo — and the reverse?",
+      "strawman": true
+    },
+    {
+      "id": "sign-aries",
+      "kind": "sign-inflection",
+      "label": "Aries (pole of the Aries–Libra axis)",
+      "kernel": "Aries: direct, pioneering, quick to ignite. Its shadow and complement is Libra (relational, balancing, fairness-seeking).",
+      "texts": {
+        "jungian": "Aries: direct, pioneering, quick to ignite. Its shadow and complement is Libra (relational, balancing, fairness-seeking). Consciously held, this polarity becomes a dialogue rather than a tug-of-war.",
+        "mundane": "Aries: direct, pioneering, quick to ignite. Its shadow and complement is Libra (relational, balancing, fairness-seeking). In practical life this shows as swings between the two styles.",
+        "energy": "Aries: direct, pioneering, quick to ignite. Its shadow and complement is Libra (relational, balancing, fairness-seeking). The energy oscillates between the two poles until it finds a rhythm.",
+        "minimal": "Aries: direct, pioneering, quick to ignite. Its shadow and complement is Libra (relational, balancing, fairness-seeking)."
+      },
+      "markers": [
+        "direct",
+        "pioneering"
+      ],
+      "ask": "When Aries overdoes its own style, what would borrowing from Libra look like?",
+      "strawman": true
+    },
+    {
+      "id": "sign-taurus",
+      "kind": "sign-inflection",
+      "label": "Taurus (pole of the Taurus–Scorpio axis)",
+      "kernel": "Taurus: steady, embodied, attached to the tangible. Its shadow and complement is Scorpio (intense, guarded, all-or-nothing).",
+      "texts": {
+        "jungian": "Taurus: steady, embodied, attached to the tangible. Its shadow and complement is Scorpio (intense, guarded, all-or-nothing). Consciously held, this polarity becomes a dialogue rather than a tug-of-war.",
+        "mundane": "Taurus: steady, embodied, attached to the tangible. Its shadow and complement is Scorpio (intense, guarded, all-or-nothing). In practical life this shows as swings between the two styles.",
+        "energy": "Taurus: steady, embodied, attached to the tangible. Its shadow and complement is Scorpio (intense, guarded, all-or-nothing). The energy oscillates between the two poles until it finds a rhythm.",
+        "minimal": "Taurus: steady, embodied, attached to the tangible. Its shadow and complement is Scorpio (intense, guarded, all-or-nothing)."
+      },
+      "markers": [
+        "steady",
+        "embodied"
+      ],
+      "ask": "When Taurus overdoes its own style, what would borrowing from Scorpio look like?",
+      "strawman": true
+    },
+    {
+      "id": "sign-gemini",
+      "kind": "sign-inflection",
+      "label": "Gemini (pole of the Gemini–Sagittarius axis)",
+      "kernel": "Gemini: curious, versatile, spoken aloud. Its shadow and complement is Sagittarius (far-ranging, candid, meaning-hungry).",
+      "texts": {
+        "jungian": "Gemini: curious, versatile, spoken aloud. Its shadow and complement is Sagittarius (far-ranging, candid, meaning-hungry). Consciously held, this polarity becomes a dialogue rather than a tug-of-war.",
+        "mundane": "Gemini: curious, versatile, spoken aloud. Its shadow and complement is Sagittarius (far-ranging, candid, meaning-hungry). In practical life this shows as swings between the two styles.",
+        "energy": "Gemini: curious, versatile, spoken aloud. Its shadow and complement is Sagittarius (far-ranging, candid, meaning-hungry). The energy oscillates between the two poles until it finds a rhythm.",
+        "minimal": "Gemini: curious, versatile, spoken aloud. Its shadow and complement is Sagittarius (far-ranging, candid, meaning-hungry)."
+      },
+      "markers": [
+        "curious",
+        "versatile"
+      ],
+      "ask": "When Gemini overdoes its own style, what would borrowing from Sagittarius look like?",
+      "strawman": true
+    },
+    {
+      "id": "sign-cancer",
+      "kind": "sign-inflection",
+      "label": "Cancer (pole of the Cancer–Capricorn axis)",
+      "kernel": "Cancer: protective, tidal, family-rooted. Its shadow and complement is Capricorn (ambitious, enduring, responsibility-bound).",
+      "texts": {
+        "jungian": "Cancer: protective, tidal, family-rooted. Its shadow and complement is Capricorn (ambitious, enduring, responsibility-bound). Consciously held, this polarity becomes a dialogue rather than a tug-of-war.",
+        "mundane": "Cancer: protective, tidal, family-rooted. Its shadow and complement is Capricorn (ambitious, enduring, responsibility-bound). In practical life this shows as swings between the two styles.",
+        "energy": "Cancer: protective, tidal, family-rooted. Its shadow and complement is Capricorn (ambitious, enduring, responsibility-bound). The energy oscillates between the two poles until it finds a rhythm.",
+        "minimal": "Cancer: protective, tidal, family-rooted. Its shadow and complement is Capricorn (ambitious, enduring, responsibility-bound)."
+      },
+      "markers": [
+        "protective",
+        "tidal"
+      ],
+      "ask": "When Cancer overdoes its own style, what would borrowing from Capricorn look like?",
+      "strawman": true
+    },
+    {
+      "id": "sign-leo",
+      "kind": "sign-inflection",
+      "label": "Leo (pole of the Leo–Aquarius axis)",
+      "kernel": "Leo: expressive, proud, heart-led. Its shadow and complement is Aquarius (independent, systemic, future-facing).",
+      "texts": {
+        "jungian": "Leo: expressive, proud, heart-led. Its shadow and complement is Aquarius (independent, systemic, future-facing). Consciously held, this polarity becomes a dialogue rather than a tug-of-war.",
+        "mundane": "Leo: expressive, proud, heart-led. Its shadow and complement is Aquarius (independent, systemic, future-facing). In practical life this shows as swings between the two styles.",
+        "energy": "Leo: expressive, proud, heart-led. Its shadow and complement is Aquarius (independent, systemic, future-facing). The energy oscillates between the two poles until it finds a rhythm.",
+        "minimal": "Leo: expressive, proud, heart-led. Its shadow and complement is Aquarius (independent, systemic, future-facing)."
+      },
+      "markers": [
+        "expressive",
+        "proud"
+      ],
+      "ask": "When Leo overdoes its own style, what would borrowing from Aquarius look like?",
+      "strawman": true
+    },
+    {
+      "id": "sign-virgo",
+      "kind": "sign-inflection",
+      "label": "Virgo (pole of the Virgo–Pisces axis)",
+      "kernel": "Virgo: precise, useful, self-critical. Its shadow and complement is Pisces (porous, compassionate, boundary-blurring).",
+      "texts": {
+        "jungian": "Virgo: precise, useful, self-critical. Its shadow and complement is Pisces (porous, compassionate, boundary-blurring). Consciously held, this polarity becomes a dialogue rather than a tug-of-war.",
+        "mundane": "Virgo: precise, useful, self-critical. Its shadow and complement is Pisces (porous, compassionate, boundary-blurring). In practical life this shows as swings between the two styles.",
+        "energy": "Virgo: precise, useful, self-critical. Its shadow and complement is Pisces (porous, compassionate, boundary-blurring). The energy oscillates between the two poles until it finds a rhythm.",
+        "minimal": "Virgo: precise, useful, self-critical. Its shadow and complement is Pisces (porous, compassionate, boundary-blurring)."
+      },
+      "markers": [
+        "precise",
+        "useful"
+      ],
+      "ask": "When Virgo overdoes its own style, what would borrowing from Pisces look like?",
+      "strawman": true
+    },
+    {
+      "id": "sign-libra",
+      "kind": "sign-inflection",
+      "label": "Libra (pole of the Libra–Aries axis)",
+      "kernel": "Libra: relational, balancing, fairness-seeking. Its shadow and complement is Aries (direct, pioneering, quick to ignite).",
+      "texts": {
+        "jungian": "Libra: relational, balancing, fairness-seeking. Its shadow and complement is Aries (direct, pioneering, quick to ignite). Consciously held, this polarity becomes a dialogue rather than a tug-of-war.",
+        "mundane": "Libra: relational, balancing, fairness-seeking. Its shadow and complement is Aries (direct, pioneering, quick to ignite). In practical life this shows as swings between the two styles.",
+        "energy": "Libra: relational, balancing, fairness-seeking. Its shadow and complement is Aries (direct, pioneering, quick to ignite). The energy oscillates between the two poles until it finds a rhythm.",
+        "minimal": "Libra: relational, balancing, fairness-seeking. Its shadow and complement is Aries (direct, pioneering, quick to ignite)."
+      },
+      "markers": [
+        "relational",
+        "balancing"
+      ],
+      "ask": "When Libra overdoes its own style, what would borrowing from Aries look like?",
+      "strawman": true
+    },
+    {
+      "id": "sign-scorpio",
+      "kind": "sign-inflection",
+      "label": "Scorpio (pole of the Scorpio–Taurus axis)",
+      "kernel": "Scorpio: intense, guarded, all-or-nothing. Its shadow and complement is Taurus (steady, embodied, attached to the tangible).",
+      "texts": {
+        "jungian": "Scorpio: intense, guarded, all-or-nothing. Its shadow and complement is Taurus (steady, embodied, attached to the tangible). Consciously held, this polarity becomes a dialogue rather than a tug-of-war.",
+        "mundane": "Scorpio: intense, guarded, all-or-nothing. Its shadow and complement is Taurus (steady, embodied, attached to the tangible). In practical life this shows as swings between the two styles.",
+        "energy": "Scorpio: intense, guarded, all-or-nothing. Its shadow and complement is Taurus (steady, embodied, attached to the tangible). The energy oscillates between the two poles until it finds a rhythm.",
+        "minimal": "Scorpio: intense, guarded, all-or-nothing. Its shadow and complement is Taurus (steady, embodied, attached to the tangible)."
+      },
+      "markers": [
+        "intense",
+        "guarded"
+      ],
+      "ask": "When Scorpio overdoes its own style, what would borrowing from Taurus look like?",
+      "strawman": true
+    },
+    {
+      "id": "sign-sagittarius",
+      "kind": "sign-inflection",
+      "label": "Sagittarius (pole of the Sagittarius–Gemini axis)",
+      "kernel": "Sagittarius: far-ranging, candid, meaning-hungry. Its shadow and complement is Gemini (curious, versatile, spoken aloud).",
+      "texts": {
+        "jungian": "Sagittarius: far-ranging, candid, meaning-hungry. Its shadow and complement is Gemini (curious, versatile, spoken aloud). Consciously held, this polarity becomes a dialogue rather than a tug-of-war.",
+        "mundane": "Sagittarius: far-ranging, candid, meaning-hungry. Its shadow and complement is Gemini (curious, versatile, spoken aloud). In practical life this shows as swings between the two styles.",
+        "energy": "Sagittarius: far-ranging, candid, meaning-hungry. Its shadow and complement is Gemini (curious, versatile, spoken aloud). The energy oscillates between the two poles until it finds a rhythm.",
+        "minimal": "Sagittarius: far-ranging, candid, meaning-hungry. Its shadow and complement is Gemini (curious, versatile, spoken aloud)."
+      },
+      "markers": [
+        "far-ranging",
+        "candid"
+      ],
+      "ask": "When Sagittarius overdoes its own style, what would borrowing from Gemini look like?",
+      "strawman": true
+    },
+    {
+      "id": "sign-capricorn",
+      "kind": "sign-inflection",
+      "label": "Capricorn (pole of the Capricorn–Cancer axis)",
+      "kernel": "Capricorn: ambitious, enduring, responsibility-bound. Its shadow and complement is Cancer (protective, tidal, family-rooted).",
+      "texts": {
+        "jungian": "Capricorn: ambitious, enduring, responsibility-bound. Its shadow and complement is Cancer (protective, tidal, family-rooted). Consciously held, this polarity becomes a dialogue rather than a tug-of-war.",
+        "mundane": "Capricorn: ambitious, enduring, responsibility-bound. Its shadow and complement is Cancer (protective, tidal, family-rooted). In practical life this shows as swings between the two styles.",
+        "energy": "Capricorn: ambitious, enduring, responsibility-bound. Its shadow and complement is Cancer (protective, tidal, family-rooted). The energy oscillates between the two poles until it finds a rhythm.",
+        "minimal": "Capricorn: ambitious, enduring, responsibility-bound. Its shadow and complement is Cancer (protective, tidal, family-rooted)."
+      },
+      "markers": [
+        "ambitious",
+        "enduring"
+      ],
+      "ask": "When Capricorn overdoes its own style, what would borrowing from Cancer look like?",
+      "strawman": true
+    },
+    {
+      "id": "sign-aquarius",
+      "kind": "sign-inflection",
+      "label": "Aquarius (pole of the Aquarius–Leo axis)",
+      "kernel": "Aquarius: independent, systemic, future-facing. Its shadow and complement is Leo (expressive, proud, heart-led).",
+      "texts": {
+        "jungian": "Aquarius: independent, systemic, future-facing. Its shadow and complement is Leo (expressive, proud, heart-led). Consciously held, this polarity becomes a dialogue rather than a tug-of-war.",
+        "mundane": "Aquarius: independent, systemic, future-facing. Its shadow and complement is Leo (expressive, proud, heart-led). In practical life this shows as swings between the two styles.",
+        "energy": "Aquarius: independent, systemic, future-facing. Its shadow and complement is Leo (expressive, proud, heart-led). The energy oscillates between the two poles until it finds a rhythm.",
+        "minimal": "Aquarius: independent, systemic, future-facing. Its shadow and complement is Leo (expressive, proud, heart-led)."
+      },
+      "markers": [
+        "independent",
+        "systemic"
+      ],
+      "ask": "When Aquarius overdoes its own style, what would borrowing from Leo look like?",
+      "strawman": true
+    },
+    {
+      "id": "sign-pisces",
+      "kind": "sign-inflection",
+      "label": "Pisces (pole of the Pisces–Virgo axis)",
+      "kernel": "Pisces: porous, compassionate, boundary-blurring. Its shadow and complement is Virgo (precise, useful, self-critical).",
+      "texts": {
+        "jungian": "Pisces: porous, compassionate, boundary-blurring. Its shadow and complement is Virgo (precise, useful, self-critical). Consciously held, this polarity becomes a dialogue rather than a tug-of-war.",
+        "mundane": "Pisces: porous, compassionate, boundary-blurring. Its shadow and complement is Virgo (precise, useful, self-critical). In practical life this shows as swings between the two styles.",
+        "energy": "Pisces: porous, compassionate, boundary-blurring. Its shadow and complement is Virgo (precise, useful, self-critical). The energy oscillates between the two poles until it finds a rhythm.",
+        "minimal": "Pisces: porous, compassionate, boundary-blurring. Its shadow and complement is Virgo (precise, useful, self-critical)."
+      },
+      "markers": [
+        "porous",
+        "compassionate"
+      ],
+      "ask": "When Pisces overdoes its own style, what would borrowing from Virgo look like?",
+      "strawman": true
+    }
+  ]
+}

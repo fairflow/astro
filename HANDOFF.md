@@ -1,7 +1,8 @@
 # HANDOFF — ASTRODYNAMICS (fairflow/astro)
 
-**Last updated:** 2026-07-07 by Fable 5
-**Repo state:** m4-draft @ cfbd811 (PR #8 open → main) — builds clean, `tsc` clean, 161/161 tests green, deployed to https://fairflow.co.uk/astro/
+**Last updated:** 2026-07-07 by Fable 5 (afternoon: §7 actions 1–2 done)
+**Repo state:** m4-draft @ HEAD — builds clean, `tsc` clean, 165/165 tests green
+**Deployed:** https://fairflow.co.uk/astro/ @ PR #8 state (authoring tab NOT yet deployed — it is flag-gated and can ship whenever)
 
 ## 1. What this project is (3 sentences max)
 
@@ -17,7 +18,7 @@ ASTRODYNAMICS is an offline-first astrology web app (Svelte 5 + TypeScript + Vit
   - Display: dark/light × contrast low/medium/high × skins (B/W print); print pipeline; wheel export SVG/PNG (self-contained files).
   - PWA offline from second visit; deployed via SFTP to Krystal.
 - **What is in progress:**
-  - Stage 1c Phase A (authoring corpus): scope agreed at `docs/plans/2026-07-06-stage-1c-phase-a-scope.md` (v2 — read it before touching interpretation content). Nothing built yet: no Authoring tab, no `tools/authoring_sheet.py` / `authoring_ingest.py`, no Wave 0 texts.
+  - Stage 1c Phase A: scope at `docs/plans/2026-07-06-stage-1c-phase-a-scope.md` (v2 — read it before touching interpretation content). **Built 2026-07-07:** Authoring tab (`AuthoringView.svelte`, flag: `?author` or `localStorage astro-author=1`), `tools/authoring_sheet.py` (generates wave-0 batch: 18 slots, straw-man texts), `tools/authoring_ingest.py --validate` (schema + register lint; pack-merge still TODO). Wave 0 texts are straw men awaiting the drafting session.
   - Interlingua experiment: designed in `docs/research/2026-07-07-interlingua.md`, not run.
 - **What is broken / known-bad:**
   - Font sizes are px throughout; the rem refactor (needed before the skin builder, issue #2/#3) is not done.
@@ -77,8 +78,8 @@ Top five — full list in `docs/PITFALLS.md`:
 
 ## 7. Next actions (each sized for ONE session by a weaker model)
 
-1. [ ] **Authoring tab skeleton** (flag-gated): new `AuthoringView.svelte` shown when `localStorage['astro-author']==='1'` or `?author` — loads `data/authoring/batch-00.json` (create a 2-slot dummy), renders kernel + 4 register texts + ✓/~/✗ buttons + comment box + Next/Back + progress dots, persists reactions to localStorage, "Export reactions" downloads annotated JSON. Follow the spec section "B's authoring form" in the scope doc. — *Done when:* `tsc` + tests green, and a manual browser check (cast chart → enable flag → tab appears; reactions survive reload; export downloads a JSON containing the reactions).
-2. [ ] **`tools/authoring_sheet.py`**: generate `authoring/batch-00.md` + `data/authoring/batch-00.json` for Wave 0 (6 sign axes + 12 sign inflections) with current template/`SIGN_TONE` output pre-filled as straw-man text. Schema: see worksheet format in the scope doc. — *Done when:* running `.venv/bin/python tools/authoring_sheet.py --wave 0` writes both files and `authoring_ingest.py --validate` (stub ok) accepts them.
+1. [x] **Authoring tab skeleton** — done 2026-07-07 (Fable): flag-gated `AuthoringView.svelte`; verified in browser: tab appears with flag, 18 slots, reactions + comments persist across reload, export downloads annotated JSON. (Deviation from spec: no 2-slot dummy — action 2's real batch was generated first and the tab loads that.)
+2. [x] **`tools/authoring_sheet.py`** — done 2026-07-07 (Fable): `--wave 0` writes `authoring/batch-00.md` + `data/authoring/batch-00.json` (18 slots, straw-man texts from SIGN_TONE); `authoring_ingest.py --validate` passes; schema locked by `test/authoring.spec.ts`.
 3. [ ] **rem refactor** (unblocks skin builder): convert `app.css` font-sizes to rem with a single root size, keep `--ts` scaling working. — *Done when:* visual spot-check at textScale 100%/130% matches before/after screenshots, tests green.
 4. [ ] **Tone-word tooltips**: add `data-tip` for the three SIGN_TONE keywords per sign (needs a 36-entry tip table in `vocab.ts`). — *Done when:* hovering each tone word in the sign panel shows a tip; tests green.
 5. [ ] *(Fable session, not Sonnet)* Wave 0 drafting: replace batch-00 straw-man texts with authored kernels/renderings per the batch loop.
