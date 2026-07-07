@@ -41,6 +41,7 @@ npm run build                                    # expect: "✓ built in <1s", d
   - After any rebuild, **reload the browser tab** — `vite preview` serves dist live but an open tab keeps the old bundle (see PITFALLS).
 - Deploy (only when asked): `cd ~/Projects/private/astro-m4 && .venv/bin/python tools/deploy_sftp.py --secrets /Users/matthew/Software/working/miolingo/.streamlit/secrets.toml --remote /home/fairtlou/fairflow.co.uk/astro --delete` then `curl -s https://fairflow.co.uk/astro/ | grep -o 'index-[A-Za-z0-9_-]*\.js'` and compare against `dist/assets/`. NEVER print or commit the secrets file's contents.
 - Git flow: work on `m4-draft` (this worktree), push, `gh pr create --base main`; Matthew merges; then ff-sync both checkouts. Local `main` lives at `~/Projects/private/astro`.
+- Beads sync: after creating/closing issues run `bd dolt push` (from `~/Projects/private/astro`; `env -u BEADS_DIR` in Finance-rooted sessions), and `bd dolt pull` at session start on another machine/clone — the issue DB syncs via `refs/dolt/data`, NOT via normal git push/pull.
 
 ## 4. Decisions and rationale (DO NOT RE-LITIGATE)
 
