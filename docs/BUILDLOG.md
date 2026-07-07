@@ -202,6 +202,36 @@ updated at the end of each working session.
   illegible dark-on-dark in light mode. New `--rowhover`/`--rowsel`/
   `--badgebg` variables per theme replace all hardcoded surfaces.
 
+## Overnight 2026-07-06 → 07 (issues #2/#4/#5, chooser, servers, 1c-A scope)
+
+- Servers: 8324 now serves MAIN's production build (`astro-main` in
+  launch.json); m4-draft preview moved to 8325 (`astro-m4-preview`);
+  8323 stays the m4 dev server; stale astro-dev/astro-mockup removed.
+- Aspect chooser (UX option A): a click near several overlapping lines
+  pops a menu at the pointer listing every candidate (glyphs + orb,
+  natal + cross lines) — pick one, Escape/click-away dismisses.
+  Conjunctions now draw a dot at the chord midpoint with a 14-unit hit
+  disc, and land in the chooser like any line (their chord sits under
+  every other line of the same bodies — previously unclickable).
+  `distToSegment` in render/wheel.ts, tested (test/geometry.spec.ts).
+- Skins (#2, first slice): `ui/skins.ts` — a skin is a var-map applied
+  inline on <html> (beats theme × contrast). B/W print skin shipped;
+  Display menu gains Skin row (Theme / B/W print). Header gradient
+  moved to `--header-top` so skins/themes control it. rem refactor
+  still pending (issue notes it).
+- Print pipeline (#4): real dialog — "Print black on white" swaps to
+  the B/W skin for the job and restores after (afterprint), "Print as
+  shown" available with an ink warning in dark mode; @media print CSS
+  hides app chrome. Stub text gone.
+- Wheel export (#5): SVG/PNG buttons beside ⤢ Expand on every wheel.
+  `render/export.ts` serialises a standalone SVG (glyph symbols
+  inlined from GlyphDefs, theme vars resolved onto the root, bg rect,
+  hit-zones stripped — verified 30 symbols, self-contained) and
+  rasterises PNG at 2×. Filenames `wheel-<who>-<date>`.
+- Stage 1c Phase A scoped: docs/plans/2026-07-06-stage-1c-phase-a-scope.md
+  (coverage measured: 8/153 natal pairs authored; wave plan, three-way
+  batch protocol, worksheet format, ingest tooling, gate criteria).
+
 ## How to resume
 
 ```bash

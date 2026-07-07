@@ -1,7 +1,9 @@
 <script lang="ts">
-  import { wheelGeometry } from '../render/wheel';
+  import { distToSegment, wheelGeometry, type XY } from '../render/wheel';
   import { bodyGlyphId, signGlyphId } from '../render/glyphset';
-  import { signIndex } from '../render/glyphs';
+  import { BODY_NAME, fmtOrb, signIndex } from '../render/glyphs';
+  import Glyph from './Glyph.svelte';
+  import type { AspectName } from '../chart/aspects';
   import type { Chart } from '../chart/chart';
   import type { BodyKey } from '../ephemeris/types';
   import type { Selection } from './selection';
@@ -89,9 +91,71 @@
   function aspectFocused(a: BodyKey, b: BodyKey): boolean {
     return selection.kind === 'body' && (a === selection.body || b === selection.body);
   }
+
+  // ---- click-disambiguation chooser (UX option A) ----------------------
+  // A click near several overlapping lines (conjunctions especially — a
+  // near-zero-length chord under every other line of the same bodies)
+  // pops a small menu instead of guessing.
+  interface ChooserItem {
+    kind: 'aspect' | 'cross';
+    key?: string;
+    index?: number;
+    a: BodyKey; b: BodyKey; name: AspectName; orb: number;
+  }
+  let chooser = $state<{ x: number; y: number; items: ChooserItem[] } | null>(null);
+  let svgEl: SVGSVGElement | undefined = $state();
+
+  function toSvgPoint(e: MouseEvent): XY | null {
+    const ctm = svgEl?.getScreenCTM();
+    if (!ctm) return null;
+    const p = new DOMPoint(e.clientX, e.clientY).matrixTransform(ctm.inverse());
+    return { x: p.x, y: p.y };
+  }
+
+  function candidatesAt(p: XY): ChooserItem[] {
+    const T = 12 * (geom.size / 720);
+    const items: ChooserItem[] = [];
+    for (const a of geom.aspects) {
+      if (distToSegment(p, a.from, a.to) <= T) {
+        items.push({
+          kind: 'aspect', key: a.key,
+          a: a.aspect.a, b: a.aspect.b, name: a.aspect.def.name, orb: a.aspect.orb,
+        });
+      }
+    }
+    for (const c of geom.crossLines) {
+      const x = crossAspects?.[c.index];
+      if (x && distToSegment(p, c.from, c.to) <= T) {
+        items.push({ kind: 'cross', index: c.index, a: x.a, b: x.b, name: x.def.name, orb: x.orb });
+      }
+    }
+    return items;
+  }
+
+  function pickAspect(e: MouseEvent, primary: ChooserItem) {
+    e.stopPropagation();
+    const p = toSvgPoint(e);
+    const items = p ? candidatesAt(p) : [];
+    if (items.length > 1) {
+      chooser = { x: e.clientX, y: e.clientY, items };
+      return;
+    }
+    chooser = null;
+    choose(primary);
+  }
+
+  function choose(item: ChooserItem) {
+    chooser = null;
+    if (item.kind === 'aspect' && item.key) onselect({ kind: 'aspect', key: item.key });
+    else if (item.kind === 'cross' && item.index !== undefined) oncross?.(item.index);
+  }
 </script>
 
-<svg viewBox={`0 0 ${geom.size} ${geom.size}`} role="img" aria-label="Natal chart wheel">
+<svelte:window
+  onclick={() => { if (chooser) chooser = null; }}
+  onkeydown={e => { if (e.key === 'Escape' && chooser) chooser = null; }} />
+
+<svg bind:this={svgEl} viewBox={`0 0 ${geom.size} ${geom.size}`} role="img" aria-label="Natal chart wheel">
   <circle cx={geom.cx} cy={geom.cy} r={geom.rZodiacOuter + 8} fill="var(--bg2)" stroke="var(--line)" />
 
   <!-- zodiac band -->
@@ -135,10 +199,11 @@
 
   <!-- aspects -->
   {#each geom.aspects as a (a.key)}
+    {@const item = { kind: 'aspect', key: a.key, a: a.aspect.a, b: a.aspect.b, name: a.aspect.def.name, orb: a.aspect.orb } as const}
     <g class="aspect-line" class:dimmed={aspectDimmed(a.key, a.aspect.a, a.aspect.b)}
       role="button" tabindex="0" aria-label={`${a.aspect.a} ${a.aspect.def.name} ${a.aspect.b}`}
-      onclick={() => onselect({ kind: 'aspect', key: a.key })}
-      onkeydown={e => e.key === 'Enter' && onselect({ kind: 'aspect', key: a.key })}>
+      onclick={e => pickAspect(e, item)}
+      onkeydown={e => e.key === 'Enter' && choose(item)}>
       {#if a.partile}
         <line x1={a.from.x} y1={a.from.y} x2={a.to.x} y2={a.to.y}
           stroke={`var(${a.colorVar})`} stroke-width="5" opacity="0.25" />
@@ -146,6 +211,14 @@
       <line x1={a.from.x} y1={a.from.y} x2={a.to.x} y2={a.to.y}
         stroke={`var(${a.colorVar})`} stroke-width={a.width} opacity={a.opacity}
         stroke-dasharray={a.dashed ? '5 4' : undefined} />
+      {#if a.aspect.def.name === 'conjunction'}
+        <!-- a conjunction's chord is near zero-length: mark it with a dot
+             and give it a round hit disc so it can actually be tapped -->
+        <circle cx={(a.from.x + a.to.x) / 2} cy={(a.from.y + a.to.y) / 2}
+          r="5" fill={`var(${a.colorVar})`} opacity={a.opacity} />
+        <circle class="aspect-hit-dot" cx={(a.from.x + a.to.x) / 2}
+          cy={(a.from.y + a.to.y) / 2} r="14" fill="transparent" />
+      {/if}
       <line class="aspect-hit" class:big={aspectFocused(a.aspect.a, a.aspect.b)}
         x1={a.from.x} y1={a.from.y} x2={a.to.x} y2={a.to.y} />
     </g>
@@ -183,9 +256,11 @@
   <!-- bi-wheel: cross-aspect lines (outer -> natal) -->
   {#if geom.crossLines.length}
     {#each geom.crossLines as c (c.index)}
+      {@const x = crossAspects?.[c.index]}
+      {@const citem = x ? { kind: 'cross', index: c.index, a: x.a, b: x.b, name: x.def.name, orb: x.orb } as const : null}
       <g class="aspect-line" class:dimmed={crossDimmed(c.index)}
         role="button" tabindex="0" aria-label={`cross aspect ${c.index}`}
-        onclick={() => oncross?.(c.index)}
+        onclick={e => citem ? pickAspect(e, citem) : oncross?.(c.index)}
         onkeydown={e => e.key === 'Enter' && oncross?.(c.index)}>
         <line x1={c.from.x} y1={c.from.y} x2={c.to.x} y2={c.to.y}
           stroke={`var(${c.colorVar})`} stroke-width="1.3" opacity={c.opacity}
@@ -240,3 +315,19 @@
     {chart.houses.polarFallback ? 'Porphyry (polar fallback)' : 'Placidus'} · Tropical{geom.outer.length ? ' · outer ring: second chart' : ''}
   </text>
 </svg>
+
+{#if chooser}
+  <div class="wheelchooser" role="menu"
+    style={`left:${Math.min(chooser.x, window.innerWidth - 330)}px; top:${Math.min(chooser.y + 6, window.innerHeight - 40 * chooser.items.length - 40)}px`}>
+    <div class="title">Several lines here — which one?</div>
+    {#each chooser.items as item}
+      <button role="menuitem" onclick={e => { e.stopPropagation(); choose(item); }}>
+        <Glyph body={item.a} size={15} />
+        <Glyph aspect={item.name} size={13} />
+        <Glyph body={item.b} size={15} />
+        {BODY_NAME[item.a]} {item.name} {BODY_NAME[item.b]}{item.kind === 'cross' ? ' (outer)' : ''}
+        <span class="orb">{fmtOrb(item.orb)}</span>
+      </button>
+    {/each}
+  </div>
+{/if}

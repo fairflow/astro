@@ -25,12 +25,15 @@ export interface DisplaySettings {
   /** Contrast level — independent of theme; 'high' is as strong as
    *  possible while colours remain distinguishable. */
   contrast: 'low' | 'medium' | 'high';
+  /** Skin override: 'auto' = theme system; 'bw' = black-on-white print. */
+  skin: 'auto' | 'bw';
   /** Multiplies text sizes (wheel labels and reading panels). */
   textScale: number;
 }
 
 export const DEFAULT_DISPLAY: DisplaySettings = {
-  glyphScale: 1.25, weight: 7, slant: 0, theme: 'dark', contrast: 'low', textScale: 1,
+  glyphScale: 1.25, weight: 7, slant: 0, theme: 'dark', contrast: 'low',
+  skin: 'auto', textScale: 1,
 };
 
 const DISPLAY_KEY = 'astro-display';
