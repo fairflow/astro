@@ -14,11 +14,20 @@
   function house(body: string): number {
     return chart.positions.find(p => p.body === body)?.house ?? 0;
   }
+
+  /** Partially-expanded list: strongest few always visible, no inner scroll.
+   *  Auto-expands when a selection (e.g. a wheel tap) sits beyond the preview. */
+  const PREVIEW = 5;
+  let showAll = $state(false);
+  const selIdx = $derived(selection.kind === 'aspect'
+    ? chart.aspects.findIndex(a => aspectKey(a) === selection.key) : -1);
+  const visible = $derived(showAll || selIdx >= PREVIEW
+    ? chart.aspects : chart.aspects.slice(0, PREVIEW));
 </script>
 
 <div class="aspectlist">
   <h3>Aspects · strongest first</h3>
-  {#each chart.aspects as a (aspectKey(a))}
+  {#each visible as a (aspectKey(a))}
     <button
       class="row"
       class:sel={selection.kind === 'aspect' && selection.key === aspectKey(a)}
@@ -35,4 +44,9 @@
       </span>
     </button>
   {/each}
+  {#if chart.aspects.length > PREVIEW}
+    <button class="more" onclick={() => showAll = !showAll}>
+      {showAll ? 'Show fewer ▴' : `Show all ${chart.aspects.length} aspects ▾`}
+    </button>
+  {/if}
 </div>

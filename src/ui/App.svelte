@@ -255,7 +255,6 @@
     <aside class="app">
       <Panel {chart} {selection} meta={current!.meta} style={styleId} onselect={s => selection = s} />
       <AspectList {chart} {selection} onselect={s => selection = s} />
-      <div class="legend"><span>tight orb</span><span class="ramp"></span><span>edge of orb</span></div>
     </aside>
   {:else}
     <div class="empty">

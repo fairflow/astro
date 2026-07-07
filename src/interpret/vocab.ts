@@ -57,6 +57,24 @@ export const SIGN_TONE = [
   'porous, compassionate, boundary-blurring',   // Pisces
 ];
 
+/** New-reader tooltips for the sign panel (elements, modalities, rulership). */
+export const ELEMENT_TIP: Record<string, string> = {
+  fire: 'Fire signs (Aries, Leo, Sagittarius): energy expressed as action, spirit and initiative.',
+  earth: 'Earth signs (Taurus, Virgo, Capricorn): energy expressed through the tangible — body, matter, work.',
+  air: 'Air signs (Gemini, Libra, Aquarius): energy expressed through thought, language and relationship.',
+  water: 'Water signs (Cancer, Scorpio, Pisces): energy expressed through feeling, imagination and empathy.',
+};
+
+export const MODALITY_TIP: Record<string, string> = {
+  cardinal: 'Cardinal signs start things — each opens a season. Initiative, though follow-through must come from elsewhere.',
+  fixed: 'Fixed signs sustain things — mid-season stability. Endurance and loyalty, at the risk of rigidity.',
+  mutable: 'Mutable signs adapt things — each closes a season. Flexibility and exchange, at the risk of scattering.',
+};
+
+export const RULER_TIP =
+  'The sign’s ruling planet: the planet whose manner most colours this sign. '
+  + 'Where that planet sits in the chart shows how the sign’s style actually gets lived.';
+
 /** House arenas: where a factor plays out in life. */
 export const HOUSE_ARENA = [
   'the body, the self-image, and how life is met',            // 1

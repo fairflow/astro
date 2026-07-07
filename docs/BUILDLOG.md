@@ -232,6 +232,32 @@ updated at the end of each working session.
   (coverage measured: 8/153 natal pairs authored; wave plan, three-way
   batch protocol, worksheet format, ingest tooling, gate criteria).
 
+## 2026-07-07 morning (scope v2 + UX round)
+
+- Scope doc rewritten (v2): houses & signs are first-class authoring
+  dimensions (1a bodies-in-houses, 1b bodies-in-signs, 1c combination
+  rule, 1d existing assets); building principles follow Liz Greene —
+  axis-first authoring (6 sign axes + 6 house axes + inflections) so
+  polarity (B's Scorpio→Taurus instinct) is structural; revised sizing
+  (~380 kernels total, wave 0 = the frame); B's in-app Authoring tab
+  specified (one slot per screen, ✓/~/✗ + comment, Next/Back,
+  localStorage, export; ?author flag now, admin later). Terminology
+  answered in-doc (pair/class).
+- Interlingua research note (docs/research/2026-07-07-interlingua.md):
+  frames + RST realizers recommended; MTT lexical functions for
+  paraphrase variety; process-calculus laws as property tests; one-
+  evening blind experiment defined (regenerate 3 authored pairs from
+  trees, B judges blind); Phase A does not block on it.
+- UX: instant CSS tooltips ([data-tip], no browser title delay) on sign
+  panel element/modality/ruler + aspect class/phase; aspect list shows
+  strongest 5 with "Show all N" (auto-expands if a selection is deeper);
+  orb legend removed (glossary covers it); Settings group checkboxes
+  now plain two-state (all on / all off).
+- Bug: group toggle only affected the first body — Svelte 5 {@const} is
+  REACTIVE, so `!allOn` flipped mid-loop after the first assignment
+  (also the cause of yesterday's "random body" test artifacts). Fix:
+  compute the target once inside the handler.
+
 ## How to resume
 
 ```bash

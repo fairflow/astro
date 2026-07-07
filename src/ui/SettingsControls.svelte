@@ -25,11 +25,14 @@
       {#each BODY_GROUPS as g (g.label)}
         {@const unlocked = g.bodies.filter(b => !LOCKED_BODIES.includes(b))}
         {@const allOn = unlocked.every(b => prefs.bodies[b])}
-        {@const someOn = unlocked.some(b => prefs.bodies[b])}
         <label class="group">
-          <input type="checkbox" checked={allOn} indeterminate={someOn && !allOn}
-            title={`Toggle the whole “${g.label}” group`}
-            onchange={() => { for (const b of unlocked) prefs.bodies[b] = !allOn; }}>
+          <input type="checkbox" checked={allOn}
+            title={allOn ? `Switch the whole “${g.label}” group off` : `Switch the whole “${g.label}” group on`}
+            onchange={() => {
+              // compute once: {@const allOn} is reactive and would flip mid-loop
+              const on = !unlocked.every(b => prefs.bodies[b]);
+              for (const b of unlocked) prefs.bodies[b] = on;
+            }}>
           {g.label}
         </label>
         <div class="grid">
