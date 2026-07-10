@@ -37,6 +37,10 @@
   let banner = $state('');
   let copied = $state(false);
 
+  // Build-time version stamp (see vite.config.ts). hash tail = last 5 hex.
+  const buildDate = __GIT_DATE__;
+  const buildHash = __GIT_HASH__.slice(-5);
+
   async function copySnapshot() {
     if (!chart || !current) return;
     const text = chartSnapshot(chart, current.meta);
@@ -207,6 +211,9 @@
 <header class="app">
   <div class="brand">
     <h1>ASTRODYNAMICS</h1>
+    {#if buildDate}
+      <span class="build" title="Latest commit: {buildDate} · {buildHash}">{buildDate} · {buildHash}</span>
+    {/if}
     <span class="tag">charts · offline ephemeris · interpretations</span>
     <span class="spacer"></span>
     {#if chart}
