@@ -8,10 +8,19 @@
  *    gazetteer, text packs, icons): cache-first, network fallback —
  *    hashed asset names make this safe, and the data files are
  *    versioned by content in practice;
- *  - old caches cleaned on activate. Bump VERSION to force a full
- *    refetch after breaking data-layout changes.
+ *  - old caches cleaned on activate, and all lookups are scoped to the
+ *    current VERSION's cache (not the global `caches.match`, which
+ *    searches every cache regardless of name — a stray old-version cache
+ *    would otherwise shadow fresh content indefinitely). VERSION is
+ *    stamped with the build's git hash by vite.config.ts (see
+ *    swVersionStamp) — every deploy gets a fresh cache automatically,
+ *    including for unhashed data fetches (authoring batches, text packs)
+ *    that would otherwise be stuck cache-first forever. The literal below
+ *    is the dev-server/no-git fallback only; never hand-edit it for a
+ *    real deploy.
  */
 const VERSION = 'astrodynamics-v1';
+const openCache = () => caches.open(VERSION);
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -37,20 +46,20 @@ self.addEventListener('fetch', (event) => {
       fetch(req)
         .then((res) => {
           const copy = res.clone();
-          caches.open(VERSION).then((c) => c.put(req, copy));
+          openCache().then((c) => c.put(req, copy));
           return res;
         })
-        .catch(() => caches.match(req).then((hit) => hit ?? caches.match('.'))),
+        .catch(() => openCache().then((c) => c.match(req)).then((hit) => hit ?? openCache().then((c) => c.match('.')))),
     );
     return;
   }
 
   event.respondWith(
-    caches.match(req).then((hit) => hit
+    openCache().then((c) => c.match(req)).then((hit) => hit
       ?? fetch(req).then((res) => {
         if (res.ok) {
           const copy = res.clone();
-          caches.open(VERSION).then((c) => c.put(req, copy));
+          openCache().then((c) => c.put(req, copy));
         }
         return res;
       })),

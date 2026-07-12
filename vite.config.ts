@@ -1,5 +1,7 @@
 import { execSync } from 'node:child_process';
-import { defineConfig } from 'vitest/config';
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { resolve } from 'node:path';
+import { defineConfig, type Plugin } from 'vitest/config';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 
 // Version stamp injected at build time: the deployed bundle differs from its
@@ -17,11 +19,29 @@ function gitStamp(): { hash: string; date: string } {
 }
 
 const git = gitStamp();
+const hashTail = git.hash ? git.hash.slice(-5) : 'v1';
+
+// sw.js is copied verbatim from publicDir (data/) — `define` doesn't reach
+// it. Patch its cache-key VERSION post-build so every deploy busts old
+// caches, including unhashed data fetches (authoring batches, text packs)
+// that would otherwise be stuck cache-first forever (see PITFALLS).
+function swVersionStamp(): Plugin {
+  return {
+    name: 'sw-version-stamp',
+    closeBundle() {
+      const swPath = resolve(__dirname, 'dist/sw.js');
+      if (!existsSync(swPath)) return;
+      const patched = readFileSync(swPath, 'utf8')
+        .replace(/const VERSION = '[^']*';/, `const VERSION = 'astrodynamics-${hashTail}';`);
+      writeFileSync(swPath, patched);
+    },
+  };
+}
 
 export default defineConfig({
   // relative base so dist/ works from any subdirectory (e.g. /astro/)
   base: './',
-  plugins: [svelte()],
+  plugins: [svelte(), swVersionStamp()],
   define: {
     __GIT_HASH__: JSON.stringify(git.hash),
     __GIT_DATE__: JSON.stringify(git.date),
