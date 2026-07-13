@@ -1,7 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import {
-    deleteChart, listCharts, saveChart, updateChart, type SavedChart,
+    DEFAULT_SET, deleteChart, listCharts, saveChart, setsOf, updateChart,
+    type SavedChart,
   } from '../store/db';
 
   let { saveable, onload, loadedId = null, onsaved }: {
@@ -15,11 +16,35 @@
   let open = $state(false);
   let flash = $state('');
   let confirmDelete = $state<number | null>(null);
+  // load view: search box + family filter
+  let search = $state('');
+  let family = $state('__all__');
+  // save view: which set to file the person under
+  let saveMode = $state(false);
+  let saveSet = $state(DEFAULT_SET);
+  let newSet = $state('');
 
   async function refresh() {
     charts = await listCharts();
   }
   onMount(refresh);
+
+  const sets = $derived(setsOf(charts));
+  // Search wins over the family filter: a query matches any fragment of the
+  // name, date/time or place, across every family (SolarFire-style lookup).
+  const filtered = $derived.by(() => {
+    const q = search.trim().toLowerCase();
+    if (q) {
+      return charts.filter(c => {
+        const hay = `${c.name} ${c.date} ${c.time} ${c.place.name} ${c.place.country}`;
+        return hay.toLowerCase().includes(q);
+      });
+    }
+    if (family !== '__all__') {
+      return charts.filter(c => (c.set || DEFAULT_SET) === family);
+    }
+    return charts;
+  });
 
   function samePerson(a: Omit<SavedChart, 'id' | 'createdAt'>, b: SavedChart): boolean {
     return a.name === b.name && a.date === b.date && a.time === b.time
@@ -34,12 +59,24 @@
   const dirty = $derived(saveable !== null && loaded !== null
     && !samePerson(saveable, loaded));
 
-  async function save() {
+  /** Open the save panel and preselect a sensible target family. */
+  function beginSave() {
     if (!saveable || alreadySaved) return;
-    const id = await saveChart(saveable);
-    await refresh();
-    flash = `Saved “${saveable.name}”`;
+    saveSet = family !== '__all__' ? family : (loaded?.set || sets[0] || DEFAULT_SET);
+    newSet = '';
+    saveMode = true;
     open = true;
+  }
+
+  async function confirmSave() {
+    if (!saveable) return;
+    const set = newSet.trim() || saveSet || DEFAULT_SET;
+    const id = await saveChart({ ...saveable, set });
+    await refresh();
+    saveMode = false;
+    newSet = '';
+    family = set;               // reveal the family we just filed into
+    flash = `Saved “${saveable.name}” to ${set}`;
     if (typeof id === 'number') onsaved?.(id);
     setTimeout(() => flash = '', 2500);
   }
@@ -96,6 +133,7 @@
         const cand = {
           name: c.name, date: c.date, time: c.time ?? '12:00',
           accuracy: c.accuracy ?? 'unknown', place: c.place, notes: c.notes,
+          set: typeof c.set === 'string' ? c.set : DEFAULT_SET,
         };
         if (charts.some(x => samePerson(cand, x))) { skipped++; continue; }
         await saveChart(cand);
@@ -115,28 +153,65 @@
     <button class="primary" title={`Update “${loaded?.name}” in place with the current form data`}
       onclick={update}>Update</button>
     <button class="primary" title="Keep the original and save this as a new person"
-      disabled={alreadySaved} onclick={save}>Save new</button>
+      disabled={alreadySaved} onclick={beginSave}>Save new</button>
   {:else}
     <button class="primary" disabled={!saveable || alreadySaved}
-      title={alreadySaved ? 'This chart is already saved' : 'Save the current birth data (positions are recomputed on load)'}
-      onclick={save}>
+      title={alreadySaved ? 'This chart is already saved' : 'Save the current birth data into a family (positions are recomputed on load)'}
+      onclick={beginSave}>
       {alreadySaved ? 'Saved ✓' : 'Save chart'}
     </button>
   {/if}
-  <button onclick={() => { open = !open; confirmDelete = null; }}
+  <button onclick={() => { open = !open; confirmDelete = null; saveMode = false; }}
     title="Show saved charts">Saved ({charts.length})</button>
   {#if open}
     <div class="menu">
       {#if flash}<div class="flash">{flash}</div>{/if}
+
+      {#if saveMode && saveable}
+        <div class="savebox">
+          <div class="savehead">Save “{saveable.name}” to family</div>
+          <select bind:value={saveSet} aria-label="Choose family">
+            {#each sets as s (s)}<option value={s}>{s}</option>{/each}
+            {#if !sets.includes(DEFAULT_SET)}<option value={DEFAULT_SET}>{DEFAULT_SET}</option>{/if}
+          </select>
+          <input type="text" placeholder="…or type a new family" bind:value={newSet}
+            aria-label="New family name">
+          <div class="saveactions">
+            <button class="go" onclick={confirmSave}>Save</button>
+            <button onclick={() => saveMode = false}>Cancel</button>
+          </div>
+        </div>
+      {/if}
+
       {#if charts.length === 0}
         <div class="none">Nothing saved yet. Cast a chart, then “Save chart”.</div>
+      {:else}
+        <div class="find">
+          <input type="search" class="search" placeholder="🔍 search name, date or place"
+            bind:value={search} aria-label="Search saved charts">
+          {#if !search.trim()}
+            <select bind:value={family} aria-label="Filter by family" class="famsel">
+              <option value="__all__">All families ({charts.length})</option>
+              {#each sets as s (s)}
+                <option value={s}>{s} ({charts.filter(c => (c.set || DEFAULT_SET) === s).length})</option>
+              {/each}
+            </select>
+          {/if}
+        </div>
+        {#if filtered.length === 0}
+          <div class="none">No matches.</div>
+        {/if}
       {/if}
-      {#each charts as c (c.id)}
+
+      {#each filtered as c (c.id)}
         <div class="item">
           <div class="who">
             <b>{c.name}</b>
             <span>{c.date} {c.time} · {c.place.name}, {c.place.country}</span>
           </div>
+          {#if search.trim() || family === '__all__'}
+            <span class="settag" title="Family">{c.set || DEFAULT_SET}</span>
+          {/if}
           <button title="Load this chart into the form and cast it"
             onclick={() => { onload(c); open = false; }}>Load</button>
           {#if confirmDelete === c.id}
@@ -169,6 +244,27 @@
     border-radius: 6px; padding: 4px 8px; font-size: 12.5px; margin-bottom: 6px;
   }
   .danger { color: #ff8b8b !important; border-color: #7a4a4a !important; }
+  .savebox {
+    border: 1px solid var(--gold-dim); border-radius: 8px; padding: 8px 10px;
+    margin-bottom: 8px; display: flex; flex-direction: column; gap: 6px;
+  }
+  .savehead { font-size: 12.5px; color: var(--gold); }
+  .savebox select, .savebox input, .find select, .find input {
+    background: var(--bg2); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 6px; padding: 5px 8px; font-size: 12.5px; width: 100%;
+  }
+  .saveactions { display: flex; gap: 6px; }
+  .saveactions .go { color: var(--on-gold); background: var(--gold); border-color: var(--gold); font-weight: 600; }
+  .saveactions button, .savebox { box-sizing: border-box; }
+  .saveactions button {
+    border: 1px solid var(--line); background: var(--bg2); color: var(--ink);
+    border-radius: 8px; padding: 4px 14px; font-size: 12.5px;
+  }
+  .find { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+  .settag {
+    font-size: 10.5px; color: var(--dim); border: 1px solid var(--line);
+    border-radius: 8px; padding: 1px 7px; align-self: center; white-space: nowrap;
+  }
   .tools { display: flex; gap: 6px; padding: 6px 4px 2px; }
   .tools button {
     background: none; border: 1px solid var(--gold-dim); color: var(--gold);
