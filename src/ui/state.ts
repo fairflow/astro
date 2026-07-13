@@ -32,11 +32,14 @@ export interface DisplaySettings {
   /** Aspect emphasis 0..1: raises line width, colour saturation and the
    *  minimum opacity of wide-orb aspects together. 0.5 = balanced default. */
   aspectEmphasis: number;
+  /** Per-aspect colour overrides: CSS var name → hex. Applied inline over the
+   *  palette (empty = palette defaults). Ignored while the B/W print skin is on. */
+  aspectColors: Record<string, string>;
 }
 
 export const DEFAULT_DISPLAY: DisplaySettings = {
   glyphScale: 1.25, weight: 7, slant: 0, theme: 'dark', contrast: 'low',
-  skin: 'auto', textScale: 1, aspectEmphasis: 0.5,
+  skin: 'auto', textScale: 1, aspectEmphasis: 0.5, aspectColors: {},
 };
 
 const DISPLAY_KEY = 'astro-display';

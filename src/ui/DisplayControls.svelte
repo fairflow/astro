@@ -1,10 +1,28 @@
 <script lang="ts">
   import type { DisplaySettings } from './state';
   import { BW_SKIN, applySkin, skinById } from './skins';
+  import { ASPECT_FAMILIES } from '../render/glyphs';
 
   let { display = $bindable() }: { display: DisplaySettings } = $props();
   let open = $state(false);
   let printOpen = $state(false);
+  let coloursOpen = $state(false);
+
+  /** Current effective colour of an aspect var, as #rrggbb for the picker:
+   *  the user's override if set, else the live palette value. */
+  function aspectColour(varName: string): string {
+    const ov = display.aspectColors[varName];
+    if (ov) return ov;
+    const v = getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+    return /^#[0-9a-f]{6}$/i.test(v) ? v : '#888888';
+  }
+  function setAspectColour(varName: string, hex: string) {
+    display.aspectColors = { ...display.aspectColors, [varName]: hex };
+  }
+  function resetAspectColour(varName: string) {
+    const { [varName]: _drop, ...rest } = display.aspectColors;
+    display.aspectColors = rest;
+  }
 
   /** Print pipeline (issue #4): optionally switch to the B/W skin just
    *  for the print job, then restore whatever skin the user had. */
@@ -43,6 +61,28 @@
         <input type="range" min="0" max="1" step="0.05" bind:value={display.aspectEmphasis}
           title="Line thickness, colour saturation and how boldly wide-orb aspects show">
       </label>
+      <div class="aspcolours">
+        <button class="disclose" onclick={() => coloursOpen = !coloursOpen} aria-expanded={coloursOpen}>
+          {coloursOpen ? '▾' : '▸'} Aspect colours{display.skin === 'bw' ? ' (off in B/W print)' : ''}
+        </button>
+        {#if coloursOpen}
+          <div class="swatches">
+            {#each ASPECT_FAMILIES as fam (fam.var)}
+              <div class="swatch">
+                <input type="color" aria-label={`${fam.label} colour`}
+                  value={aspectColour(fam.var)}
+                  oninput={e => setAspectColour(fam.var, (e.target as HTMLInputElement).value)}>
+                <span>{fam.label}</span>
+                {#if display.aspectColors[fam.var]}
+                  <button class="rst" title="Back to palette default"
+                    aria-label={`Reset ${fam.label} colour`}
+                    onclick={() => resetAspectColour(fam.var)}>×</button>
+                {/if}
+              </div>
+            {/each}
+          </div>
+        {/if}
+      </div>
       <div class="themes">
         <span class="tlabel">Theme</span>
         <button class:on={display.theme === 'dark'} onclick={() => display.theme = 'dark'}>Dark</button>
@@ -99,6 +139,21 @@
     display: flex; flex-direction: column; gap: 10px;
   }
   label { font-size: 12px; color: var(--dim); display: flex; flex-direction: column; gap: 4px; }
+  .disclose {
+    background: none; border: none; color: var(--dim); font-size: 12px;
+    text-align: left; padding: 0; cursor: pointer;
+  }
+  .swatches { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 10px; margin-top: 8px; }
+  .swatch { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--ink); }
+  .swatch input[type="color"] {
+    width: 26px; height: 20px; padding: 0; border: 1px solid var(--line);
+    border-radius: 4px; background: none; cursor: pointer;
+  }
+  .swatch .rst {
+    background: none; border: none; color: var(--dim); cursor: pointer;
+    font-size: 14px; line-height: 1; padding: 0 2px;
+  }
+  .swatch .rst:hover { color: var(--square); }
   label span { color: var(--ink); float: right; }
   .themes { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
   .tlabel { font-size: 12px; color: var(--dim); margin-right: 2px; }
