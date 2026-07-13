@@ -53,6 +53,16 @@ export const ASPECT_COLOR: Record<AspectName, string> = {
   trine: '--trine', quincunx: '--quincunx', opposition: '--opp',
 };
 
+/** Aspect colour families, in a sensible picker order (var + human label). */
+export const ASPECT_FAMILIES: { var: string; label: string }[] = [
+  { var: '--trine', label: 'Trine' },
+  { var: '--sextile', label: 'Sextile' },
+  { var: '--square', label: 'Square' },
+  { var: '--opp', label: 'Opposition' },
+  { var: '--conj', label: 'Conjunction' },
+  { var: '--quincunx', label: 'Quincunx' },
+];
+
 export function signIndex(lon: number): number {
   return Math.floor(normDeg(lon) / 30);
 }

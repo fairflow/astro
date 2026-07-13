@@ -19,6 +19,7 @@
   import SynastryView from './SynastryView.svelte';
   import { session, storeSession } from './session.svelte';
   import { applySkin, skinById } from './skins';
+  import { ASPECT_FAMILIES } from '../render/glyphs';
   import CompositeView from './CompositeView.svelte';
   import { STYLES, type StyleId } from '../interpret/types';
   import { fetchPacks, PACK_BODIES } from '../ephemeris/packs';
@@ -103,6 +104,15 @@
     document.documentElement.style.setProperty(
       '--aspect-sat', String(0.7 + 0.9 * display.aspectEmphasis));
     applySkin(skinById(display.skin));
+    // per-aspect colour overrides — AFTER applySkin (which clears/sets the
+    // same vars) and only when no print skin is active, so B/W stays single-ink.
+    if (display.skin === 'auto') {
+      for (const { var: v } of ASPECT_FAMILIES) {
+        const hex = display.aspectColors[v];
+        if (hex) document.documentElement.style.setProperty(v, hex);
+        else document.documentElement.style.removeProperty(v);
+      }
+    }
   });
 
   // Working state survives refresh: remember the last-cast birth data.

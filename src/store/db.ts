@@ -14,6 +14,9 @@ export type TimeAccuracy = 'exact' | '5min' | '30min' | '2h' | 'unknown';
  * Birth data is the source of truth; positions are recomputed on load so
  * ephemeris improvements propagate to old charts.
  */
+/** Charts with no explicit set fall in this family. */
+export const DEFAULT_SET = 'Unfiled';
+
 export interface SavedChart {
   id?: number;
   name: string;
@@ -22,6 +25,8 @@ export interface SavedChart {
   accuracy: TimeAccuracy;
   place: SavedPlace;
   notes?: string;
+  /** Family/set this person belongs to (SolarFire-style grouping). */
+  set?: string;
   createdAt: number;
 }
 
@@ -32,9 +37,22 @@ export const db = new Dexie('astro') as Dexie & {
 db.version(1).stores({
   charts: '++id, name, createdAt',
 });
+// v2: group charts into named sets/families. Backfill existing charts.
+db.version(2).stores({
+  charts: '++id, name, createdAt, set',
+}).upgrade(tx => tx.table('charts').toCollection().modify(c => {
+  if (!c.set) c.set = DEFAULT_SET;
+}));
 
 export async function listCharts(): Promise<SavedChart[]> {
   return db.charts.orderBy('createdAt').reverse().toArray();
+}
+
+/** Distinct set/family names present, sorted (DEFAULT_SET last). */
+export function setsOf(charts: SavedChart[]): string[] {
+  const names = [...new Set(charts.map(c => c.set || DEFAULT_SET))];
+  return names.sort((a, b) =>
+    a === DEFAULT_SET ? 1 : b === DEFAULT_SET ? -1 : a.localeCompare(b));
 }
 
 export async function saveChart(c: Omit<SavedChart, 'id' | 'createdAt'>) {
