@@ -12,7 +12,10 @@
   }
   interface Batch { batch: number; wave: number; title: string; slots: Slot[] }
   type Mark = 'yes' | 'flat' | 'no';
-  interface Reaction { mark: Mark | null; comment: string }
+  // tags/ask are B's edits: tags present = she curated them (else slot.markers
+  // stand); ask present = she reworded the question (else slot.ask stands).
+  // These feed the rewrite phase alongside mark + comment.
+  interface Reaction { mark: Mark | null; comment: string; tags?: string[]; ask?: string }
 
   let batch = $state<Batch | null>(null);
   let error = $state('');
@@ -50,8 +53,17 @@
   });
 
   const slot = $derived(batch?.slots[idx] ?? null);
-  const reacted = $derived(batch
-    ? batch.slots.filter(s => reactions[s.id]?.mark).length : 0);
+  // A slot is "engaged" if she gave any signal at all — a mark, a comment,
+  // a tag edit or a reworded ask. Comment-only (no mark) still counts, so a
+  // pass of pure comments can still be sent (M's note: no mark = neutral-ok,
+  // but the comment matters).
+  function engaged(id: string): boolean {
+    const r = reactions[id];
+    return !!r && (r.mark !== null || r.comment.trim() !== ''
+      || r.tags !== undefined || r.ask !== undefined);
+  }
+  const engagedCount = $derived(batch
+    ? batch.slots.filter(s => engaged(s.id)).length : 0);
 
   // Reads must NOT mutate: the template calls rxRead during render and
   // Svelte throws state_unsafe_mutation if a render writes state.
@@ -68,6 +80,39 @@
     if (!slot) return;
     const r = rxWrite(slot.id);
     r.mark = r.mark === m ? null : m;
+  }
+
+  // Effective tags for a slot: her curated set if she touched it, else the
+  // proposed markers. Read-only — must not mutate during render.
+  function slotTags(s: Slot): string[] {
+    return reactions[s.id]?.tags ?? s.markers;
+  }
+  function addTag(value: string) {
+    if (!slot) return;
+    const t = value.trim();
+    if (!t) return;
+    const cur = reactions[slot.id]?.tags ?? slot.markers;
+    if (cur.includes(t)) return;
+    rxWrite(slot.id).tags = [...cur, t];
+  }
+  function removeTag(tag: string) {
+    if (!slot) return;
+    const cur = reactions[slot.id]?.tags ?? slot.markers;
+    rxWrite(slot.id).tags = cur.filter(x => x !== tag);
+  }
+
+  // Ask box is pre-filled with the proposed question; only record an override
+  // when she actually changes it (revert to default drops the override).
+  function askValue(s: Slot): string {
+    return reactions[s.id]?.ask ?? s.ask;
+  }
+  function setAsk(value: string) {
+    if (!slot) return;
+    if (value === slot.ask) {
+      if (reactions[slot.id]) reactions[slot.id].ask = undefined;
+    } else {
+      rxWrite(slot.id).ask = value;
+    }
   }
 
   function reactionsFile(b: Batch): File {
@@ -123,8 +168,8 @@
   {:else}
     <header>
       <h2 class="serif">{batch.title}</h2>
-      <span class="progress">{reacted}/{batch.slots.length} reacted</span>
-      <button class="export" onclick={sendReactions} disabled={reacted === 0}
+      <span class="progress">{engagedCount}/{batch.slots.length} reacted</span>
+      <button class="export" onclick={sendReactions} disabled={engagedCount === 0}
         title={canShareFiles ? 'Send your reactions (Messages, Mail or AirDrop)' : 'Download your reactions as a file to send back'}>
         {canShareFiles ? 'Send reactions' : 'Export reactions'}</button>
     </header>
@@ -132,7 +177,7 @@
     <div class="dots" role="tablist" aria-label="Batch slots">
       {#each batch.slots as s, i (s.id)}
         <button class="dot" role="tab" aria-selected={i === idx}
-          class:current={i === idx} class:done={!!reactions[s.id]?.mark}
+          class:current={i === idx} class:done={engaged(s.id)}
           title={s.label} onclick={() => idx = i}></button>
       {/each}
     </div>
@@ -153,8 +198,22 @@
       {/each}
 
       <div class="meta">
-        {#each slot.markers as m}<span class="chip">{m}</span>{/each}
-        <span class="ask">Ask: {slot.ask}</span>
+        <span class="metalabel">Tags</span>
+        {#each slotTags(slot) as m (m)}
+          <span class="chip">{m}<button class="tagx" title="Remove this tag"
+            aria-label={`Remove tag ${m}`} onclick={() => removeTag(m)}>×</button></span>
+        {/each}
+        <input class="tagadd" type="text" placeholder="+ add tag" aria-label="Add a tag"
+          onkeydown={e => { if (e.key === 'Enter') {
+            const el = e.target as HTMLInputElement; addTag(el.value); el.value = '';
+          } }}>
+      </div>
+
+      <div class="askedit">
+        <span class="metalabel">Ask</span>
+        <textarea class="askbox" rows="2" aria-label="Question to sit with (edit if you'd change it)"
+          value={askValue(slot)}
+          oninput={e => setAsk((e.target as HTMLTextAreaElement).value)}></textarea>
       </div>
 
       <div class="react">
@@ -211,12 +270,32 @@
     color: var(--gold-dim); margin-bottom: 2px;
   }
   .reg p { font-size: 14.5px; line-height: 1.55; }
-  .meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: 10px 0 14px; }
+  .meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: 10px 0 8px; }
+  .metalabel {
+    font-size: 10.5px; text-transform: uppercase; letter-spacing: .09em;
+    color: var(--gold-dim);
+  }
   .chip {
-    border: 1px solid var(--line); border-radius: 10px; padding: 1px 8px;
+    display: inline-flex; align-items: center; gap: 4px;
+    border: 1px solid var(--line); border-radius: 10px; padding: 1px 4px 1px 8px;
     font-size: 12px; color: var(--dim);
   }
-  .ask { color: var(--dim); font-size: 12.5px; font-style: italic; }
+  .tagx {
+    background: none; border: none; color: var(--dim); cursor: pointer;
+    font-size: 14px; line-height: 1; padding: 0 2px; border-radius: 6px;
+  }
+  .tagx:hover { color: var(--square); }
+  .tagadd {
+    background: var(--bg2); color: var(--ink); border: 1px dashed var(--line);
+    border-radius: 10px; padding: 2px 8px; font-size: 12px; width: 88px;
+  }
+  .askedit { display: flex; align-items: flex-start; gap: 8px; margin: 0 0 14px; }
+  .askedit .metalabel { padding-top: 8px; }
+  .askbox {
+    flex: 1; background: var(--bg2); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 8px; padding: 6px 9px; font-size: 12.5px; font-style: italic;
+    line-height: 1.5; resize: vertical; font-family: inherit;
+  }
   .react { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
   .mark {
     background: var(--bg2); color: var(--dim); border: 1px solid var(--line);
