@@ -19,7 +19,9 @@ function gitStamp(): { hash: string; date: string } {
 }
 
 const git = gitStamp();
-const hashTail = git.hash ? git.hash.slice(-5) : 'v1';
+// First 5 hex of the commit hash — matches git's front-truncation convention
+// and the header build stamp (App.svelte). Header and cache key stay in sync.
+const hashHead = git.hash ? git.hash.slice(0, 5) : 'v1';
 
 // sw.js is copied verbatim from publicDir (data/) — `define` doesn't reach
 // it. Patch its cache-key VERSION post-build so every deploy busts old
@@ -32,7 +34,7 @@ function swVersionStamp(): Plugin {
       const swPath = resolve(__dirname, 'dist/sw.js');
       if (!existsSync(swPath)) return;
       const patched = readFileSync(swPath, 'utf8')
-        .replace(/const VERSION = '[^']*';/, `const VERSION = 'astrodynamics-${hashTail}';`);
+        .replace(/const VERSION = '[^']*';/, `const VERSION = 'astrodynamics-${hashHead}';`);
       writeFileSync(swPath, patched);
     },
   };

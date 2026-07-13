@@ -5,34 +5,77 @@
   /** Stage 1c Phase A: B's reaction form (scope doc, "B's authoring form").
    *  Flag-gated (?author or localStorage astro-author=1); admin-only later. */
 
+  interface Revision {
+    note: string;              // "what changed & why", always shown
+    basedOn?: string;          // "You said …" — the reaction that prompted it
+    prevKernel?: string;       // previous kernel, for before/after
+    prevTexts?: Record<string, string>;  // previous register texts, if they changed
+  }
   interface Slot {
     id: string; kind: string; label: string; kernel: string;
     texts: Record<string, string>; markers: string[]; ask: string;
-    strawman?: boolean;
+    strawman?: boolean; revision?: Revision;
   }
   interface Batch { batch: number; wave: number; title: string; slots: Slot[] }
   type Mark = 'yes' | 'flat' | 'no';
-  interface Reaction { mark: Mark | null; comment: string }
+  // tags/ask are B's edits: tags present = she curated them (else slot.markers
+  // stand); ask present = she reworded the question (else slot.ask stands).
+  // These feed the rewrite phase alongside mark + comment.
+  interface Reaction { mark: Mark | null; comment: string; tags?: string[]; ask?: string }
 
+  interface BatchRef { file: string; label: string }
+
+  let batches = $state<BatchRef[]>([]);
+  let batchFile = $state('');       // currently-loaded batch file
   let batch = $state<Batch | null>(null);
   let error = $state('');
   let idx = $state(0);
   let reactions = $state<Record<string, Reaction>>({});
+  // Which slot's "how it read before" panel is open (collapses on navigation
+  // since the id no longer matches the current slot).
+  let showPrevId = $state<string | null>(null);
+  // Can this browser share a file to the OS share sheet (iPad: Messages/
+  // Mail/AirDrop)? If not (desktop Safari/Chrome), we fall back to download.
+  let canShareFiles = $state(false);
 
   const storageKey = (b: Batch) => `astro-authoring-${b.batch}`;
 
-  onMount(async () => {
+  // Load one wave's batch. Each wave keeps its own reactions (keyed by batch
+  // number), so previous waves stay available for revision and completion.
+  async function loadBatch(file: string) {
     try {
-      const res = await fetch('authoring/batch-00.json');
+      const res = await fetch(`authoring/${file}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      batch = await res.json() as Batch;
+      const b = await res.json() as Batch;
+      let rx: Record<string, Reaction> = {};
       try {
-        const raw = localStorage.getItem(storageKey(batch));
-        if (raw) reactions = JSON.parse(raw) as Record<string, Reaction>;
+        const raw = localStorage.getItem(storageKey(b));
+        if (raw) rx = JSON.parse(raw) as Record<string, Reaction>;
       } catch { /* fresh reactions */ }
+      reactions = rx;      // set reactions before batch so the save-effect keys correctly
+      batch = b;
+      batchFile = file;
+      idx = 0;
+      showPrevId = null;
+      error = '';
     } catch (e) {
       error = `Batch failed to load: ${e instanceof Error ? e.message : e}`;
     }
+  }
+
+  onMount(async () => {
+    try {
+      const probe = new File(['{}'], 'probe.json', { type: 'application/json' });
+      canShareFiles = !!navigator.canShare?.({ files: [probe] });
+    } catch { canShareFiles = false; }
+    try {
+      const res = await fetch('authoring/index.json');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      batches = (await res.json() as { batches: BatchRef[] }).batches;
+    } catch {
+      batches = [{ file: 'batch-00.json', label: 'Wave 0' }];  // fallback
+    }
+    await loadBatch(batches[0]?.file ?? 'batch-00.json');
   });
 
   $effect(() => {
@@ -43,8 +86,17 @@
   });
 
   const slot = $derived(batch?.slots[idx] ?? null);
-  const reacted = $derived(batch
-    ? batch.slots.filter(s => reactions[s.id]?.mark).length : 0);
+  // A slot is "engaged" if she gave any signal at all — a mark, a comment,
+  // a tag edit or a reworded ask. Comment-only (no mark) still counts, so a
+  // pass of pure comments can still be sent (M's note: no mark = neutral-ok,
+  // but the comment matters).
+  function engaged(id: string): boolean {
+    const r = reactions[id];
+    return !!r && (r.mark !== null || r.comment.trim() !== ''
+      || r.tags !== undefined || r.ask !== undefined);
+  }
+  const engagedCount = $derived(batch
+    ? batch.slots.filter(s => engaged(s.id)).length : 0);
 
   // Reads must NOT mutate: the template calls rxRead during render and
   // Svelte throws state_unsafe_mutation if a render writes state.
@@ -63,20 +115,75 @@
     r.mark = r.mark === m ? null : m;
   }
 
-  function exportReactions() {
-    if (!batch) return;
+  // Effective tags for a slot: her curated set if she touched it, else the
+  // proposed markers. Read-only — must not mutate during render.
+  function slotTags(s: Slot): string[] {
+    return reactions[s.id]?.tags ?? s.markers;
+  }
+  function addTag(value: string) {
+    if (!slot) return;
+    const t = value.trim();
+    if (!t) return;
+    const cur = reactions[slot.id]?.tags ?? slot.markers;
+    if (cur.includes(t)) return;
+    rxWrite(slot.id).tags = [...cur, t];
+  }
+  function removeTag(tag: string) {
+    if (!slot) return;
+    const cur = reactions[slot.id]?.tags ?? slot.markers;
+    rxWrite(slot.id).tags = cur.filter(x => x !== tag);
+  }
+
+  // Ask box is pre-filled with the proposed question; only record an override
+  // when she actually changes it (revert to default drops the override).
+  function askValue(s: Slot): string {
+    return reactions[s.id]?.ask ?? s.ask;
+  }
+  function setAsk(value: string) {
+    if (!slot) return;
+    if (value === slot.ask) {
+      if (reactions[slot.id]) reactions[slot.id].ask = undefined;
+    } else {
+      rxWrite(slot.id).ask = value;
+    }
+  }
+
+  function reactionsFile(b: Batch): File {
     const data = JSON.stringify({
       app: 'astrodynamics-authoring',
-      batch: batch.batch,
+      batch: b.batch,
       exportedAt: new Date().toISOString(),
       reactions,
     }, null, 2);
-    const url = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
+    const name = `authoring-batch-${String(b.batch).padStart(2, '0')}-reactions.json`;
+    return new File([data], name, { type: 'application/json' });
+  }
+
+  function download(file: File) {
+    const url = URL.createObjectURL(file);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `authoring-batch-${String(batch.batch).padStart(2, '0')}-reactions.json`;
+    a.download = file.name;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  async function sendReactions() {
+    if (!batch) return;
+    const file = reactionsFile(batch);
+    // Prefer the OS share sheet (iPad: Messages/Mail/AirDrop — no Downloads
+    // folder, no Files app). Fall back to a plain download otherwise.
+    if (canShareFiles && navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: 'Astrodynamics reactions' });
+        return;
+      } catch (e) {
+        // User dismissed the sheet: stop, don't surprise them with a download.
+        if (e instanceof DOMException && e.name === 'AbortError') return;
+        // Any other share failure: fall through to download.
+      }
+    }
+    download(file);
   }
 
   const MARKS: { m: Mark; label: string; hint: string }[] = [
@@ -87,6 +194,14 @@
 </script>
 
 <main class="authoring">
+  {#if batches.length > 1}
+    <div class="waves" role="tablist" aria-label="Waves">
+      {#each batches as b (b.file)}
+        <button class="wave" role="tab" aria-selected={batchFile === b.file}
+          class:on={batchFile === b.file} onclick={() => loadBatch(b.file)}>{b.label}</button>
+      {/each}
+    </div>
+  {/if}
   {#if error}
     <div class="err">{error}</div>
   {:else if !batch || !slot}
@@ -94,15 +209,16 @@
   {:else}
     <header>
       <h2 class="serif">{batch.title}</h2>
-      <span class="progress">{reacted}/{batch.slots.length} reacted</span>
-      <button class="export" onclick={exportReactions} disabled={reacted === 0}
-        title="Download your reactions as a file to send back">Export reactions</button>
+      <span class="progress">{engagedCount}/{batch.slots.length} reacted</span>
+      <button class="export" onclick={sendReactions} disabled={engagedCount === 0}
+        title={canShareFiles ? 'Send your reactions (Messages, Mail or AirDrop)' : 'Download your reactions as a file to send back'}>
+        {canShareFiles ? 'Send reactions' : 'Export reactions'}</button>
     </header>
 
     <div class="dots" role="tablist" aria-label="Batch slots">
       {#each batch.slots as s, i (s.id)}
         <button class="dot" role="tab" aria-selected={i === idx}
-          class:current={i === idx} class:done={!!reactions[s.id]?.mark}
+          class:current={i === idx} class:done={engaged(s.id)}
           title={s.label} onclick={() => idx = i}></button>
       {/each}
     </div>
@@ -112,8 +228,39 @@
         <b>{slot.label}</b>
         <span class="kind">{slot.kind}</span>
         {#if slot.strawman}<span class="straw" title="Machine-generated placeholder — react to how it reads anyway">straw-man</span>{/if}
+        {#if slot.revision}<span class="revtag" title="Changed since you last saw it">✦ revised</span>{/if}
       </div>
       <div class="kernel">{slot.kernel}</div>
+
+      {#if slot.revision}
+        <div class="revised">
+          <div class="revnote"><b>What changed &amp; why —</b> {slot.revision.note}</div>
+          {#if slot.revision.basedOn}<div class="basedon">{slot.revision.basedOn}</div>{/if}
+          {#if slot.revision.prevKernel || slot.revision.prevTexts}
+            <button class="prevtoggle"
+              onclick={() => showPrevId = showPrevId === slot.id ? null : slot.id}>
+              {showPrevId === slot.id ? '▾ Hide previous version' : '▸ See how it read before'}
+            </button>
+            {#if showPrevId === slot.id}
+              <div class="prevbox">
+                {#if slot.revision.prevKernel}
+                  <div class="prevkernel">{slot.revision.prevKernel}</div>
+                {/if}
+                {#if slot.revision.prevTexts}
+                  {#each STYLES as st (st.id)}
+                    {#if slot.revision.prevTexts[st.id]}
+                      <div class="prevreg">
+                        <div class="regname">{st.label}</div>
+                        <p>{slot.revision.prevTexts[st.id]}</p>
+                      </div>
+                    {/if}
+                  {/each}
+                {/if}
+              </div>
+            {/if}
+          {/if}
+        </div>
+      {/if}
 
       {#each STYLES as st (st.id)}
         <div class="reg">
@@ -123,8 +270,22 @@
       {/each}
 
       <div class="meta">
-        {#each slot.markers as m}<span class="chip">{m}</span>{/each}
-        <span class="ask">Ask: {slot.ask}</span>
+        <span class="metalabel">Tags</span>
+        {#each slotTags(slot) as m (m)}
+          <span class="chip">{m}<button class="tagx" title="Remove this tag"
+            aria-label={`Remove tag ${m}`} onclick={() => removeTag(m)}>×</button></span>
+        {/each}
+        <input class="tagadd" type="text" placeholder="+ add tag" aria-label="Add a tag"
+          onkeydown={e => { if (e.key === 'Enter') {
+            const el = e.target as HTMLInputElement; addTag(el.value); el.value = '';
+          } }}>
+      </div>
+
+      <div class="askedit">
+        <span class="metalabel">Ask</span>
+        <textarea class="askbox" rows="2" aria-label="Question to sit with (edit if you'd change it)"
+          value={askValue(slot)}
+          oninput={e => setAsk((e.target as HTMLTextAreaElement).value)}></textarea>
       </div>
 
       <div class="react">
@@ -148,6 +309,12 @@
 
 <style>
   .authoring { max-width: 720px; margin: 18px auto 40px; padding: 0 20px; }
+  .waves { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .wave {
+    background: var(--bg2); color: var(--dim); border: 1px solid var(--line);
+    border-radius: 14px; padding: 5px 14px; font-size: 13px;
+  }
+  .wave.on { color: var(--on-gold); background: var(--gold); border-color: var(--gold); font-weight: 600; }
   header { display: flex; align-items: baseline; gap: 14px; margin-bottom: 10px; }
   header h2 { color: var(--gold); font-size: 19px; flex: 1; }
   .progress { color: var(--dim); font-size: 12.5px; }
@@ -174,19 +341,62 @@
     border: 1px solid var(--line); border-radius: 8px; padding: 1px 7px; color: var(--dim);
   }
   .straw { color: var(--square); border-color: var(--square); }
+  .revtag {
+    font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em;
+    border: 1px solid var(--gold-dim); border-radius: 8px; padding: 1px 7px;
+    color: var(--gold);
+  }
   .kernel { color: var(--dim); font-style: italic; font-size: 13.5px; margin-bottom: 12px; }
+  .revised {
+    border: 1px solid var(--gold-dim); border-left: 3px solid var(--gold);
+    border-radius: 8px; padding: 10px 12px; margin: 0 0 14px;
+    background: color-mix(in srgb, var(--gold) 6%, transparent);
+  }
+  .revnote { font-size: 13px; line-height: 1.5; }
+  .basedon { color: var(--dim); font-size: 12px; font-style: italic; margin-top: 4px; }
+  .prevtoggle {
+    background: none; border: none; color: var(--gold); cursor: pointer;
+    font-size: 12px; padding: 6px 0 0; text-align: left;
+  }
+  .prevbox {
+    margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line);
+    opacity: 0.85;
+  }
+  .prevkernel { color: var(--dim); font-style: italic; font-size: 12.5px; margin-bottom: 8px; }
+  .prevreg { margin-bottom: 6px; }
+  .prevreg p { font-size: 12.5px; line-height: 1.45; color: var(--dim); }
   .reg { margin-bottom: 10px; }
   .regname {
     font-size: 10.5px; text-transform: uppercase; letter-spacing: .09em;
     color: var(--gold-dim); margin-bottom: 2px;
   }
   .reg p { font-size: 14.5px; line-height: 1.55; }
-  .meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: 10px 0 14px; }
+  .meta { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; margin: 10px 0 8px; }
+  .metalabel {
+    font-size: 10.5px; text-transform: uppercase; letter-spacing: .09em;
+    color: var(--gold-dim);
+  }
   .chip {
-    border: 1px solid var(--line); border-radius: 10px; padding: 1px 8px;
+    display: inline-flex; align-items: center; gap: 4px;
+    border: 1px solid var(--line); border-radius: 10px; padding: 1px 4px 1px 8px;
     font-size: 12px; color: var(--dim);
   }
-  .ask { color: var(--dim); font-size: 12.5px; font-style: italic; }
+  .tagx {
+    background: none; border: none; color: var(--dim); cursor: pointer;
+    font-size: 14px; line-height: 1; padding: 0 2px; border-radius: 6px;
+  }
+  .tagx:hover { color: var(--square); }
+  .tagadd {
+    background: var(--bg2); color: var(--ink); border: 1px dashed var(--line);
+    border-radius: 10px; padding: 2px 8px; font-size: 12px; width: 88px;
+  }
+  .askedit { display: flex; align-items: flex-start; gap: 8px; margin: 0 0 14px; }
+  .askedit .metalabel { padding-top: 8px; }
+  .askbox {
+    flex: 1; background: var(--bg2); color: var(--ink); border: 1px solid var(--line);
+    border-radius: 8px; padding: 6px 9px; font-size: 12.5px; font-style: italic;
+    line-height: 1.5; resize: vertical; font-family: inherit;
+  }
   .react { display: flex; gap: 7px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
   .mark {
     background: var(--bg2); color: var(--dim); border: 1px solid var(--line);

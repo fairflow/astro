@@ -37,9 +37,10 @@
   let banner = $state('');
   let copied = $state(false);
 
-  // Build-time version stamp (see vite.config.ts). hash tail = last 5 hex.
+  // Build-time version stamp (see vite.config.ts). First 5 hex of the commit
+  // hash — matches git's front-truncation and sw.js's cache VERSION.
   const buildDate = __GIT_DATE__;
-  const buildHash = __GIT_HASH__.slice(-5);
+  const buildHash = __GIT_HASH__.slice(0, 5);
 
   async function copySnapshot() {
     if (!chart || !current) return;
