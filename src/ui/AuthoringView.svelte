@@ -23,6 +23,10 @@
   // These feed the rewrite phase alongside mark + comment.
   interface Reaction { mark: Mark | null; comment: string; tags?: string[]; ask?: string }
 
+  interface BatchRef { file: string; label: string }
+
+  let batches = $state<BatchRef[]>([]);
+  let batchFile = $state('');       // currently-loaded batch file
   let batch = $state<Batch | null>(null);
   let error = $state('');
   let idx = $state(0);
@@ -36,22 +40,42 @@
 
   const storageKey = (b: Batch) => `astro-authoring-${b.batch}`;
 
+  // Load one wave's batch. Each wave keeps its own reactions (keyed by batch
+  // number), so previous waves stay available for revision and completion.
+  async function loadBatch(file: string) {
+    try {
+      const res = await fetch(`authoring/${file}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const b = await res.json() as Batch;
+      let rx: Record<string, Reaction> = {};
+      try {
+        const raw = localStorage.getItem(storageKey(b));
+        if (raw) rx = JSON.parse(raw) as Record<string, Reaction>;
+      } catch { /* fresh reactions */ }
+      reactions = rx;      // set reactions before batch so the save-effect keys correctly
+      batch = b;
+      batchFile = file;
+      idx = 0;
+      showPrevId = null;
+      error = '';
+    } catch (e) {
+      error = `Batch failed to load: ${e instanceof Error ? e.message : e}`;
+    }
+  }
+
   onMount(async () => {
     try {
       const probe = new File(['{}'], 'probe.json', { type: 'application/json' });
       canShareFiles = !!navigator.canShare?.({ files: [probe] });
     } catch { canShareFiles = false; }
     try {
-      const res = await fetch('authoring/batch-00.json');
+      const res = await fetch('authoring/index.json');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      batch = await res.json() as Batch;
-      try {
-        const raw = localStorage.getItem(storageKey(batch));
-        if (raw) reactions = JSON.parse(raw) as Record<string, Reaction>;
-      } catch { /* fresh reactions */ }
-    } catch (e) {
-      error = `Batch failed to load: ${e instanceof Error ? e.message : e}`;
+      batches = (await res.json() as { batches: BatchRef[] }).batches;
+    } catch {
+      batches = [{ file: 'batch-00.json', label: 'Wave 0' }];  // fallback
     }
+    await loadBatch(batches[0]?.file ?? 'batch-00.json');
   });
 
   $effect(() => {
@@ -170,6 +194,14 @@
 </script>
 
 <main class="authoring">
+  {#if batches.length > 1}
+    <div class="waves" role="tablist" aria-label="Waves">
+      {#each batches as b (b.file)}
+        <button class="wave" role="tab" aria-selected={batchFile === b.file}
+          class:on={batchFile === b.file} onclick={() => loadBatch(b.file)}>{b.label}</button>
+      {/each}
+    </div>
+  {/if}
   {#if error}
     <div class="err">{error}</div>
   {:else if !batch || !slot}
@@ -277,6 +309,12 @@
 
 <style>
   .authoring { max-width: 720px; margin: 18px auto 40px; padding: 0 20px; }
+  .waves { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .wave {
+    background: var(--bg2); color: var(--dim); border: 1px solid var(--line);
+    border-radius: 14px; padding: 5px 14px; font-size: 13px;
+  }
+  .wave.on { color: var(--on-gold); background: var(--gold); border-color: var(--gold); font-weight: 600; }
   header { display: flex; align-items: baseline; gap: 14px; margin-bottom: 10px; }
   header h2 { color: var(--gold); font-size: 19px; flex: 1; }
   .progress { color: var(--dim); font-size: 12.5px; }
