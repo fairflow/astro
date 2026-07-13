@@ -25,12 +25,14 @@
     onouter?: (b: BodyKey) => void;
   } = $props();
 
-  const FLOOR = { low: 0.25, medium: 0.45, high: 0.62 };
-  const FLOOR_LIGHT = { low: 0.35, medium: 0.55, high: 0.72 };
+  // Raised floors keep wide-orb aspects readable (tighter orb→opacity range).
+  const FLOOR = { low: 0.45, medium: 0.58, high: 0.7 };
+  const FLOOR_LIGHT = { low: 0.5, medium: 0.64, high: 0.78 };
 
   const geom = $derived(wheelGeometry(chart, {
     glyphScale: display.glyphScale,
     opacityFloor: (display.theme === 'light' ? FLOOR_LIGHT : FLOOR)[display.contrast],
+    aspectEmphasis: display.aspectEmphasis,
     outer,
     crossAspects,
   }));
@@ -263,7 +265,7 @@
         onclick={e => citem ? pickAspect(e, citem) : oncross?.(c.index)}
         onkeydown={e => e.key === 'Enter' && oncross?.(c.index)}>
         <line x1={c.from.x} y1={c.from.y} x2={c.to.x} y2={c.to.y}
-          stroke={`var(${c.colorVar})`} stroke-width="1.3" opacity={c.opacity}
+          stroke={`var(${c.colorVar})`} stroke-width={c.width} opacity={c.opacity}
           stroke-dasharray="6 4" />
         <line class="aspect-hit" x1={c.from.x} y1={c.from.y} x2={c.to.x} y2={c.to.y} />
       </g>

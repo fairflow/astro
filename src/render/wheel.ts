@@ -24,6 +24,9 @@ export interface WheelOptions {
   glyphScale?: number;
   /** Minimum aspect-line opacity (raised in high-contrast mode). */
   opacityFloor?: number;
+  /** Aspect emphasis 0..1 (display setting): scales line width and lifts the
+   *  wide-orb opacity floor further. 0.5 = neutral. */
+  aspectEmphasis?: number;
   /**
    * Bi-wheel: a second chart's bodies drawn in an outer ring (Solar
    * Fire style) — transits or a synastry partner. Radii shrink to fit.
@@ -79,7 +82,7 @@ export interface WheelGeometry {
   /** Cross-aspect lines from outer bodies to inner positions. */
   crossLines: {
     index: number; from: XY; to: XY;
-    colorVar: string; opacity: number;
+    colorVar: string; opacity: number; width: number;
   }[];
 }
 
@@ -123,7 +126,11 @@ function nudge(lons: number[], minGap: number): number[] {
 export function wheelGeometry(chart: Chart, opts: WheelOptions = {}): WheelGeometry {
   const size = opts.size ?? 720;
   const glyphScale = opts.glyphScale ?? 1.25;
-  const floor = opts.opacityFloor ?? 0.25;
+  const baseFloor = opts.opacityFloor ?? 0.25;
+  const emph = opts.aspectEmphasis ?? 0.5;
+  // Emphasis lifts the floor (tighter orb→opacity range) and thickens lines.
+  const floor = Math.min(0.92, baseFloor + (1 - baseFloor) * (emph - 0.5) * 0.6);
+  const widthScale = 0.72 + 0.56 * emph;  // 0.72..1.28, 1.0 at emph 0.5
   const cx = size / 2, cy = size / 2;
   const s = size / 720; // radii tuned at 720
   // Bi-wheel: shrink the natal wheel to make room for the outer ring.
@@ -215,7 +222,8 @@ export function wheelGeometry(chart: Chart, opts: WheelOptions = {}): WheelGeome
       to: pt(pb.lon, R.hub),
       colorVar: ASPECT_COLOR[a.def.name],
       opacity: floor + (1 - floor) * tight,
-      width: a.orb < 2 ? 2.2 : 1.4,
+      // thicker + smoother than the old binary 1.4/2.2; scaled by emphasis
+      width: (2.1 + 1.3 * tight) * widthScale,
       dashed: a.def.name === 'quincunx',
       partile: a.orb < 1,
     };
@@ -244,6 +252,7 @@ export function wheelGeometry(chart: Chart, opts: WheelOptions = {}): WheelGeome
       to: pt(to.lon, R.hub),
       colorVar: ASPECT_COLOR[x.def.name],
       opacity: floor + (1 - floor) * tight,
+      width: (1.6 + 1.1 * tight) * widthScale,
     };
   }).filter((x): x is NonNullable<typeof x> => x !== null);
 

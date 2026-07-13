@@ -99,6 +99,9 @@
     document.documentElement.classList.toggle('chigh', display.contrast === 'high');
     document.documentElement.classList.toggle('light', display.theme === 'light');
     document.documentElement.style.setProperty('--ts', String(display.textScale));
+    // aspect emphasis → colour saturation on aspect lines (0.7..1.6, 1.15 mid)
+    document.documentElement.style.setProperty(
+      '--aspect-sat', String(0.7 + 0.9 * display.aspectEmphasis));
     applySkin(skinById(display.skin));
   });
 
