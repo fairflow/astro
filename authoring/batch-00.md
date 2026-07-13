@@ -3,47 +3,53 @@
 Marks: ✓ lands · ~ flat · ✗ wrong/preachy. React, don't analyse.
 
 ## axis-aries-libra · sign-axis
-KERNEL: Aries and Libra are one axis: the self that acts and the other who answers. Aries asserts a life by starting things; Libra makes life liveable by weighing and relating. Without each other, will has no counterpart and harmony has nobody home.
+REVISED: Named the cardinal axis and added a completion line — how each pole holds the key to the other — and folded your 'innocence / composure' contrast into the tags.
+KERNEL: Aries and Libra are the cardinal axis of self and other — both poles initiate, one by acting, the other by relating. Aries asserts a life by starting things; Libra makes life liveable by weighing and relating. Each completes the other: Libra gives Aries' drive someone to act with rather than against, and Aries gives Libra's fairness the nerve to choose. Without the pairing, will has no counterpart and harmony has nobody home.
 PSYCHOLOGICAL: The first axis of the zodiac sets the ego's oldest question: how to be someone without being alone. Aries carries the raw 'I am'; Libra carries the discovered 'you exist' — and whichever pole is lived, the other tends to arrive from outside, worn by partners and opponents until it is recognised as one's own. | B:
 MUNDANE: In daily life this axis runs between initiative and negotiation: starting things, versus keeping the peace among the people they affect. Strong Aries placements push ahead and apologise later; strong Libra placements consult first and can wait too long — most careers and marriages need a working exchange rate between the two. | B:
 ENERGY: A fast, sparking current meets a poising one: thrust and counterweight on the same wire. When the pair works, action stays graceful and diplomacy keeps its nerve; when it splits, the system alternates between collision and stalemate. | B:
 MINIMAL: Self versus other, the first axis. Aries starts; Libra weighs. Overdone: combat, or appeasement. | B:
-MARKERS: direct, relational | ASK: Under pressure, do you act first or consult first — and what has that cost?
+MARKERS: direct, relational, innocence, composure | ASK: Under pressure, do you act first or consult first — and what has that cost?
 
 ## axis-taurus-scorpio · sign-axis
-KERNEL: Taurus and Scorpio are one axis about substance: what is mine and can be kept, against what is shared, merged and inevitably changed. Taurus holds and stabilises; Scorpio penetrates and transforms. Security without depth goes inert; intensity without ground consumes itself.
+REVISED: Named the fixed axis and added a completion clause — how each pole holds the key to the other — exactly as you asked.
+KERNEL: Taurus and Scorpio are the fixed axis of substance — both poles endure and resist, so this is a pairing that changes only from within. Taurus holds what is mine and can be kept; Scorpio penetrates what is shared, merged and finally transformed. Each is the other's completion: Taurus gives Scorpio's intensity a ground that survives being remade, and Scorpio saves Taurus's holding from hardening into a hoard. Security without depth goes inert; intensity without ground consumes itself.
 PSYCHOLOGICAL: This is the axis of possession and surrender: the ego's need to have and hold, set against the psyche's need to merge and be remade. What Taurus builds, Scorpio composts — and the personality matures by discovering that letting go is not the loss of substance but its transformation. | B:
 MUNDANE: Money, bodies and belongings live here: earning and keeping on one side; inheritance, debt, sex and shared resources on the other. Comfortable routines meet the crises that redistribute everything — the practical art is owning things without being owned by them. | B:
 ENERGY: A slow, accumulating charge meets a concentrated, discharging one — the battery and the lightning. Held together they give staying power that can also regenerate; split apart, one pole hoards while the other burns the stores down. | B:
 MINIMAL: Keeping versus transforming. Taurus holds; Scorpio burns through. Both are about what matters. | B:
-MARKERS: steady, intense | ASK: What are you keeping safe that might be asking to change?
+MARKERS: steady, intense, endurance | ASK: What are you keeping safe that might be asking to change?
 
 ## axis-gemini-sagittarius · sign-axis
-KERNEL: Gemini and Sagittarius are one axis of mind: the near view and the far view. Gemini gathers particulars — names, facts, conversations; Sagittarius wants the pattern that makes them mean something. Facts without meaning scatter; meaning without facts inflates.
+REVISED: Named the mutable axis, added a completion line, and folded your 'networking vs perspective / truth-seeking' contrasts into the tags.
+KERNEL: Gemini and Sagittarius are the mutable axis of mind — both poles adapt and keep moving, one between facts, the other between horizons. Gemini gathers particulars — names, facts, conversations; Sagittarius wants the pattern that makes them mean something. Each completes the other: Gemini's detail keeps Sagittarius' meaning honest, and Sagittarius' direction keeps Gemini's chatter going somewhere. Facts without meaning scatter; meaning without facts inflates.
 PSYCHOLOGICAL: The near mind and the far mind are one function split in two: curiosity that collects, and conviction that connects. Each pole shadows the other — the collector secretly longs for a creed, and the believer quietly fears the detail that doesn't fit. | B:
 MUNDANE: Errands, messages and local knowledge sit at one end; travel, study, publishing and belief at the other. The axis shows in how someone learns and teaches — quick versatile exchange, or the long argument toward a worldview — and good teachers work both ends of it. | B:
 ENERGY: A darting, branching current meets a long-arcing one: signal traffic against trajectory. Together they make thought that travels, detail feeding direction; apart, the system chatters without going anywhere, or launches without checking the map. | B:
 MINIMAL: Near mind, far mind. Gemini collects the facts; Sagittarius wants their meaning. Each corrects the other. | B:
-MARKERS: curious, far-ranging | ASK: Which do you trust first — the telling detail, or the big picture?
+MARKERS: curious, far-ranging, networking, perspective | ASK: Which do you trust first — the telling detail, or the big picture?
 
 ## axis-cancer-capricorn · sign-axis
-KERNEL: Cancer and Capricorn are one axis between private roots and public role: where you come from and are held, against what you build and answer for. Cancer protects the inner, remembered world; Capricorn structures the outer, accountable one. The parental inheritance rides on both ends.
+REVISED: Named the cardinal axis and added a completion line; folded your 'symbiosis / co-dependency vs autonomy' contrast into the tags.
+KERNEL: Cancer and Capricorn are the cardinal axis of roots and role — both poles initiate, one by nurturing, the other by building. Cancer protects the inner, remembered world; Capricorn structures the outer, accountable one. Each completes the other: Cancer gives Capricorn's ambition something worth protecting, and Capricorn gives Cancer's care a structure that holds. The parental inheritance rides on both ends.
 PSYCHOLOGICAL: This is the parental axis: the remembered mother-world of belonging and the father-world of demand, however the actual parents distributed the parts. The adult task is to stop commuting between them — to build a life in which being held and being responsible are no longer opposites. | B:
 MUNDANE: Home and career sit at either end, and time given to one is felt at the other — the oldest work-life ledger there is. Strength at the Cancer end makes places that hold people; strength at the Capricorn end builds things that outlast them; either way, the family past tends to set the terms of ambition. | B:
 ENERGY: A tidal, containing current meets a slow crystallising one: the spring and the masonry. In cooperation, feeling supplies the reason for structure and structure gives feeling somewhere safe to live; in conflict, the home drains the career or the career hollows the home. | B:
 MINIMAL: Roots versus role: the parental axis. Cancer holds; Capricorn builds. Each funds the other. | B:
-MARKERS: protective, ambitious | ASK: When work and home pull at once, which wins by default — and who decided that?
+MARKERS: protective, ambitious, symbiosis, autonomy | ASK: When work and home pull at once, which wins by default — and who decided that?
 
 ## axis-leo-aquarius · sign-axis
-KERNEL: Leo and Aquarius are one axis between the individual and the collective: the heart that must shine as itself, and the mind that belongs to something larger than any self. Leo personalises; Aquarius generalises. Warmth without perspective turns theatrical; perspective without warmth turns cold.
+REVISED: Named the fixed axis, added a completion clause, and worked in your accents — art, intuition, conservative vs progressive, autocratic vs rebellion, Aquarian resonance vs Leo dominance.
+KERNEL: Leo and Aquarius are the fixed axis of the individual and the collective — both poles hold their ground, one as the heart that must shine, the other as the mind that belongs to something larger. Leo personalises, warm and sometimes autocratic; Aquarius generalises, cooler, progressive, quick to rebel. Each completes the other: Aquarius' wide view saves Leo's dominance from mere display, and Leo's living warmth saves Aquarius' principles from going cold and abstract. Both create — Leo through art made personal, Aquarius through intuition of the pattern. Warmth without perspective turns theatrical; perspective without warmth turns cold.
 PSYCHOLOGICAL: The king and the citizen share one throne: the need to be singular, and the need to be one among equals. Whichever pole the ego claims, the other returns as critique — the performer haunted by the group's judgement, the reformer secretly hungry to be special. | B:
 MUNDANE: Creative work, romance and children sit at one end; friends, causes and networks at the other. Leo-weighted people lead from the front and take things personally; Aquarius-weighted people organise, theorise and keep a cooler distance — a team needs both its star and its system. | B:
 ENERGY: A radiant central current meets a distributing one — the sun and the grid. Aligned, personal fire lights common purposes; opposed, charisma competes with the collective, or the collective flattens the spark. | B:
 MINIMAL: The heart versus the group. Leo shines as itself; Aquarius joins the pattern. Both are loyal, differently. | B:
-MARKERS: expressive, independent | ASK: Where do you most want recognition — as unrepeatable, or as truly one of us?
+MARKERS: expressive, independent, art, intuition, progressive | ASK: Where do you most want recognition — as unrepeatable, or as truly one of us?
 
 ## axis-virgo-pisces · sign-axis
-KERNEL: Virgo and Pisces are one axis between order and ocean: the discriminating craft that makes daily life work, and the dissolving compassion that makes it bearable. Virgo separates and refines; Pisces merges and forgives. This is the axis of service and sacrifice.
+REVISED: Applied the same modality + completion frame you asked for on the Taurus–Scorpio axis: named the mutable axis and how each pole completes the other.
+KERNEL: Virgo and Pisces are the mutable axis of order and ocean — both poles yield and adapt, one by refining, the other by dissolving. Virgo separates and refines the daily craft; Pisces merges and forgives what refinement can't fix. Each completes the other: Virgo gives Pisces' compassion a usable form, and Pisces gives Virgo's precision something to serve beyond itself. This is the axis of service and sacrifice.
 PSYCHOLOGICAL: Discrimination and dissolution are one movement of the soul: sorting the world into what serves, then surrendering the sorter. Virgo's precision guards against Pisces' undertow, and Pisces' mercy redeems Virgo's verdicts — competence and grace quarrel here until they marry. | B:
 MUNDANE: Routines, health and useful work sit at one end; retreat, imagination and the unbudgeted hours at the other. Virgo-strong lives run on lists and improvements, Pisces-strong ones on tides and exceptions — the workable version keeps a clean desk with the door left open. | B:
 ENERGY: A fine filtering current meets a boundless one: the sieve and the sea. In rhythm, inspiration arrives and gets built into usable form; out of rhythm, the system tightens into worry or leaks into fog. | B:
@@ -99,11 +105,12 @@ MINIMAL: Precise, useful, self-critical. Pisces opposite forgives the unfinished
 MARKERS: precise, useful | ASK: What are you still improving that might already be good enough?
 
 ## sign-libra · sign-inflection
-KERNEL: Libra is the relating pole of the Aries–Libra axis: balancing, fairness-seeking, incomplete without a counterpart to weigh against. Its complement is Aries — the blunt self-assertion it polishes away.
-PSYCHOLOGICAL: Libra carries the archetype of the diplomat: reality is a relationship, and truth must be beautiful as well as right. Its disowned pole is Aries' plain want — and it returns as the strange fury that follows years of being reasonable. | B:
-MUNDANE: Excellent in negotiation, design and any room that needs cooling; slow with menus, job offers and ultimatums. Others may quietly be recruited to do the deciding — the corrective is naming a preference first, unpolished. | B:
-ENERGY: Cardinal air: a poising current, always adjusting toward equilibrium between live charges. Graceful under load, it stalls when both pans are full; Aries across the axis supplies the tie-breaking spark. | B:
-MINIMAL: Balancing, relational, fairness first. Aries opposite owns the blunt want. | B:
+REVISED: You found this flat — rewrote it with more edge: the hidden steel under the good manners, and the cost of being agreeable.
+KERNEL: Libra is the relating pole of the Aries–Libra axis: it thinks in twos, weighing itself against a partner, an opponent, a standard. Charming and unwilling to be crude, it can mistake being agreeable for being fair. Its complement is Aries — the blunt 'I want' it keeps polishing away.
+PSYCHOLOGICAL: Libra lives the archetype of the diplomat, but under the good manners is a set of scales that never quite rests. Truth has to be beautiful here — its grace and its evasion — and the disowned Aries pole waits as the flash of temper that finally says the unsayable after years of being reasonable. | B:
+MUNDANE: At its best in negotiation, design and any room that has overheated; quietly manipulative at its worst, arranging outcomes while appearing to defer. The growth edge is blunt: state a preference before consulting everyone else's, and let someone be displeased. | B:
+ENERGY: Cardinal air held in balance — a current forever tilting the scales toward level, alive between two charges rather than at rest. It stalls when both pans are full; the Aries spark is what breaks the tie and lets it finally move. | B:
+MINIMAL: Weighs everything, itself included. Gracious, quietly steely. Aries opposite owns the naked want. | B:
 MARKERS: relational, balancing | ASK: What do you actually want, before anyone else has voted?
 
 ## sign-scorpio · sign-inflection
@@ -115,11 +122,12 @@ MINIMAL: Intense, guarded, all-or-nothing. Taurus opposite rests in the tangible
 MARKERS: intense, guarded | ASK: What might it feel like to enjoy something without testing it?
 
 ## sign-sagittarius · sign-inflection
-KERNEL: Sagittarius is the far-seeking pole of the Gemini–Sagittarius axis: wide-ranging, blunt, hungry for meaning and the journey toward it. Its complement is Gemini — the near detail that checks the grand arc.
-PSYCHOLOGICAL: Sagittarius carries the archetype of the pilgrim: life must mean something, and the meaning is always over the next hill. Its neglected pole is Gemini's patient particulars — and they return as the awkward facts the great theory forgot to include. | B:
-MUNDANE: Teaches, travels, promotes and bets big; promises tend to arrive before the diary has been consulted. The corrective is the detail pass — dates, names, small print — done before the leap rather than after it. | B:
-ENERGY: Mutable fire: a long-arc current, launched at the horizon and impatient of drag. Momentum is its medicine and its blind spot; the Gemini pole feeds in course corrections mid-flight. | B:
-MINIMAL: Far-ranging, blunt, meaning-hungry. Gemini opposite keeps the facts in view. | B:
+REVISED: You found this flat — rewrote it with more life: the restlessness, the tactless honesty, the flight from confinement.
+KERNEL: Sagittarius is the far-seeking pole of the Gemini–Sagittarius axis: it aims past the immediate at meaning, and trusts the arrow more than the map. Frank to the point of tactless, it would rather be free than be right in detail. Its complement is Gemini — the near fact that keeps the grand arc honest.
+PSYCHOLOGICAL: Sagittarius lives the archetype of the pilgrim, forever certain the meaning is over the next hill and mildly allergic to the room it is in. Its neglected Gemini pole returns as the small awkward fact the great theory skipped — and as the people who wanted presence, not a lecture. | B:
+MUNDANE: Teaches, travels, sells the vision and bets big, often promising before the diary has been checked. The corrective is unglamorous: the detail pass — dates, names, small print — done before the leap, not in the wreckage after it. | B:
+ENERGY: Mutable fire on a long arc, loosed at the horizon and impatient of anything that drags. Momentum is both its medicine and its blind spot; the Gemini pole is the mid-flight correction that keeps it from overshooting entirely. | B:
+MINIMAL: Aims at meaning, blunt about it, restless in rooms. Gemini opposite keeps the facts in view. | B:
 MARKERS: far-ranging, candid | ASK: Which inconvenient detail is your current big picture leaving out?
 
 ## sign-capricorn · sign-inflection
