@@ -18,10 +18,17 @@
   let error = $state('');
   let idx = $state(0);
   let reactions = $state<Record<string, Reaction>>({});
+  // Can this browser share a file to the OS share sheet (iPad: Messages/
+  // Mail/AirDrop)? If not (desktop Safari/Chrome), we fall back to download.
+  let canShareFiles = $state(false);
 
   const storageKey = (b: Batch) => `astro-authoring-${b.batch}`;
 
   onMount(async () => {
+    try {
+      const probe = new File(['{}'], 'probe.json', { type: 'application/json' });
+      canShareFiles = !!navigator.canShare?.({ files: [probe] });
+    } catch { canShareFiles = false; }
     try {
       const res = await fetch('authoring/batch-00.json');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -63,20 +70,42 @@
     r.mark = r.mark === m ? null : m;
   }
 
-  function exportReactions() {
-    if (!batch) return;
+  function reactionsFile(b: Batch): File {
     const data = JSON.stringify({
       app: 'astrodynamics-authoring',
-      batch: batch.batch,
+      batch: b.batch,
       exportedAt: new Date().toISOString(),
       reactions,
     }, null, 2);
-    const url = URL.createObjectURL(new Blob([data], { type: 'application/json' }));
+    const name = `authoring-batch-${String(b.batch).padStart(2, '0')}-reactions.json`;
+    return new File([data], name, { type: 'application/json' });
+  }
+
+  function download(file: File) {
+    const url = URL.createObjectURL(file);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `authoring-batch-${String(batch.batch).padStart(2, '0')}-reactions.json`;
+    a.download = file.name;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  async function sendReactions() {
+    if (!batch) return;
+    const file = reactionsFile(batch);
+    // Prefer the OS share sheet (iPad: Messages/Mail/AirDrop — no Downloads
+    // folder, no Files app). Fall back to a plain download otherwise.
+    if (canShareFiles && navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: 'Astrodynamics reactions' });
+        return;
+      } catch (e) {
+        // User dismissed the sheet: stop, don't surprise them with a download.
+        if (e instanceof DOMException && e.name === 'AbortError') return;
+        // Any other share failure: fall through to download.
+      }
+    }
+    download(file);
   }
 
   const MARKS: { m: Mark; label: string; hint: string }[] = [
@@ -95,8 +124,9 @@
     <header>
       <h2 class="serif">{batch.title}</h2>
       <span class="progress">{reacted}/{batch.slots.length} reacted</span>
-      <button class="export" onclick={exportReactions} disabled={reacted === 0}
-        title="Download your reactions as a file to send back">Export reactions</button>
+      <button class="export" onclick={sendReactions} disabled={reacted === 0}
+        title={canShareFiles ? 'Send your reactions (Messages, Mail or AirDrop)' : 'Download your reactions as a file to send back'}>
+        {canShareFiles ? 'Send reactions' : 'Export reactions'}</button>
     </header>
 
     <div class="dots" role="tablist" aria-label="Batch slots">
