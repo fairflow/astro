@@ -1,7 +1,7 @@
 :root {
   --bg: #0e1220; --bg2: #141a2e; --panel: #171e33; --line: #28304d;
   --ink: #e8e4d8; --dim: #9aa0b5; --gold: #d4af6a; --gold-dim: #8a744a;
-  --trine: #4e9df1; --sextile: #46c48f; --square: #e05555; --opp: #e0704e;
+  --trine: #2f86ff; --sextile: #35cf90; --square: #ff3d3d; --opp: #ff6a3a;
   --conj: #d4af6a; --quincunx: #b7a5e0;
   --transit: #5fd4d0; --syn: #d98fd4;
   --fire: #e07a5f; --earth: #a8b168; --air: #e6c86e; --water: #6fa8dc;
@@ -15,7 +15,7 @@
 :root.cmed {
   --bg: #04060c; --bg2: #0b1120; --panel: #0e152a; --line: #45507c;
   --ink: #f7f4ea; --dim: #c6cbdc; --gold: #eac67e; --gold-dim: #b0965e;
-  --trine: #6fb3ff; --sextile: #5ee3a6; --square: #ff6b6b; --opp: #ff8b5e;
+  --trine: #4f9dff; --sextile: #46e39a; --square: #ff4a4a; --opp: #ff7742;
   --quincunx: #cbb8ff; --hub: #070b16;
   --houseband: rgba(255, 255, 255, 0.07);
 }
@@ -23,7 +23,7 @@
 :root.chigh {
   --bg: #000000; --bg2: #0a0f1e; --panel: #0b1124; --line: #6273b3;
   --ink: #ffffff; --dim: #dfe3f0; --gold: #ffd98f; --gold-dim: #cfa963;
-  --trine: #8ec4ff; --sextile: #6dffb8; --square: #ff7a7a; --opp: #ffa170;
+  --trine: #7ab8ff; --sextile: #5cffb0; --square: #ff5f5f; --opp: #ff8c54;
   --conj: #ffd98f; --quincunx: #dcccff;
   --transit: #7ff0ea; --syn: #ff9df5;
   --fire: #ff9d7e; --earth: #cdd97e; --air: #ffe08a; --water: #92c6f5;
@@ -32,7 +32,7 @@
 :root.light {
   --bg: #f4f0e6; --bg2: #fbf8f1; --panel: #ffffff; --line: #c9c0aa;
   --ink: #2c2820; --dim: #6d6656; --gold: #8f6f2f; --gold-dim: #b39a63;
-  --trine: #2160b8; --sextile: #187a55; --square: #bd2f2f; --opp: #b85618;
+  --trine: #0a55d6; --sextile: #0e8a57; --square: #db1f1f; --opp: #d15600;
   --conj: #8f6f2f; --quincunx: #6d4fb8;
   --transit: #0d7f7a; --syn: #9c3f96;
   --fire: #bb4a28; --earth: #66732b; --air: #94781c; --water: #2a6a9e;
@@ -45,7 +45,7 @@
 :root.light.cmed {
   --bg: #f7f3e9; --bg2: #fffdf7; --panel: #ffffff; --line: #7d7357;
   --ink: #14100a; --dim: #453f30; --gold: #6b5115; --gold-dim: #7d652f;
-  --trine: #10437f; --sextile: #0a563a; --square: #8f1c1c; --opp: #883d0b;
+  --trine: #073fa8; --sextile: #086b45; --square: #b41414; --opp: #a84600;
   --conj: #6b5115; --quincunx: #4b3596;
   --transit: #075853; --syn: #722a6d;
   --fire: #8f351a; --earth: #47521d; --air: #64500e; --water: #1a4d75;
@@ -55,7 +55,7 @@
 :root.light.chigh {
   --bg: #fbf8ef; --bg2: #ffffff; --panel: #ffffff; --line: #4a4430;
   --ink: #000000; --dim: #2e2a1e; --gold: #4f3c0b; --gold-dim: #5f4d1e;
-  --trine: #082e5c; --sextile: #003d27; --square: #6e0f0f; --opp: #5f2a06;
+  --trine: #06336b; --sextile: #003d27; --square: #8a0f0f; --opp: #5f2a06;
   --conj: #4f3c0b; --quincunx: #33235f;
   --transit: #003f3b; --syn: #551f52;
   --fire: #6e2812; --earth: #333d13; --air: #4a3a08; --water: #123a59;
@@ -272,7 +272,8 @@ aside.app { flex: 0 0 372px; padding: 16px 20px 30px 6px; }
 .saved .none { color: var(--dim); font-size: 13px; padding: 8px; }
 
 /* ---- svg ---- */
-.aspect-line { cursor: pointer; }
+/* Aspect-emphasis slider drives --aspect-sat (set on :root from display). */
+.aspect-line { cursor: pointer; filter: saturate(var(--aspect-sat, 1)); }
 .signhit { cursor: pointer; }
 .signhit.selsign circle { stroke: var(--gold); stroke-width: 1.5; fill: rgba(212, 175, 106, 0.09); }
 .househit { cursor: pointer; }

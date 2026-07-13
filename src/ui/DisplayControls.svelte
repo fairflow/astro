@@ -39,6 +39,10 @@
       <label>Text size <span>{Math.round(display.textScale * 100)}%</span>
         <input type="range" min="0.85" max="1.6" step="0.05" bind:value={display.textScale}>
       </label>
+      <label>Aspect emphasis <span>{Math.round(display.aspectEmphasis * 100)}%</span>
+        <input type="range" min="0" max="1" step="0.05" bind:value={display.aspectEmphasis}
+          title="Line thickness, colour saturation and how boldly wide-orb aspects show">
+      </label>
       <div class="themes">
         <span class="tlabel">Theme</span>
         <button class:on={display.theme === 'dark'} onclick={() => display.theme = 'dark'}>Dark</button>
