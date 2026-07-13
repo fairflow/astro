@@ -5,10 +5,16 @@
   /** Stage 1c Phase A: B's reaction form (scope doc, "B's authoring form").
    *  Flag-gated (?author or localStorage astro-author=1); admin-only later. */
 
+  interface Revision {
+    note: string;              // "what changed & why", always shown
+    basedOn?: string;          // "You said …" — the reaction that prompted it
+    prevKernel?: string;       // previous kernel, for before/after
+    prevTexts?: Record<string, string>;  // previous register texts, if they changed
+  }
   interface Slot {
     id: string; kind: string; label: string; kernel: string;
     texts: Record<string, string>; markers: string[]; ask: string;
-    strawman?: boolean;
+    strawman?: boolean; revision?: Revision;
   }
   interface Batch { batch: number; wave: number; title: string; slots: Slot[] }
   type Mark = 'yes' | 'flat' | 'no';
@@ -21,6 +27,9 @@
   let error = $state('');
   let idx = $state(0);
   let reactions = $state<Record<string, Reaction>>({});
+  // Which slot's "how it read before" panel is open (collapses on navigation
+  // since the id no longer matches the current slot).
+  let showPrevId = $state<string | null>(null);
   // Can this browser share a file to the OS share sheet (iPad: Messages/
   // Mail/AirDrop)? If not (desktop Safari/Chrome), we fall back to download.
   let canShareFiles = $state(false);
@@ -187,8 +196,39 @@
         <b>{slot.label}</b>
         <span class="kind">{slot.kind}</span>
         {#if slot.strawman}<span class="straw" title="Machine-generated placeholder — react to how it reads anyway">straw-man</span>{/if}
+        {#if slot.revision}<span class="revtag" title="Changed since you last saw it">✦ revised</span>{/if}
       </div>
       <div class="kernel">{slot.kernel}</div>
+
+      {#if slot.revision}
+        <div class="revised">
+          <div class="revnote"><b>What changed &amp; why —</b> {slot.revision.note}</div>
+          {#if slot.revision.basedOn}<div class="basedon">{slot.revision.basedOn}</div>{/if}
+          {#if slot.revision.prevKernel || slot.revision.prevTexts}
+            <button class="prevtoggle"
+              onclick={() => showPrevId = showPrevId === slot.id ? null : slot.id}>
+              {showPrevId === slot.id ? '▾ Hide previous version' : '▸ See how it read before'}
+            </button>
+            {#if showPrevId === slot.id}
+              <div class="prevbox">
+                {#if slot.revision.prevKernel}
+                  <div class="prevkernel">{slot.revision.prevKernel}</div>
+                {/if}
+                {#if slot.revision.prevTexts}
+                  {#each STYLES as st (st.id)}
+                    {#if slot.revision.prevTexts[st.id]}
+                      <div class="prevreg">
+                        <div class="regname">{st.label}</div>
+                        <p>{slot.revision.prevTexts[st.id]}</p>
+                      </div>
+                    {/if}
+                  {/each}
+                {/if}
+              </div>
+            {/if}
+          {/if}
+        </div>
+      {/if}
 
       {#each STYLES as st (st.id)}
         <div class="reg">
@@ -263,7 +303,30 @@
     border: 1px solid var(--line); border-radius: 8px; padding: 1px 7px; color: var(--dim);
   }
   .straw { color: var(--square); border-color: var(--square); }
+  .revtag {
+    font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em;
+    border: 1px solid var(--gold-dim); border-radius: 8px; padding: 1px 7px;
+    color: var(--gold);
+  }
   .kernel { color: var(--dim); font-style: italic; font-size: 13.5px; margin-bottom: 12px; }
+  .revised {
+    border: 1px solid var(--gold-dim); border-left: 3px solid var(--gold);
+    border-radius: 8px; padding: 10px 12px; margin: 0 0 14px;
+    background: color-mix(in srgb, var(--gold) 6%, transparent);
+  }
+  .revnote { font-size: 13px; line-height: 1.5; }
+  .basedon { color: var(--dim); font-size: 12px; font-style: italic; margin-top: 4px; }
+  .prevtoggle {
+    background: none; border: none; color: var(--gold); cursor: pointer;
+    font-size: 12px; padding: 6px 0 0; text-align: left;
+  }
+  .prevbox {
+    margin-top: 8px; padding-top: 8px; border-top: 1px dashed var(--line);
+    opacity: 0.85;
+  }
+  .prevkernel { color: var(--dim); font-style: italic; font-size: 12.5px; margin-bottom: 8px; }
+  .prevreg { margin-bottom: 6px; }
+  .prevreg p { font-size: 12.5px; line-height: 1.45; color: var(--dim); }
   .reg { margin-bottom: 10px; }
   .regname {
     font-size: 10.5px; text-transform: uppercase; letter-spacing: .09em;

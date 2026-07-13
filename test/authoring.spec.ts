@@ -43,4 +43,22 @@ describe('authoring batch 00 (wave 0)', () => {
       expect(s.label, s.id).toMatch(/pole of the .+–.+ axis/);
     }
   });
+
+  it('revision provenance is well-formed where present', () => {
+    for (const s of batch.slots as (typeof batch.slots[number] & {
+      revision?: { note: string; basedOn?: string; prevKernel?: string;
+        prevTexts?: Record<string, string> };
+    })[]) {
+      const rev = s.revision;
+      if (!rev) continue;
+      // must explain the change and carry the "before" for the diff view
+      expect(rev.note?.length, s.id).toBeGreaterThan(10);
+      expect(rev.prevKernel || rev.prevTexts, `${s.id} has a before`).toBeTruthy();
+      if (rev.prevTexts) {
+        for (const st of STYLES) {
+          expect(rev.prevTexts[st.id]?.length, `${s.id}.prev.${st.id}`).toBeGreaterThan(10);
+        }
+      }
+    }
+  });
 });
