@@ -7,6 +7,11 @@ __pycache__/
 *.se1
 tools/cache/
 
+# Reaction exports carry personal data (a named reader's comments) — never
+# commit them, and never let them sit in data/ (served publicly). The vite
+# build also blocks any *reactions* file under data/. See PITFALLS.
+*reactions*.json
+
 # Beads / Dolt files (added by bd init)
 .dolt/
 *.db

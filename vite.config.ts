@@ -1,8 +1,37 @@
 import { execSync } from 'node:child_process';
-import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { defineConfig, type Plugin } from 'vitest/config';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
+
+// Personal-data guard: reaction exports (a named reader's comments) must never
+// sit under data/ — it is the publicDir, so anything here is bundled into dist/
+// and served world-readable. Fail the build if a *reactions* file is found.
+// (A leak of one such file to the live site prompted this — 2026-07-14.)
+function guardNoServedPersonalData(): Plugin {
+  return {
+    name: 'guard-no-served-personal-data',
+    apply: 'build',
+    buildStart() {
+      const root = resolve(__dirname, 'data');
+      const bad: string[] = [];
+      const walk = (d: string) => {
+        for (const e of readdirSync(d, { withFileTypes: true })) {
+          const p = resolve(d, e.name);
+          if (e.isDirectory()) walk(p);
+          else if (/reactions/i.test(e.name)) bad.push(p);
+        }
+      };
+      if (existsSync(root)) walk(root);
+      if (bad.length) {
+        throw new Error(
+          'Build blocked — personal-data file(s) under data/ (served publicly):\n'
+          + bad.map(p => '  ' + p).join('\n')
+          + '\nMove reaction exports out of data/ (e.g. to repo-root authoring/).');
+      }
+    },
+  };
+}
 
 // Version stamp injected at build time: the deployed bundle differs from its
 // source commit only by these values (see header build tag). Falls back to
@@ -43,7 +72,7 @@ function swVersionStamp(): Plugin {
 export default defineConfig({
   // relative base so dist/ works from any subdirectory (e.g. /astro/)
   base: './',
-  plugins: [svelte(), swVersionStamp()],
+  plugins: [svelte(), swVersionStamp(), guardNoServedPersonalData()],
   define: {
     __GIT_HASH__: JSON.stringify(git.hash),
     __GIT_DATE__: JSON.stringify(git.date),
