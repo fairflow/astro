@@ -30,6 +30,7 @@ re-derive it.
 ## Data & storage
 
 - **Symptom:** "all my saved charts vanished". → **Cause:** IndexedDB/localStorage are **per-origin** — localhost:8323/8324/8325 and fairflow.co.uk are four separate stores; private windows and "clear site data on close" also wipe. → **Fix:** expected behaviour — use Export/Import to move people between origins; `navigator.storage.persist()` already requested.
+- **Symptom:** a personal-data file (a reader's reaction export, `*reactions*.json`) becomes world-readable on the live site. → **Cause:** `data/` is Vite's **publicDir** — *everything* in it is copied into `dist/` and served, regardless of `.gitignore` (gitignore stops commits, not the publicDir copy). A reactions file dropped into `data/authoring/` for ingestion got bundled and deployed; no-`--delete` deploys then left it there. → **Fix:** reaction exports live in repo-root `authoring/` (NOT served), never `data/`. Two guards added 2026-07-14: `.gitignore` blocks `*reactions*.json` from commits, and a `vite.config.ts` build plugin (`guardNoServedPersonalData`, `apply: 'build'`) fails `npm run build` if any `*reactions*` file is found under `data/`. The leaked server copy was removed surgically over SFTP (single file, never `--delete`, local data kept). Verify the guard by planting `data/**/x-reactions.json` and confirming the build aborts.
 
 ## Build / preview / deploy
 
