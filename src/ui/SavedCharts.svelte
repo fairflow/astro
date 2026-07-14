@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import {
-    DEFAULT_SET, deleteChart, listCharts, saveChart, setsOf, updateChart,
-    type SavedChart,
+    DEFAULT_SET, deleteChart, listCharts, moveChart, saveChart, setsOf,
+    updateChart, type SavedChart,
   } from '../store/db';
 
   let { saveable, onload, loadedId = null, onsaved }: {
@@ -23,6 +23,10 @@
   let saveMode = $state(false);
   let saveSet = $state(DEFAULT_SET);
   let newSet = $state('');
+  // move view: reassign an already-saved person to another family
+  let moveId = $state<number | null>(null);
+  let moveSet = $state(DEFAULT_SET);
+  let moveNew = $state('');
 
   async function refresh() {
     charts = await listCharts();
@@ -78,6 +82,26 @@
     family = set;               // reveal the family we just filed into
     flash = `Saved “${saveable.name}” to ${set}`;
     if (typeof id === 'number') onsaved?.(id);
+    setTimeout(() => flash = '', 2500);
+  }
+
+  function beginMove(c: SavedChart) {
+    moveId = c.id ?? null;
+    moveSet = c.set || DEFAULT_SET;
+    moveNew = '';
+    saveMode = false;
+  }
+
+  async function confirmMove() {
+    if (moveId === null) return;
+    const set = moveNew.trim() || moveSet || DEFAULT_SET;
+    const moved = charts.find(c => c.id === moveId);
+    await moveChart(moveId, set);
+    await refresh();
+    moveId = null;
+    moveNew = '';
+    if (family !== '__all__' && !search.trim()) family = set;  // follow the person
+    flash = `Moved “${moved?.name ?? ''}” to ${set}`;
     setTimeout(() => flash = '', 2500);
   }
 
@@ -183,6 +207,23 @@
         </div>
       {/if}
 
+      {#if moveId !== null}
+        {@const mc = charts.find(c => c.id === moveId)}
+        <div class="savebox">
+          <div class="savehead">Move “{mc?.name ?? ''}” to family</div>
+          <select bind:value={moveSet} aria-label="Choose family">
+            {#each sets as s (s)}<option value={s}>{s}</option>{/each}
+            {#if !sets.includes(DEFAULT_SET)}<option value={DEFAULT_SET}>{DEFAULT_SET}</option>{/if}
+          </select>
+          <input type="text" placeholder="…or type a new family" bind:value={moveNew}
+            aria-label="New family name">
+          <div class="saveactions">
+            <button class="go" onclick={confirmMove}>Move</button>
+            <button onclick={() => moveId = null}>Cancel</button>
+          </div>
+        </div>
+      {/if}
+
       {#if charts.length === 0}
         <div class="none">Nothing saved yet. Cast a chart, then “Save chart”.</div>
       {:else}
@@ -208,10 +249,9 @@
           <div class="who">
             <b>{c.name}</b>
             <span>{c.date} {c.time} · {c.place.name}, {c.place.country}</span>
+            <button class="settag" title="Change this person's family"
+              onclick={() => beginMove(c)}>{c.set || DEFAULT_SET} ▾</button>
           </div>
-          {#if search.trim() || family === '__all__'}
-            <span class="settag" title="Family">{c.set || DEFAULT_SET}</span>
-          {/if}
           <button title="Load this chart into the form and cast it"
             onclick={() => { onload(c); open = false; }}>Load</button>
           {#if confirmDelete === c.id}
@@ -261,10 +301,6 @@
     border-radius: 8px; padding: 4px 14px; font-size: 12.5px;
   }
   .find { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
-  .settag {
-    font-size: 10.5px; color: var(--dim); border: 1px solid var(--line);
-    border-radius: 8px; padding: 1px 7px; align-self: center; white-space: nowrap;
-  }
   .tools { display: flex; gap: 6px; padding: 6px 4px 2px; }
   .tools button {
     background: none; border: 1px solid var(--gold-dim); color: var(--gold);
