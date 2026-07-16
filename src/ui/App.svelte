@@ -7,8 +7,7 @@
   import AspectList from './AspectList.svelte';
   import SavedCharts from './SavedCharts.svelte';
   import GlyphDefs from './GlyphDefs.svelte';
-  import DisplayControls from './DisplayControls.svelte';
-  import SettingsControls from './SettingsControls.svelte';
+  import SettingsMenu from './SettingsMenu.svelte';
   import { enabledAspectDefs, enabledBodies } from './prefs.svelte';
   import Themes from './Themes.svelte';
   import TransitsView from './TransitsView.svelte';
@@ -236,8 +235,7 @@
         {copied ? 'Copied ✓' : 'Copy for AI'}
       </button>
     {/if}
-    <SettingsControls />
-    <DisplayControls bind:display />
+    <SettingsMenu bind:display />
     <SavedCharts {saveable} {loadedId} onload={loadSaved} onsaved={id => loadedId = id} />
   </div>
   {#if banner}<div class="banner">{banner}</div>{/if}

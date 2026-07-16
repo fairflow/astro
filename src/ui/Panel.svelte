@@ -12,6 +12,7 @@
     modifiersFor, modifierSentence, readingFor,
   } from '../interpret/composer';
   import { bodyIntro } from '../interpret/textstore';
+  import { lunationBlurb, lunationPhase } from '../interpret/dossiers';
   import { markersFor } from '../interpret/markers';
   import {
     ELEMENT_TIP, HOUSE_ARENA, MODALITY_TIP, RULER_TIP, SIGN_TONE,
@@ -194,6 +195,17 @@
     <div class="row"><span class="k">ASC</span> {fmtDegInSign(chart.houses.asc)}</div>
     <div class="row"><span class="k">MC</span> {fmtDegInSign(chart.houses.mc)}</div>
     <div class="row"><span class="k">Houses</span> {chart.houses.system}{chart.houses.polarFallback ? ' (Placidus undefined at this latitude)' : ''}</div>
+    {@const sunp = chart.positions.find(p => p.body === 'sun')}
+    {@const moonp = chart.positions.find(p => p.body === 'moon')}
+    {#if sunp && moonp}
+      {@const ph = lunationPhase(sunp.lon, moonp.lon)}
+      {@const blurb = lunationBlurb(ph.index, style)}
+      <div class="row"><span class="k">Moon phase</span>
+        <Glyph body="moon" size={14} /> {ph.name} · {ph.waxing ? 'waxing' : 'waning'}</div>
+      {#if blurb}
+        <div class="reading" style="margin:2px 0 6px">{blurb.charAt(0).toUpperCase() + blurb.slice(1)}.</div>
+      {/if}
+    {/if}
     <div class="cusps">
       {#each chart.houses.cusps as c, i}
         <div><span class="h">{i + 1}</span>{fmtDegInSign(c)}</div>

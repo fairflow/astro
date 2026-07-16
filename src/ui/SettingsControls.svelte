@@ -6,6 +6,9 @@
   import { BODY_NAME } from '../render/glyphs';
   import Glyph from './Glyph.svelte';
 
+  // embedded = render bare content inside the shared Settings panel (no own
+  // button/dropdown); standalone keeps the old button+menu for compatibility.
+  let { embedded = false }: { embedded?: boolean } = $props();
   let open = $state(false);
 
   $effect(() => storePrefs($state.snapshot(prefs)));
@@ -17,10 +20,7 @@
   }
 </script>
 
-<div class="settings">
-  <button onclick={() => open = !open} aria-expanded={open}>Settings ▾</button>
-  {#if open}
-    <div class="menu">
+{#snippet content()}
       <h3>Bodies in charts & readings</h3>
       {#each BODY_GROUPS as g (g.label)}
         {@const unlocked = g.bodies.filter(b => !LOCKED_BODIES.includes(b))}
@@ -62,9 +62,16 @@
         <span class="note">Applies everywhere: wheels, aspect lists, readings,
           dossiers, snapshots. Saved automatically.</span>
       </div>
-    </div>
-  {/if}
-</div>
+{/snippet}
+
+{#if embedded}
+  {@render content()}
+{:else}
+  <div class="settings">
+    <button onclick={() => open = !open} aria-expanded={open}>Settings ▾</button>
+    {#if open}<div class="menu">{@render content()}</div>{/if}
+  </div>
+{/if}
 
 <style>
   .settings { position: relative; }

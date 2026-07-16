@@ -35,7 +35,9 @@ export function chartSnapshot(chart: Chart, meta: ChartMeta): string {
   const sun = chart.positions.find(p => p.body === 'sun');
   const moon = chart.positions.find(p => p.body === 'moon');
   if (sun && moon) {
-    lines.push('', `Lunation phase at birth: ${lunationPhase(sun.lon, moon.lon).name}.`);
+    const ph = lunationPhase(sun.lon, moon.lon);
+    lines.push('', `Lunation phase at birth: ${ph.name}, `
+      + `${ph.waxing ? 'waxing' : 'waning'} (Sun–Moon ${Math.round(ph.angle)}°).`);
   }
   const tensions = tensionReport(chart);
   if (tensions.length) {
