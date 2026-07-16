@@ -282,7 +282,8 @@
       </ExpandableWheel>
     </div>
     <aside class="app">
-      <Panel {chart} {selection} meta={current!.meta} style={styleId} onselect={s => selection = s} />
+      <Panel {chart} {selection} meta={current!.meta} style={styleId}
+        showMoonPhase={display.showMoonPhase} onselect={s => selection = s} />
       <AspectList {chart} {selection} onselect={s => selection = s} />
     </aside>
   {:else}

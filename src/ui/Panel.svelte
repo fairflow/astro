@@ -12,7 +12,7 @@
     modifiersFor, modifierSentence, readingFor,
   } from '../interpret/composer';
   import { bodyIntro } from '../interpret/textstore';
-  import { lunationBlurb, lunationPhase } from '../interpret/dossiers';
+  import { lunationPhase, lunationReading } from '../interpret/dossiers';
   import { markersFor } from '../interpret/markers';
   import {
     ELEMENT_TIP, HOUSE_ARENA, MODALITY_TIP, RULER_TIP, SIGN_TONE,
@@ -21,13 +21,18 @@
   import type { Selection } from './selection';
   import type { ChartMeta } from './state';
 
-  let { chart, selection, meta, style, onselect }: {
+  let { chart, selection, meta, style, showMoonPhase = true, onselect }: {
     chart: Chart;
     selection: Selection;
     meta: ChartMeta;
     style: StyleId;
+    showMoonPhase?: boolean;
     onselect: (s: Selection) => void;
   } = $props();
+
+  const WAX_TIP = 'The Moon always moves forward through the signs, faster than '
+    + 'the Sun. Waxing = Moon 0–180° ahead of the Sun (New → Full, light growing); '
+    + 'waning = 180–360° ahead (Full → New, light shrinking).';
 
   const styleLabel = $derived(STYLES.find(s => s.id === style)?.label ?? style);
 
@@ -195,17 +200,6 @@
     <div class="row"><span class="k">ASC</span> {fmtDegInSign(chart.houses.asc)}</div>
     <div class="row"><span class="k">MC</span> {fmtDegInSign(chart.houses.mc)}</div>
     <div class="row"><span class="k">Houses</span> {chart.houses.system}{chart.houses.polarFallback ? ' (Placidus undefined at this latitude)' : ''}</div>
-    {@const sunp = chart.positions.find(p => p.body === 'sun')}
-    {@const moonp = chart.positions.find(p => p.body === 'moon')}
-    {#if sunp && moonp}
-      {@const ph = lunationPhase(sunp.lon, moonp.lon)}
-      {@const blurb = lunationBlurb(ph.index, style)}
-      <div class="row"><span class="k">Moon phase</span>
-        <Glyph body="moon" size={14} /> {ph.name} · {ph.waxing ? 'waxing' : 'waning'}</div>
-      {#if blurb}
-        <div class="reading" style="margin:2px 0 6px">{blurb.charAt(0).toUpperCase() + blurb.slice(1)}.</div>
-      {/if}
-    {/if}
     <div class="cusps">
       {#each chart.houses.cusps as c, i}
         <div><span class="h">{i + 1}</span>{fmtDegInSign(c)}</div>
@@ -220,5 +214,25 @@
     <div class="hint" style="margin-top:10px">
       Tap an aspect line, a planet, a sign glyph, a house number, or a row in the aspect list.
     </div>
+  {/if}
+
+  <!-- Moon phase: persistent (independent of selection), toggleable in Settings -->
+  {#if showMoonPhase}
+    {@const sunp = chart.positions.find(p => p.body === 'sun')}
+    {@const moonp = chart.positions.find(p => p.body === 'moon')}
+    {#if sunp && moonp}
+      {@const ph = lunationPhase(sunp.lon, moonp.lon)}
+      <div class="moonphase">
+        <div class="mphead">
+          <Glyph body="moon" size={15} />
+          <b>{ph.name}</b>
+          <span class="waxwane" data-tip={WAX_TIP}>{ph.waxing ? 'waxing' : 'waning'}</span>
+          <span class="mpangle">· Sun–Moon {Math.round(ph.angle)}°</span>
+        </div>
+        {#key style + ph.index}
+          <p class="mpread" in:fade={{ duration: 200 }}>{lunationReading(ph.index, style)}</p>
+        {/key}
+      </div>
+    {/if}
   {/if}
 </div>

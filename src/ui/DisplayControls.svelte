@@ -98,6 +98,10 @@
         <button class:on={display.skin === 'bw'} title="Black on white — single ink, paper-safe"
           onclick={() => display.skin = 'bw'}>B/W print</button>
       </div>
+      <label class="check">
+        <input type="checkbox" bind:checked={display.showMoonPhase}>
+        Show Moon phase in the reading panel
+      </label>
       <button class="printbtn" onclick={() => { printOpen = true; open = false; }}>Print chart…</button>
       <div class="note">Settings save automatically in this browser and are used as your defaults.</div>
 {/snippet}
@@ -146,6 +150,7 @@
   /* embedded in the shared Settings panel: same column layout, no dropdown */
   .dwrap { display: flex; flex-direction: column; gap: 10px; }
   label { font-size: 12px; color: var(--dim); display: flex; flex-direction: column; gap: 4px; }
+  label.check { flex-direction: row; align-items: center; gap: 7px; color: var(--ink); font-size: 12.5px; cursor: pointer; }
   .disclose {
     background: none; border: none; color: var(--dim); font-size: 12px;
     text-align: left; padding: 0; cursor: pointer;
