@@ -3,7 +3,8 @@
   import { BW_SKIN, applySkin, skinById } from './skins';
   import { ASPECT_FAMILIES } from '../render/glyphs';
 
-  let { display = $bindable() }: { display: DisplaySettings } = $props();
+  let { display = $bindable(), embedded = false }:
+    { display: DisplaySettings; embedded?: boolean } = $props();
   let open = $state(false);
   let printOpen = $state(false);
   let coloursOpen = $state(false);
@@ -41,10 +42,7 @@
   const dark = $derived(display.theme === 'dark' && display.skin !== 'bw');
 </script>
 
-<div class="display">
-  <button onclick={() => open = !open} aria-expanded={open}>Display ▾</button>
-  {#if open}
-    <div class="menu">
+{#snippet content()}
       <label>Glyph size <span>{Math.round(display.glyphScale * 100)}%</span>
         <input type="range" min="0.9" max="1.9" step="0.05" bind:value={display.glyphScale}>
       </label>
@@ -102,9 +100,16 @@
       </div>
       <button class="printbtn" onclick={() => { printOpen = true; open = false; }}>Print chart…</button>
       <div class="note">Settings save automatically in this browser and are used as your defaults.</div>
-    </div>
-  {/if}
-</div>
+{/snippet}
+
+{#if embedded}
+  <div class="dwrap">{@render content()}</div>
+{:else}
+  <div class="display">
+    <button onclick={() => open = !open} aria-expanded={open}>Display ▾</button>
+    {#if open}<div class="menu">{@render content()}</div>{/if}
+  </div>
+{/if}
 
 {#if printOpen}
   <div class="scrim" onclick={() => printOpen = false} role="presentation"></div>
@@ -138,6 +143,8 @@
     padding: 12px 14px; box-shadow: 0 8px 24px #0009;
     display: flex; flex-direction: column; gap: 10px;
   }
+  /* embedded in the shared Settings panel: same column layout, no dropdown */
+  .dwrap { display: flex; flex-direction: column; gap: 10px; }
   label { font-size: 12px; color: var(--dim); display: flex; flex-direction: column; gap: 4px; }
   .disclose {
     background: none; border: none; color: var(--dim); font-size: 12px;
