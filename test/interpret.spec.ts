@@ -87,6 +87,13 @@ describe('dossiers', () => {
     expect(lunationPhase(300, 310).name).toBe('New Moon'); // wraps
   });
 
+  it('waxing before Full (0–180°), waning after', () => {
+    expect(lunationPhase(0, 90).waxing).toBe(true);   // First Quarter, waxing
+    expect(lunationPhase(0, 179).waxing).toBe(true);  // Gibbous, waxing
+    expect(lunationPhase(0, 181).waxing).toBe(false); // Full Moon phase, waning
+    expect(lunationPhase(0, 300).waxing).toBe(false); // Last Quarter, waning
+  });
+
   it('saturn returns land ~29.5 years apart', () => {
     const provider = new CoreProvider();
     const jdBirth = jdUtFromUtc(1975, 3, 8, 14, 30);

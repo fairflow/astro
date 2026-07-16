@@ -213,10 +213,18 @@ const PHASE_TEXT: Record<StyleId, string[]> = {
   ],
 };
 
-export function lunationPhase(sunLon: number, moonLon: number): { index: number; name: string } {
+export function lunationPhase(sunLon: number, moonLon: number):
+  { index: number; name: string; waxing: boolean; angle: number } {
   const elong = normDeg(moonLon - sunLon);
   const index = Math.floor(elong / 45) % 8;
-  return { index, name: PHASE_NAMES[index]! };
+  // Waxing from New to Full (0–180°, indices 0–3); waning back to New
+  // (180–360°, indices 4–7, beginning with the just-past-full Full Moon phase).
+  return { index, name: PHASE_NAMES[index]!, waxing: index < 4, angle: elong };
+}
+
+/** One-line phase reading in the chosen register (as shown in the panel). */
+export function lunationBlurb(index: number, style: StyleId): string {
+  return PHASE_TEXT[style][index] ?? '';
 }
 
 export function sunMoonDossier(chart: Chart, style: StyleId): Dossier {
@@ -267,7 +275,8 @@ export function sunMoonDossier(chart: Chart, style: StyleId): Dossier {
 
   const phase = lunationPhase(sun.lon, moon.lon);
   sections.push({
-    heading: `${phase.name} birth (Rudhyar-derived reading)`,
+    heading: `${phase.name} birth — ${phase.waxing ? 'waxing' : 'waning'} `
+      + `(Rudhyar-derived reading)`,
     text: cap(PHASE_TEXT[style][phase.index]!) + '.',
     source: 'authored',
   });
