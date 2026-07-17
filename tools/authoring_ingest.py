@@ -19,9 +19,12 @@ from pathlib import Path
 
 REGISTERS = ['jungian', 'mundane', 'energy', 'minimal']
 KINDS = {'sign-axis', 'sign-inflection', 'house-axis', 'house-inflection',
-         'body-in-sign', 'body-in-house', 'aspect-pair'}
-# register lint: things the corpus voice bans
-BANNED = re.compile(r'\bhonest(ly)?\b|\bfrankly\b|\bcandidly\b|\*', re.I)
+         'body-in-sign', 'body-in-house', 'body-intro', 'aspect-pair'}
+# Register lint. Bans rhetorical hedges ("honestly/frankly/candidly" — filler
+# that fakes candour) and asterisks (the app renders plain text, so markdown
+# emphasis would show literally). NB: the *adjective* "honest" is legitimate
+# and deliberately allowed — the old \bhonest(ly)?\b also caught it.
+BANNED = re.compile(r'\bhonestly\b|\bfrankly\b|\bcandidly\b|\*', re.I)
 
 
 def validate(path: Path) -> list[str]:

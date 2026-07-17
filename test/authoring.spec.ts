@@ -20,6 +20,8 @@ function load(name: string): Batch {
 
 const batch00 = load('batch-00.json');
 const batch01 = load('batch-01.json');
+const batch02 = load('batch-02.json');
+const batch03 = load('batch-03.json');
 
 /** Shape invariants every batch must satisfy. */
 function checkCommonShape(batch: Batch): void {
@@ -61,7 +63,7 @@ function checkCommonShape(batch: Batch): void {
   });
 }
 
-describe('authoring batch 00 (wave 0 — signs)', () => {
+describe('authoring batch 00 (wave 1 — signs)', () => {
   it('covers the frame: 6 sign axes + 12 sign inflections', () => {
     expect(batch00.slots.filter(s => s.kind === 'sign-axis')).toHaveLength(6);
     expect(batch00.slots.filter(s => s.kind === 'sign-inflection')).toHaveLength(12);
@@ -69,15 +71,52 @@ describe('authoring batch 00 (wave 0 — signs)', () => {
   checkCommonShape(batch00);
 });
 
-describe('authoring batch 01 (wave 1 — houses)', () => {
+describe('authoring batch 01 (wave 2 — houses)', () => {
   it('covers the frame: 6 house axes + 12 house inflections', () => {
     expect(batch01.slots.filter(s => s.kind === 'house-axis')).toHaveLength(6);
     expect(batch01.slots.filter(s => s.kind === 'house-inflection')).toHaveLength(12);
   });
-  it('is batch 1 with its own reaction namespace', () => {
-    expect(batch01.batch).toBe(1);
-  });
   checkCommonShape(batch01);
+});
+
+describe('authoring batch 02 (wave 3 — planets & major asteroids)', () => {
+  it('covers the 10 planets plus Chiron, Vesta, Pallas — and no minors', () => {
+    expect(batch02.slots.filter(s => s.kind === 'body-intro')).toHaveLength(13);
+    const ids = batch02.slots.map(s => s.id);
+    for (const b of ['sun', 'moon', 'mercury', 'venus', 'mars', 'jupiter',
+      'saturn', 'uranus', 'neptune', 'pluto', 'chiron', 'vesta', 'pallas']) {
+      expect(ids, b).toContain(`body-${b}`);
+    }
+    for (const minor of ['ceres', 'juno', 'eris', 'meanNode', 'lilith']) {
+      expect(ids, minor).not.toContain(`body-${minor}`);
+    }
+  });
+  checkCommonShape(batch02);
+});
+
+describe('authoring batch 03 (wave 4 — aspects)', () => {
+  it('covers 8 pairs × 3 classes = 24 readings', () => {
+    expect(batch03.slots.filter(s => s.kind === 'aspect-pair')).toHaveLength(24);
+    for (const klass of ['neutral', 'flowing', 'challenge']) {
+      expect(batch03.slots.filter(s => s.id.endsWith(`-${klass}`)), klass)
+        .toHaveLength(8);
+    }
+  });
+  checkCommonShape(batch03);
+});
+
+describe('wave numbering', () => {
+  // `batch` is a stable, opaque storage id — reactions live under localStorage
+  // astro-authoring-<batch>, so renumbering it would orphan B's saved work.
+  // `wave` is the 1-based number shown to the reader; the two differ by one.
+  it('waves are 1-based and sequential', () => {
+    expect([batch00.wave, batch01.wave, batch02.wave, batch03.wave])
+      .toEqual([1, 2, 3, 4]);
+  });
+  it('batch storage ids stay stable (0-based) so saved reactions survive', () => {
+    expect([batch00.batch, batch01.batch, batch02.batch, batch03.batch])
+      .toEqual([0, 1, 2, 3]);
+  });
 });
 
 describe('authoring manifest', () => {
@@ -85,10 +124,12 @@ describe('authoring manifest', () => {
     readFileSync(new URL('../data/authoring/index.json', import.meta.url), 'utf8'),
   ) as { batches: { file: string; label: string }[] };
 
-  it('lists both wave files with labels', () => {
-    const files = manifest.batches.map(b => b.file);
-    expect(files).toContain('batch-00.json');
-    expect(files).toContain('batch-01.json');
-    for (const b of manifest.batches) expect(b.label).toBeTruthy();
+  it('lists every wave file with a 1-based label', () => {
+    expect(manifest.batches.map(b => b.file)).toEqual([
+      'batch-00.json', 'batch-01.json', 'batch-02.json', 'batch-03.json',
+    ]);
+    expect(manifest.batches.map(b => b.label)).toEqual([
+      'Wave 1 · Signs', 'Wave 2 · Houses', 'Wave 3 · Planets', 'Wave 4 · Aspects',
+    ]);
   });
 });
