@@ -22,6 +22,7 @@ const batch00 = load('batch-00.json');
 const batch01 = load('batch-01.json');
 const batch02 = load('batch-02.json');
 const batch03 = load('batch-03.json');
+const batch04 = load('batch-04.json');
 
 /** Shape invariants every batch must satisfy. */
 function checkCommonShape(batch: Batch): void {
@@ -105,17 +106,41 @@ describe('authoring batch 03 (wave 4 — aspects)', () => {
   checkCommonShape(batch03);
 });
 
+describe('authoring batch 04 (wave 5 — synastry probe)', () => {
+  it('is a 6-slot probe spanning all three classes', () => {
+    expect(batch04.slots.filter(s => s.kind === 'synastry-pair')).toHaveLength(6);
+    for (const klass of ['neutral', 'flowing', 'challenge']) {
+      expect(batch04.slots.filter(s => s.id.endsWith(`-${klass}`)), klass)
+        .toHaveLength(2);
+    }
+  });
+
+  // The probe's whole point: a synastry contact is NOT symmetrical, so every
+  // register that speaks about people must voice BOTH sides. 'energy' is
+  // exempt — across every wave it speaks in currents, not persons.
+  it('every people-facing register states both sides of the contact', () => {
+    for (const s of batch04.slots) {
+      for (const reg of ['jungian', 'mundane', 'minimal']) {
+        const mentions = (s.texts[reg]!.match(/ person/g) ?? []).length;
+        expect(mentions, `${s.id}.${reg} names both sides`).toBeGreaterThanOrEqual(2);
+      }
+    }
+  });
+
+  checkCommonShape(batch04);
+});
+
 describe('wave numbering', () => {
   // `batch` is a stable, opaque storage id — reactions live under localStorage
   // astro-authoring-<batch>, so renumbering it would orphan B's saved work.
   // `wave` is the 1-based number shown to the reader; the two differ by one.
   it('waves are 1-based and sequential', () => {
-    expect([batch00.wave, batch01.wave, batch02.wave, batch03.wave])
-      .toEqual([1, 2, 3, 4]);
+    expect([batch00.wave, batch01.wave, batch02.wave, batch03.wave, batch04.wave])
+      .toEqual([1, 2, 3, 4, 5]);
   });
   it('batch storage ids stay stable (0-based) so saved reactions survive', () => {
-    expect([batch00.batch, batch01.batch, batch02.batch, batch03.batch])
-      .toEqual([0, 1, 2, 3]);
+    expect([batch00.batch, batch01.batch, batch02.batch, batch03.batch, batch04.batch])
+      .toEqual([0, 1, 2, 3, 4]);
   });
 });
 
@@ -127,9 +152,11 @@ describe('authoring manifest', () => {
   it('lists every wave file with a 1-based label', () => {
     expect(manifest.batches.map(b => b.file)).toEqual([
       'batch-00.json', 'batch-01.json', 'batch-02.json', 'batch-03.json',
+      'batch-04.json',
     ]);
     expect(manifest.batches.map(b => b.label)).toEqual([
       'Wave 1 · Signs', 'Wave 2 · Houses', 'Wave 3 · Planets', 'Wave 4 · Aspects',
+      'Wave 5 · Synastry',
     ]);
   });
 });

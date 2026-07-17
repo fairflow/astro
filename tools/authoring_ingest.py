@@ -19,7 +19,8 @@ from pathlib import Path
 
 REGISTERS = ['jungian', 'mundane', 'energy', 'minimal']
 KINDS = {'sign-axis', 'sign-inflection', 'house-axis', 'house-inflection',
-         'body-in-sign', 'body-in-house', 'body-intro', 'aspect-pair'}
+         'body-in-sign', 'body-in-house', 'body-intro', 'aspect-pair',
+         'synastry-pair'}
 # Register lint. Bans rhetorical hedges ("honestly/frankly/candidly" — filler
 # that fakes candour) and asterisks (the app renders plain text, so markdown
 # emphasis would show literally). NB: the *adjective* "honest" is legitimate
