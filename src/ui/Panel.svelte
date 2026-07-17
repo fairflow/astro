@@ -14,6 +14,7 @@
   import { bodyIntro } from '../interpret/textstore';
   import { lunationPhase, lunationReading } from '../interpret/dossiers';
   import { markersFor } from '../interpret/markers';
+  import { prefs } from './prefs.svelte';
   import {
     ELEMENT_TIP, HOUSE_ARENA, MODALITY_TIP, RULER_TIP, SIGN_TONE,
   } from '../interpret/vocab';
@@ -21,12 +22,11 @@
   import type { Selection } from './selection';
   import type { ChartMeta } from './state';
 
-  let { chart, selection, meta, style, showMoonPhase = true, onselect }: {
+  let { chart, selection, meta, style, onselect }: {
     chart: Chart;
     selection: Selection;
     meta: ChartMeta;
     style: StyleId;
-    showMoonPhase?: boolean;
     onselect: (s: Selection) => void;
   } = $props();
 
@@ -217,7 +217,7 @@
   {/if}
 
   <!-- Moon phase: persistent (independent of selection), toggleable in Settings -->
-  {#if showMoonPhase}
+  {#if prefs.showMoonPhase}
     {@const sunp = chart.positions.find(p => p.body === 'sun')}
     {@const moonp = chart.positions.find(p => p.body === 'moon')}
     {#if sunp && moonp}

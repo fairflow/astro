@@ -35,14 +35,11 @@ export interface DisplaySettings {
   /** Per-aspect colour overrides: CSS var name → hex. Applied inline over the
    *  palette (empty = palette defaults). Ignored while the B/W print skin is on. */
   aspectColors: Record<string, string>;
-  /** Show the natal Moon-phase block in the reading panel. */
-  showMoonPhase: boolean;
 }
 
 export const DEFAULT_DISPLAY: DisplaySettings = {
   glyphScale: 1.25, weight: 7, slant: 0, theme: 'dark', contrast: 'low',
   skin: 'auto', textScale: 1, aspectEmphasis: 0.5, aspectColors: {},
-  showMoonPhase: true,
 };
 
 const DISPLAY_KEY = 'astro-display';

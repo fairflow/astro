@@ -81,10 +81,9 @@
     ['natal', 'Natal'], ['transits', 'Transits'],
     ['synastry', 'Synastry'], ['composite', 'Composite'],
   ] as const;
-  /** Stage 1c authoring form — flag-gated (admin-only before public deploys). */
-  const authorEnabled = typeof location !== 'undefined'
-    && (new URLSearchParams(location.search).has('author')
-      || localStorage.getItem('astro-author') === '1');
+  // The Authoring form is a plain tab — no ?author flag, no login. Home-screen
+  // shortcuts on iOS/Android drop query strings, which made a flag-gated tab
+  // unreachable from an installed icon. It only collects language feedback.
 
   function loadStyle(): StyleId {
     const s = localStorage.getItem('astro-style');
@@ -242,24 +241,20 @@
   <ChartForm bind:form {gaz} onsubmit={cast} />
 </header>
 
-{#if chart || authorEnabled}
-  <nav class="modetabs">
-    {#each MODES as [id, label] (id)}
-      <button class:on={mode === id} onclick={() => mode = id}>{label}</button>
+<nav class="modetabs">
+  {#each MODES as [id, label] (id)}
+    <button class:on={mode === id} onclick={() => mode = id}>{label}</button>
+  {/each}
+  <button class:on={mode === 'authoring'} onclick={() => mode = 'authoring'}>Authoring</button>
+  <span class="stylepick" role="radiogroup" aria-label="Interpretation style">
+    <span>Style</span>
+    {#each STYLES as s (s.id)}
+      <button class:on={styleId === s.id} onclick={() => styleId = s.id}>{s.label}</button>
     {/each}
-    {#if authorEnabled}
-      <button class:on={mode === 'authoring'} onclick={() => mode = 'authoring'}>Authoring</button>
-    {/if}
-    <span class="stylepick" role="radiogroup" aria-label="Interpretation style">
-      <span>Style</span>
-      {#each STYLES as s (s.id)}
-        <button class:on={styleId === s.id} onclick={() => styleId = s.id}>{s.label}</button>
-      {/each}
-    </span>
-  </nav>
-{/if}
+  </span>
+</nav>
 
-{#if authorEnabled && mode === 'authoring'}
+{#if mode === 'authoring'}
   <AuthoringView />
 {:else if chart && current && mode === 'transits'}
   <TransitsView natal={chart} meta={current.meta} {provider} {display} style={styleId} {chartFromSaved} />
@@ -282,8 +277,7 @@
       </ExpandableWheel>
     </div>
     <aside class="app">
-      <Panel {chart} {selection} meta={current!.meta} style={styleId}
-        showMoonPhase={display.showMoonPhase} onselect={s => selection = s} />
+      <Panel {chart} {selection} meta={current!.meta} style={styleId} onselect={s => selection = s} />
       <AspectList {chart} {selection} onselect={s => selection = s} />
     </aside>
   {:else}

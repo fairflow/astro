@@ -17,6 +17,7 @@
     const d = defaultPrefs();
     Object.assign(prefs.bodies, d.bodies);
     Object.assign(prefs.aspects, d.aspects);
+    prefs.showMoonPhase = d.showMoonPhase;
   }
 </script>
 
@@ -56,6 +57,12 @@
           </label>
         {/each}
       </div>
+
+      <h3>Readings</h3>
+      <label>
+        <input type="checkbox" bind:checked={prefs.showMoonPhase}>
+        Show Moon phase in the reading panel
+      </label>
 
       <div class="foot">
         <button class="reset" onclick={reset}>Reset to defaults</button>
