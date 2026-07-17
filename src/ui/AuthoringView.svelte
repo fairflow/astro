@@ -3,7 +3,8 @@
   import { STYLES } from '../interpret/types';
 
   /** Stage 1c Phase A: B's reaction form (scope doc, "B's authoring form").
-   *  Flag-gated (?author or localStorage astro-author=1); admin-only later. */
+   *  A plain tab — no flag, no login: home-screen shortcuts drop query strings,
+   *  which made a ?author-gated tab unreachable from an installed icon. */
 
   interface Revision {
     note: string;              // "what changed & why", always shown

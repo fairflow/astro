@@ -214,6 +214,21 @@ aside.app { flex: 0 0 372px; padding: 16px 20px 30px 6px; }
 }
 .stylepick button.on { color: var(--on-gold); background: var(--gold); border-color: var(--gold); font-weight: 600; }
 .panel .reading { margin-top: 10px; font-size: 14px; line-height: 1.55; }
+/* Persistent Moon-phase block at the foot of the reading panel */
+.panel .moonphase {
+  margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line);
+}
+.panel .moonphase .mphead {
+  display: flex; align-items: center; gap: 7px; flex-wrap: wrap;
+}
+.panel .moonphase .mphead b { font-size: 14px; color: var(--gold); }
+.panel .moonphase .waxwane {
+  font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
+  color: var(--dim); border: 1px dotted var(--gold-dim); border-radius: 8px;
+  padding: 0 7px; cursor: help;
+}
+.panel .moonphase .mpangle { color: var(--dim); font-size: 11.5px; }
+.panel .moonphase .mpread { margin-top: 6px; font-size: 13.5px; line-height: 1.55; }
 .panel .src {
   color: var(--dim); font-size: 10px; text-transform: uppercase;
   letter-spacing: .06em; border: 1px solid var(--line); border-radius: 8px;

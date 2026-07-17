@@ -170,46 +170,49 @@ const PHASE_NAMES = [
   'Full Moon', 'Disseminating', 'Last Quarter', 'Balsamic',
 ];
 
-const PHASE_TEXT: Record<StyleId, string[]> = {
+// Fuller lunation-phase readings (8 Rudhyar phases × 4 registers), shown in
+// the natal panel and the Sun–Moon dialogue. Each is a self-contained
+// sentence or two — capitalised, ending in a full stop.
+const PHASE_READING: Record<StyleId, string[]> = {
   jungian: [
-    'conscious and unconscious begin a joint venture — instinctive, self-starting, not yet self-observing',
-    'emerging purpose must pull away from the past’s gravity',
-    'a crisis of action: structures must be built for the impulse or it dies',
-    'refinement — the work is analysed, perfected, made ready to be seen',
-    'full illumination: the inner life is visible, relationship becomes the mirror of the psyche',
-    'what was realised must now be given away and taught',
-    'a crisis of conscience: the system is questioned from inside',
-    'the cycle composts itself; the psyche serves something not yet born',
+    'Born at the New Moon, you begin things from instinct, before you can see them clearly — self and feeling are fused and pointed the same way. The gift is spontaneity; the task is developing the self-observation a New-Moon nature is born without.',
+    'A Crescent birth carries a forward push that must fight the gravity of the past and the familiar. Emerging purpose meets inertia — habit, family, old security — and grows only by daring to leave them behind.',
+    'A First-Quarter birth meets life as a crisis of action: the impulse now demands structures, and building them means breaking with what came before. Strong-willed and constructive, it grows through decisive turning points, not gradual drift.',
+    'A Gibbous birth is driven toward perfection and usefulness — analysing, refining, making the work ready to be seen. The gift is craft and devotion; the shadow is the self-criticism that never lets "good enough" be enough.',
+    'Born at the Full Moon, you come to consciousness through relationship — the other is the mirror in which you finally see yourself. Everything is illuminated and objective now; the risk is living entirely through others’ reactions.',
+    'A Disseminating birth is here to give away what it has realised — to teach, share, spread the meaning gathered on the way up. Fulfilment comes from transmission; frustration comes from hoarding it.',
+    'A Last-Quarter birth meets a crisis of consciousness: the structures it once believed in are questioned from inside, often out of step with its time. The work is reorientation — dismantling an outlived worldview to seed a truer one.',
+    'A Balsamic birth lives at the end of a cycle, composting the past to seed a future it may not see — a sense of destiny, endings, and service to something not yet born. It travels light and lets go, and can feel set apart.',
   ],
   mundane: [
-    'projects are started on instinct and explained later',
-    'momentum builds against early resistance',
-    'decisive turning points demand visible commitment',
-    'skills are polished for an audience',
-    'life is lived in public view and through partnerships',
-    'experience converts naturally into teaching and mentoring',
-    'established roles are re-evaluated mid-stream',
-    'endings and handovers recur; travel light',
+    'A New-Moon birth acts first and understands later: projects launch on impulse, identity and mood pull together, and hindsight does the explaining. Best given room to initiate; helped by pausing to ask what it is actually feeling.',
+    'Momentum here builds against early resistance — the impulse is real but circumstances (and one’s own caution) drag. Progress comes from mobilising resources and refusing to slide back into what is comfortable.',
+    'This is the phase of decisive commitment: build it or it dies. Expect strong will, a taste for turning points, and friction with anything that resists being restructured.',
+    'Skills are polished for an audience here: the drive is to contribute something worked-out and useful, and to keep improving it. Watch the perfectionism that delays ever showing the work.',
+    'A Full-Moon nature lives in the open and through partnerships: clarity, awareness, and a strong pull toward significant others. Best when the relating serves understanding rather than replacing it.',
+    'Experience converts naturally into teaching, mentoring, publishing, campaigning — the drive is to spread a conviction. Watch for preaching; the real gift is genuine transmission.',
+    'This phase re-evaluates established roles mid-stream and can feel ideologically out of step with the times. The task is inner reorganisation, not defending the old position.',
+    'Endings and handovers recur here; the drive is release and preparation rather than accumulation. Best when it trusts the sense of transition instead of clinging.',
   ],
   energy: [
-    'the cycle at ignition: maximum instinct, minimum form',
-    'rising current working against inertia',
-    'first structural stress-test of the waveform',
-    'amplitude refined toward peak',
-    'peak amplitude: full radiation, full exposure',
-    'the wave gives back its energy outward',
-    'controlled decay, extracting the usable remainder',
-    'the trough that seeds the next wave',
+    'The lunar cycle caught at ignition — maximum instinct, minimum form. Enormous starting energy that has not yet learned to watch itself; direction emerges by doing, not by planning.',
+    'The rising current working against inertia — thrust against drag. The signature is effortful build; once the early resistance breaks, the wave gathers speed.',
+    'The first structural stress-test of the waveform: the current is high and must be given form or it tears loose. Crisis is the medium; it constructs under pressure.',
+    'Amplitude refined toward peak — the wave is nearly full and the work is tuning, not launching. Fine adjustment and rising clarity, with a tendency to overwork.',
+    'Peak amplitude: full radiation, full exposure. Maximum illumination and objectivity; the current now turns from building to broadcasting.',
+    'The wave giving its energy back outward — distribution, not accumulation. It broadcasts what the earlier phases built.',
+    'Controlled decay, extracting the usable remainder as the wave falls. Reorientation under a receding current: letting go of the form while keeping the essence.',
+    'The trough that seeds the next wave — minimal amplitude, maximal potential. Dissolution that carries the germ of the cycle to come.',
   ],
   minimal: [
-    'starter, instinctive, poor at self-explanation',
-    'builds momentum against drag',
-    'forces decisions; builds or breaks',
-    'perfects before showing',
-    'lives publicly; needs the mirror of others',
-    'natural teacher of what it has lived',
-    'questions its own structures midlife',
-    'finishes things; travels light',
+    'New Moon: instinctive starter, self and feeling fused. Strong on beginnings, poor at self-explanation.',
+    'Crescent: forward push against the gravity of the past. Grows by leaving the familiar behind.',
+    'First Quarter: crisis in action — build structures or lose the impulse. Strong-willed, breaks to build.',
+    'Gibbous: perfects before showing; driven to be useful. Watch the self-criticism.',
+    'Full Moon: consciousness through relationship; the other is the mirror. Lives publicly.',
+    'Disseminating: teaches and spreads what it has lived. Fulfilled by giving it away.',
+    'Last Quarter: questions its own structures midlife; often out of step. Reorients from within.',
+    'Balsamic: finishes things, travels light; seeds a future it will not fully see.',
   ],
 };
 
@@ -222,9 +225,9 @@ export function lunationPhase(sunLon: number, moonLon: number):
   return { index, name: PHASE_NAMES[index]!, waxing: index < 4, angle: elong };
 }
 
-/** One-line phase reading in the chosen register (as shown in the panel). */
-export function lunationBlurb(index: number, style: StyleId): string {
-  return PHASE_TEXT[style][index] ?? '';
+/** Full lunation-phase reading in the chosen register (panel + dossier). */
+export function lunationReading(index: number, style: StyleId): string {
+  return PHASE_READING[style][index] ?? '';
 }
 
 export function sunMoonDossier(chart: Chart, style: StyleId): Dossier {
@@ -277,7 +280,7 @@ export function sunMoonDossier(chart: Chart, style: StyleId): Dossier {
   sections.push({
     heading: `${phase.name} birth — ${phase.waxing ? 'waxing' : 'waning'} `
       + `(Rudhyar-derived reading)`,
-    text: cap(PHASE_TEXT[style][phase.index]!) + '.',
+    text: PHASE_READING[style][phase.index]!,
     source: 'authored',
   });
 

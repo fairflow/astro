@@ -21,6 +21,9 @@ export const LOCKED_BODIES: BodyKey[] = ['sun', 'moon'];
 export interface CalcPrefs {
   bodies: Record<BodyKey, boolean>;
   aspects: Record<AspectName, boolean>;
+  /** Show the natal Moon-phase block in the reading panel. This is about
+   *  *what* the reading includes (like bodies/aspects), not how it is drawn. */
+  showMoonPhase: boolean;
 }
 
 export function defaultPrefs(): CalcPrefs {
@@ -28,7 +31,7 @@ export function defaultPrefs(): CalcPrefs {
   for (const g of BODY_GROUPS) for (const b of g.bodies) bodies[b] = true;
   const aspects = {} as Record<AspectName, boolean>;
   for (const d of DEFAULT_ASPECTS) aspects[d.name] = true;
-  return { bodies, aspects };
+  return { bodies, aspects, showMoonPhase: true };
 }
 
 /** Pure helpers (unit-tested without the rune wrapper). */
@@ -57,6 +60,7 @@ function load(): CalcPrefs {
       return {
         bodies: { ...d.bodies, ...saved.bodies },
         aspects: { ...d.aspects, ...saved.aspects },
+        showMoonPhase: saved.showMoonPhase ?? d.showMoonPhase,
       };
     }
   } catch { /* fresh defaults */ }

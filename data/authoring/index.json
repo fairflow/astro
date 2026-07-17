@@ -1,6 +1,20 @@
 {
   "batches": [
-    { "file": "batch-00.json", "label": "Wave 0 · Signs" },
-    { "file": "batch-01.json", "label": "Wave 1 · Houses" }
+    {
+      "file": "batch-00.json",
+      "label": "Wave 1 · Signs"
+    },
+    {
+      "file": "batch-01.json",
+      "label": "Wave 2 · Houses"
+    },
+    {
+      "file": "batch-02.json",
+      "label": "Wave 3 · Planets"
+    },
+    {
+      "file": "batch-03.json",
+      "label": "Wave 4 · Aspects"
+    }
   ]
 }
