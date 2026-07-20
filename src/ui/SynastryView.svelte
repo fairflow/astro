@@ -4,6 +4,7 @@
   import ExpandableWheel from './ExpandableWheel.svelte';
   import { crossAspects, houseOverlay, midpointContacts } from '../chart/relate';
   import { synastrySnapshot } from '../interpret/snapshot';
+  import { copyToClipboard } from './clipboard';
   import { contextReading } from '../interpret/contexts';
   import { relationshipsDossier } from '../interpret/dossiers-life';
   import { BODY_NAME, fmtDegInSign, fmtOrb } from '../render/glyphs';
@@ -46,17 +47,7 @@
     if (!partnerChart || !session.partner) return;
     const text = synastrySnapshot(
       natal, meta, partnerChart, session.partner.name, cross, overlays, mids, midsRev);
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch {
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      ta.style.position = 'fixed';
-      ta.style.opacity = '0';
-      document.body.appendChild(ta);
-      ta.select();
-      try { document.execCommand('copy'); } finally { ta.remove(); }
-    }
+    if (!await copyToClipboard(text)) return;
     copied = true;
     setTimeout(() => copied = false, 2200);
   }

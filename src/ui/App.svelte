@@ -14,6 +14,7 @@
   import OverlayInfo from './OverlayInfo.svelte';
   import Glossary from './Glossary.svelte';
   import { chartSnapshot } from '../interpret/snapshot';
+  import { copyToClipboard } from './clipboard';
   import { loadTexts } from '../interpret/textstore';
   import SynastryView from './SynastryView.svelte';
   import { session, storeSession } from './session.svelte';
@@ -44,26 +45,8 @@
 
   async function copySnapshot() {
     if (!chart || !current) return;
-    const text = chartSnapshot(chart, current.meta);
-    try {
-      await navigator.clipboard.writeText(text);
-    } catch {
-      // fallback for contexts where the async clipboard API is blocked
-      const ta = document.createElement('textarea');
-      ta.value = text;
-      ta.style.position = 'fixed';
-      ta.style.opacity = '0';
-      document.body.appendChild(ta);
-      ta.select();
-      try {
-        document.execCommand('copy');
-      } catch {
-        banner = 'Clipboard unavailable in this browser context.';
-        ta.remove();
-        return;
-      }
-      ta.remove();
-    }
+    const ok = await copyToClipboard(chartSnapshot(chart, current.meta));
+    if (!ok) { banner = 'Clipboard unavailable in this browser context.'; return; }
     copied = true;
     setTimeout(() => copied = false, 2200);
   }
@@ -228,9 +211,9 @@
     {/if}
     <span class="tag">charts · offline ephemeris · interpretations</span>
     <span class="spacer"></span>
-    {#if chart}
+    {#if chart && mode === 'natal'}
       <button class="copyai" onclick={copySnapshot}
-        title="Copy a raw-factors markdown snapshot of this chart, ready to paste into an AI conversation (e.g. for an IFS-style profile)">
+        title="Copy this natal chart (only the bodies enabled in Settings) as raw-factors markdown, ready to paste into an AI conversation. Transits, Synastry and Composite tabs each have their own Copy button.">
         {copied ? 'Copied ✓' : 'Copy for AI'}
       </button>
     {/if}
