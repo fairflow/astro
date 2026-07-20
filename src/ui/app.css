@@ -333,6 +333,12 @@ header.app .copyai {
   border-radius: 14px; padding: 5px 12px; font-size: 12.5px;
 }
 header.app .copyai:hover { border-color: var(--sextile); }
+main.app .copyrow { max-width: 720px; margin: 0 auto 8px; display: flex; justify-content: flex-end; }
+main.app .copyai {
+  background: var(--bg2); color: var(--sextile); border: 1px solid var(--line);
+  border-radius: 14px; padding: 5px 12px; font-size: 12.5px;
+}
+main.app .copyai:hover { border-color: var(--sextile); }
 .aspect-hit { stroke: transparent; stroke-width: 13; fill: none; stroke-linecap: round; }
 /* selecting a planet widens the hit area of ITS aspects (conjunctions
    especially are near-impossible to click otherwise) and shrinks the rest */

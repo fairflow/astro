@@ -248,6 +248,12 @@
 {:else}
 <main class="app">
   {#if chart}
+    <div class="copyrow">
+      <button class="copyai" onclick={copySnapshot}
+        title="Copy this natal chart (only the bodies enabled in Settings) as raw-factors markdown, ready to paste into an AI conversation.">
+        {copied ? 'Copied ✓' : 'Copy for AI (natal)'}
+      </button>
+    </div>
     <div id="wheelwrap">
       <ExpandableWheel {chart} {selection} {display} {caption} onselect={s => selection = s}>
         {#snippet flyout()}
