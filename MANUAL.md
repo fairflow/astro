@@ -19,6 +19,18 @@ install/run instructions, see `GUIDE.md`. For internals, see
   of corresponding points (the "midpoints" method: cusp midpoints, not
   the reference-place/derived-ASC method — that's a possible future
   option, not implemented).
+- **Retrograde** — an animated orrery of Mercury and Venus seen from
+  above the north ecliptic pole, inside the zodiac. It works without a
+  cast chart; with one, a button jumps to the chart's moment. Shows each
+  planet's apparent track as a time spiral, the exact stations (℞ and D)
+  with their dates and longitudes, the retrograde arc, inferior
+  conjunctions (the Venus pentagram), sidereal against synodic periods,
+  and a strip chart of apparent longitude against time. Speed, direction
+  and planets are adjustable. "True orbits" uses the app's ephemeris
+  (station times match Swiss Ephemeris to within ten minutes,
+  1990–2040, `test/retrograde.spec.ts`); "Circular" is an idealised
+  teaching model. Code: `src/chart/retrograde.ts` (stations,
+  conjunctions), `src/render/orrery.ts` (canvas), `src/ui/RetrogradeView.svelte`.
 
 Transits are implemented as a chart-to-chart comparison where "chart B" is
 the current sky — the same cross-chart math (`src/chart/relate.ts`) backs

@@ -21,6 +21,7 @@
   import { applySkin, skinById } from './skins';
   import { ASPECT_FAMILIES } from '../render/glyphs';
   import CompositeView from './CompositeView.svelte';
+  import RetrogradeView from './RetrogradeView.svelte';
   import { STYLES, type StyleId } from '../interpret/types';
   import { fetchPacks, PACK_BODIES } from '../ephemeris/packs';
   import { fetchGazetteer, type Gazetteer } from '../store/gazetteer';
@@ -59,10 +60,11 @@
   let loadedId = $state<number | null>(null);
   let display = $state(loadDisplay());
   let styleId = $state<StyleId>(loadStyle());
-  let mode = $state<'natal' | 'transits' | 'synastry' | 'composite' | 'authoring'>('natal');
+  let mode = $state<'natal' | 'transits' | 'synastry' | 'composite' | 'retrograde' | 'authoring'>('natal');
   const MODES = [
     ['natal', 'Natal'], ['transits', 'Transits'],
     ['synastry', 'Synastry'], ['composite', 'Composite'],
+    ['retrograde', 'Retrograde'],
   ] as const;
   // The Authoring form is a plain tab — no ?author flag, no login. Home-screen
   // shortcuts on iOS/Android drop query strings, which made a flag-gated tab
@@ -239,6 +241,10 @@
 
 {#if mode === 'authoring'}
   <AuthoringView />
+{:else if mode === 'retrograde'}
+  <RetrogradeView {provider} {display}
+    chartJd={current?.jdUt ?? null}
+    chartLabel={current ? (current.meta.name || current.meta.date) : ''} />
 {:else if chart && current && mode === 'transits'}
   <TransitsView natal={chart} meta={current.meta} {provider} {display} style={styleId} {chartFromSaved} />
 {:else if chart && current && mode === 'synastry'}
