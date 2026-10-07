@@ -72,10 +72,12 @@ npm run typecheck      # tsc --noEmit
 npm run dev            # dev server, :8322 (no service worker)
 npm run build           # dist/, ~3.8 MB incl. all data
 npm run preview          # serve dist/ — service worker active here, not in dev
+npm run build:retro      # dist-retro/retrograde.html: standalone Retrograde page
 
 # Python tooling (one-off / regeneration), from a venv:
 python3 -m venv .venv && .venv/bin/pip install pyswisseph numpy pillow
 .venv/bin/python tools/golden_refs.py     # regenerate golden references
+.venv/bin/python tools/golden_stations.py # regenerate Mercury/Venus station references
 .venv/bin/python tools/make_packs.py      # regenerate asteroid packs
 .venv/bin/python tools/make_gazetteer.py  # regenerate place index
 .venv/bin/python tools/make_icons.py      # regenerate PWA icons
@@ -184,6 +186,24 @@ credentials external to the repo) to a subdirectory of an existing site;
 see `docs/reports/2026-07-05-implementation-and-deployment.md` for the
 full stack rationale, licensing notes, and other deployment options
 considered.
+
+### Standalone Retrograde page (keep in sync)
+
+The Retrograde tab is also published on its own as a claude.ai artifact:
+<https://claude.ai/artifact/B7PYodLUsCczgkGTPhCynF>. Matthew wants it to
+track the app, so **any change to `src/ui/RetrogradeView.svelte`,
+`src/render/orrery.ts` or `src/chart/retrograde.ts` must be followed by
+`npm run build:retro` and a republish of `dist-retro/retrograde.html` to
+that artifact URL** (Artifact tool: publish with `url` set to the link
+above). The build (`vite.retro.config.ts`) inlines the JS and CSS into one
+HTML fragment, because the artifact host supplies the page skeleton and
+loads nothing from other origins.
+
+`npm run build` also runs that config, writing the same page as a full
+document to `dist/retrograde/index.html`, so every app deploy serves it
+publicly at `<app>/retrograde/`. The Retrograde tab links to both that
+page and the artifact (the artifact is private until shared from its
+Share menu on claude.ai).
 
 ## Contributing
 
