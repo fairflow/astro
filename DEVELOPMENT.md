@@ -199,6 +199,12 @@ above). The build (`vite.retro.config.ts`) inlines the JS and CSS into one
 HTML fragment, because the artifact host supplies the page skeleton and
 loads nothing from other origins.
 
+`npm run build` also runs that config, writing the same page as a full
+document to `dist/retrograde/index.html`, so every app deploy serves it
+publicly at `<app>/retrograde/`. The Retrograde tab links to both that
+page and the artifact (the artifact is private until shared from its
+Share menu on claude.ai).
+
 ## Contributing
 
 Branch off `main`, open a PR — this repository's own convention is small,

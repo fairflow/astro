@@ -16,14 +16,18 @@
   import { J2000_JD, degDiff, normDeg, type EphemerisProvider } from '../ephemeris/types';
   import type { DisplaySettings } from './state';
 
-  let { provider, display, chartJd = null, chartLabel = '' }: {
+  let { provider, display, chartJd = null, chartLabel = '', standalone = false }: {
     provider: EphemerisProvider;
     display: DisplaySettings;
     /** The cast chart's moment, if any: offered as a starting point. */
     chartJd?: number | null;
     chartLabel?: string;
+    /** True in the standalone build, which links back to the app instead. */
+    standalone?: boolean;
   } = $props();
 
+  /** The standalone build, published on claude.ai (see DEVELOPMENT.md). */
+  const ARTIFACT_URL = 'https://claude.ai/artifact/B7PYodLUsCczgkGTPhCynF';
   const FONT = getComputedStyle(document.documentElement).fontFamily || 'system-ui, sans-serif';
   const models = { ephemeris: ephemerisModel(provider), circular: circularModel() };
   let modelId = $state<'ephemeris' | 'circular'>(kept.model);
@@ -175,6 +179,15 @@
   const fmtSpeed = (v: number) => `${v < 10 ? v.toFixed(1) : Math.round(v)} days / s`;
 </script>
 
+{#if !standalone}
+  <div class="elsewhere">
+    <span>This view on its own page:</span>
+    <a href="retrograde/" target="_blank" rel="noopener">Standalone page ↗</a>
+    <a href={ARTIFACT_URL} target="_blank" rel="noopener"
+      title="The same page published on claude.ai; private until shared from its Share menu">claude.ai artifact ↗</a>
+  </div>
+{/if}
+
 <div class="rview">
   <div class="stage">
     <div class="plate" bind:this={plateBox}>
@@ -316,6 +329,16 @@
 </div>
 
 <style>
+  .elsewhere {
+    max-width: 1220px; margin: 2px auto 0; padding: 0 24px;
+    display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; font-size: 12.5px; color: var(--dim);
+  }
+  .elsewhere a {
+    color: var(--gold); border: 1px solid var(--gold-dim); border-radius: 14px;
+    padding: 3px 12px; text-decoration: none;
+  }
+  .elsewhere a:hover { background: var(--bg2); }
+  @media (max-width: 920px) { .elsewhere { padding-inline: 16px; } }
   .rview {
     max-width: 1220px; margin: 0 auto; padding: 8px 24px 24px;
     display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 16px; align-items: start;

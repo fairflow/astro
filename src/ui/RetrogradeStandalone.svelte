@@ -14,9 +14,9 @@
 <header class="rhead">
   <h1>Inner Planet Retrogrades</h1>
   <p>Mercury and Venus seen from Earth against the fixed stars, from the
-    <a href="https://fairflow.github.io/astro/" target="_blank" rel="noopener">Astrodynamics</a> ephemeris.</p>
+    <a href="https://fairflow.github.io/writing/astro/" target="_blank" rel="noopener">Astrodynamics</a> ephemeris.</p>
 </header>
-<RetrogradeView {provider} {display} />
+<RetrogradeView {provider} {display} standalone />
 
 <style>
   :global(:root) { color-scheme: dark; }
