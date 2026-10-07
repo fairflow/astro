@@ -43,6 +43,9 @@ components. `docs/DESIGN.md` is the design of record;
 
 ## Conventions
 
+- The Retrograde tab is also a standalone claude.ai artifact; after
+  changing it, run `npm run build:retro` and republish (see
+  DEVELOPMENT.md, "Standalone Retrograde page").
 - Positions are validated against golden references (Swiss Ephemeris,
   held-out JPL Horizons samples) — never weaken tolerances to pass.
 - Birth data is the source of truth; computed positions are recomputed,

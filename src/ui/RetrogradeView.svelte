@@ -211,6 +211,7 @@
       <span><b style="color:{PALETTE.direct}">D</b> station direct</span>
       <span><i class="sw" style="background:{PALETTE.brass}"></i>Sun–Earth line (synodic reference)</span>
       <span><i class="sw dash"></i>Start longitude (sidereal reference)</span>
+      <span><i class="sw" style="background:{PALETTE.venus}"></i>Venus pentagram: inferior conjunctions on the zodiac</span>
     </div>
 
     <section class="stripbox">
@@ -296,6 +297,8 @@
           <div><Glyph body={b} size={12} /> 1/S = 1/{SIDEREAL_DAYS[b].toFixed(3)} − 1/{SIDEREAL_DAYS.earth.toFixed(3)} → <b>S = {synodicDays(b).toFixed(2)} d</b></div>
         {/each}
         <div>Venus: 5 synodic periods = {(5 * synodicDays('venus') / SIDEREAL_DAYS.earth).toFixed(3)} yr ≈ 8 yr, hence the pentagram.</div>
+        <div>Each conjunction falls {(360 - (synodicDays('venus') / SIDEREAL_DAYS.earth % 1) * 360).toFixed(1)}° behind the last in the zodiac (two-fifths of a circle),
+          so joining them in order draws a five-pointed star; after five the star has turned back {(5 * 360 * (1 - synodicDays('venus') / SIDEREAL_DAYS.earth % 1) - 720).toFixed(1)}°.</div>
       </div>
     </div>
 

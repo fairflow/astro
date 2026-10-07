@@ -17,3 +17,6 @@ tools/cache/
 *.db
 .beads-credential-key
 .beads/proxieddb/
+
+# Standalone Retrograde page (npm run build:retro)
+dist-retro/

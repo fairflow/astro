@@ -30,7 +30,7 @@ export interface OrreryModel {
   sunLon(jd: number): number;
   /** Stations within at least ±600 days of jd. */
   stations(b: InnerPlanet, jd: number): Station[];
-  /** Inferior conjunctions covering at least [jd − 6 synodic periods, jd + 1 synodic period]. */
+  /** Inferior conjunctions covering at least [jd − 10 synodic periods, jd + 1 synodic period]. */
   conjunctions(b: InnerPlanet, jd: number): number[];
   /** Orbit outline, AU. */
   orbit(b: OrreryBody, jd: number): [number, number][];
@@ -81,7 +81,7 @@ export function circularModel(): OrreryModel {
   const conjunctions = (b: InnerPlanet, jd: number) => {
     const S = synodicDays(b), k0 = Math.floor(((L(b, jd) - L('earth', jd)) / 360));
     const out: number[] = [];
-    for (let k = k0 - 6; k <= k0 + 1; k++) {
+    for (let k = k0 - 11; k <= k0 + 1; k++) {
       out.push(J2000_JD + (k * 360 - (L0[b] - L0.earth)) * S / 360);
     }
     return out;
@@ -134,8 +134,8 @@ export function ephemerisModel(provider: EphemerisProvider): OrreryModel {
   const conjunctions = (b: InnerPlanet, jd: number) => {
     const S = synodicDays(b);
     let c = cj.get(b);
-    if (!c || jd < c.from + 6 * S || jd > c.to - S) {
-      const from = jd - 8 * S, to = jd + 3 * S;
+    if (!c || jd < c.from + 10.5 * S || jd > c.to - S) {
+      const from = jd - 13 * S, to = jd + 3 * S;
       c = { from, to, list: inferiorConjunctions(b, from, to) };
       cj.set(b, c);
     }
@@ -165,6 +165,9 @@ export function ephemerisModel(provider: EphemerisProvider): OrreryModel {
 }
 
 // ---------- drawing ----------
+
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+export const dateOfJd = (jd: number) => new Date((jd - 2440587.5) * 86400000);
 
 export const PALETTE = {
   night: '#05080f', sky: '#0a1020', brass: '#d6b46e', retro: '#ff6f7f', direct: '#7fe0a8',
@@ -358,6 +361,42 @@ export class OrreryPlate {
     c.stroke();
   }
 
+  /**
+   * The Venus pentagram against the zodiac: the geocentric longitude of
+   * each inferior conjunction (where Venus and the Sun stand together as
+   * seen from Earth), joined in time order. Five synodic periods are 7.99
+   * years, so each new star sits about 2.4° behind the last; the previous
+   * star is drawn faintly to show that slow turn.
+   */
+  private pentagram(m: OrreryModel, t: number) {
+    const c = this.ctx, R = (R_BAND_IN - .006) * this.Rpx;
+    const all = m.conjunctions('venus', t), past = all.filter(j => j <= t).slice(-10);
+    const next = all.find(j => j > t);
+    const pts = past.map(j => ({ j, xy: this.P(R, m.geoLon('venus', j)) }));
+    const col = PALETTE.venus;
+    c.lineJoin = 'round';
+    for (let i = 1; i < pts.length; i++) {
+      const recent = i >= pts.length - 4; // the latest four chords close the newest star
+      const a = pts[i - 1]!.xy, b = pts[i]!.xy;
+      c.strokeStyle = rgba(col, recent ? .7 : .16); c.lineWidth = recent ? 1.6 : 1;
+      c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke();
+    }
+    if (next !== undefined && pts.length) {
+      const a = pts.at(-1)!.xy, b = this.P(R, m.geoLon('venus', next));
+      this.line(a, b, rgba(col, .45), 1.2, [5, 5]);
+      this.disc(b[0], b[1], 5, null, rgba(col, .8));
+    }
+    pts.forEach((p, i) => {
+      const recent = i >= pts.length - 5;
+      this.disc(p.xy[0], p.xy[1], recent ? 4.5 : 3, recent ? col : rgba(col, .35), PALETTE.night);
+      if (recent) {
+        const lon = m.geoLon('venus', p.j), [lx, ly] = this.P(R - 22, lon);
+        const d = dateOfJd(p.j);
+        this.text(`${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`, lx, ly, rgba(col, .85), `500 ${Math.max(9, this.Rpx * .036)}px ${this.font}`);
+      }
+    });
+  }
+
   draw(m: OrreryModel, s: PlateState, now: number) {
     const c = this.ctx, t = s.jd, { Rpx, cx, cy } = this;
     if (!this.bg) this.buildBackground(s.glyphStyle);
@@ -417,6 +456,8 @@ export class OrreryPlate {
         }
       }
     }
+
+    if (s.conj && s.show.venus) this.pentagram(m, t);
 
     // apparent tracks: a time spiral in each lane (outer edge = now, older sinks inward)
     c.lineCap = 'round';
@@ -494,8 +535,6 @@ export function nearestPeriod(stations: Station[], jd: number) {
 
 // ---------- strip chart ----------
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-export const dateOfJd = (jd: number) => new Date((jd - 2440587.5) * 86400000);
 
 export class StripChart {
   private ctx: CanvasRenderingContext2D;
