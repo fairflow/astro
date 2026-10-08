@@ -76,6 +76,7 @@ export default defineConfig({
   define: {
     __GIT_HASH__: JSON.stringify(git.hash),
     __GIT_DATE__: JSON.stringify(git.date),
+    __APP_VERSION__: JSON.stringify(JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf8')).version),
   },
   // data/ holds the committed ephemeris packs, gazetteer, text packs and
   // web-app files (manifest, service worker, icons); serving it as
