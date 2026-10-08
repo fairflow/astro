@@ -19,21 +19,27 @@ install/run instructions, see `GUIDE.md`. For internals, see
   of corresponding points (the "midpoints" method: cusp midpoints, not
   the reference-place/derived-ASC method — that's a possible future
   option, not implemented).
-- **Retrograde** — an animated orrery of Mercury and Venus seen from
-  above the north ecliptic pole, inside the zodiac. It works without a
-  cast chart; with one, a button jumps to the chart's moment. Shows each
-  planet's apparent track as a time spiral, the exact stations (℞ and D)
-  with their dates and longitudes, the retrograde arc, inferior and
-  superior conjunctions (the two Venus pentagrams, each switchable),
-  sidereal against synodic periods,
-  and a strip chart of apparent longitude against time. The zodiac is
-  centred on Earth, so each sight line meets it at the planet's apparent
-  longitude; the view can keep Earth or the Sun still. Speed, direction
-  and planets are adjustable. "True orbits" uses the app's ephemeris
-  (station times match Swiss Ephemeris to within ten minutes,
-  1990–2040, `test/retrograde.spec.ts`); "Circular" is an idealised
-  teaching model. Code: `src/chart/retrograde.ts` (stations,
-  conjunctions), `src/render/orrery.ts` (canvas), `src/ui/RetrogradeView.svelte`.
+- **Retrograde** — an animated orrery of the planets seen from above the
+  north ecliptic pole, inside the zodiac. It works without a cast chart;
+  with one, a button jumps to the chart's moment. Shows each planet's
+  apparent track as a time spiral, the exact stations (℞ and D) with their
+  dates and longitudes, the retrograde arc, the alignments that pace each
+  synodic cycle (inferior and superior conjunctions for Mercury and Venus,
+  oppositions and conjunctions with the Sun for the outer planets),
+  sidereal against synodic periods, the Venus pentagrams and decagram
+  (each switchable), and a strip chart of apparent longitude against time.
+  Planets are chosen singly or in groups (inner, classical outer, modern
+  outer) from the Options panel. Distances are true to scale out to Mars
+  and logarithmic beyond, so Mercury and Pluto share one plate. The view
+  can keep Earth (the zodiac centred on Earth, so each sight line meets it
+  at the planet's apparent longitude) or the Sun still. The player bar
+  stays at the bottom of the window. In the app the tab follows the light
+  or dark theme; the standalone page has its own switch. "True orbits"
+  uses the app's ephemeris (station times match Swiss Ephemeris to within
+  ten minutes for Mercury to Jupiter, under an hour for the outermost
+  planets, 1990–2040, `test/retrograde.spec.ts`); "Circular" is an
+  idealised teaching model. Code: `src/chart/retrograde.ts` (stations,
+  alignments), `src/render/orrery.ts` (canvas), `src/ui/RetrogradeView.svelte`.
 
 Transits are implemented as a chart-to-chart comparison where "chart B" is
 the current sky — the same cross-chart math (`src/chart/relate.ts`) backs

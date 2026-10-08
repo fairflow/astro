@@ -30,7 +30,7 @@ function inlineSingleFile(): Plugin {
       const css = html.match(/<link rel="stylesheet"[^>]*href="\.\/([^"]+)"/)![1]!;
       const code = readFileSync(resolve(dir, js), 'utf8').replace(/<\/script/gi, '<\\/script');
       const style = readFileSync(resolve(dir, css), 'utf8');
-      const fragment = '<title>Inner Planet Retrogrades</title>\n'
+      const fragment = '<title>Planetary Retrogrades</title>\n'
         + `<style>${style}</style>\n`
         + '<div id="app"></div>\n'
         + `<script type="module">${code}</script>\n`;

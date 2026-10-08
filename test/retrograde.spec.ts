@@ -3,25 +3,30 @@ import { readFileSync } from 'node:fs';
 import { CoreProvider } from '../src/ephemeris/core.js';
 import { degDiff } from '../src/ephemeris/types.js';
 import {
-  findStations, geometricLon, inferiorConjunctions, retroArc, retroPeriods,
-  superiorConjunctions, synodicDays, type InnerPlanet,
+  findStations, geometricLon, inferiorConjunctions, oppositions, PLANETS_IN_ORDER, retroArc,
+  retroPeriods, solarConjunctions, superiorConjunctions, synodicDays, type InnerPlanet, type Planet,
 } from '../src/chart/retrograde.js';
 
 interface GoldenStation { kind: 'SR' | 'SD'; jdUt: number; lon: number }
-const golden: Record<InnerPlanet, GoldenStation[]> = JSON.parse(
+const golden: Record<Planet, GoldenStation[]> = JSON.parse(
   readFileSync(new URL('./golden/stations.json', import.meta.url), 'utf8'),
 );
 
 // Station times are ill-conditioned (speed crosses zero slowly), so a
-// 1-arcminute position difference between models moves them by minutes.
-// Measured worst case 1990-2040: 10 min, 18″. 0.02 day = 29 min.
-const JD_TOL = 0.02;
+// 1-arcminute position difference between models moves them by minutes,
+// more for the slow outer planets. Tolerances sit above the worst case
+// measured 1990-2040 (minutes): Mercury 10, Venus 7, Mars 8, Jupiter 9,
+// Saturn 17, Uranus 30, Neptune 41, Pluto 44. Longitudes agree to 18″.
+const JD_TOL: Record<Planet, number> = {
+  mercury: 0.02, venus: 0.02, mars: 0.02, jupiter: 0.02,
+  saturn: 0.02, uranus: 0.03, neptune: 0.04, pluto: 0.05,
+};
 const LON_TOL = 0.03;
 
 describe('stations vs Swiss Ephemeris (1990-2040)', () => {
   const prov = new CoreProvider();
-  for (const body of ['mercury', 'venus'] as InnerPlanet[]) {
-    it(`${body}: every station found, time within ${JD_TOL} d, longitude within ${LON_TOL}°`, () => {
+  for (const body of PLANETS_IN_ORDER) {
+    it(`${body}: every station found, time within ${JD_TOL[body]} d, longitude within ${LON_TOL}°`, () => {
       const ref = golden[body];
       const got = findStations(prov, body, ref[0]!.jdUt - 3, ref.at(-1)!.jdUt + 3);
       expect(got.length).toBe(ref.length);
@@ -31,10 +36,20 @@ describe('stations vs Swiss Ephemeris (1990-2040)', () => {
         worstT = Math.max(worstT, Math.abs(s.jdUt - ref[i]!.jdUt));
         worstL = Math.max(worstL, Math.abs(degDiff(s.lon, ref[i]!.lon)));
       });
-      expect(worstT).toBeLessThan(JD_TOL);
+      expect(worstT).toBeLessThan(JD_TOL[body]);
       expect(worstL).toBeLessThan(LON_TOL);
     });
   }
+
+  it('a fast geometric scan finds the same stations as the full provider scan', () => {
+    for (const body of ['mercury', 'jupiter', 'pluto'] as Planet[]) {
+      const a = findStations(prov, body, 2460000, 2462000);
+      const rate = (jd: number) => degDiff(geometricLon(body, jd + 0.05), geometricLon(body, jd - 0.05)) / 0.1;
+      const b = findStations(prov, body, 2460000, 2462000, 2, rate);
+      expect(b.length).toBe(a.length);
+      b.forEach((s, i) => expect(Math.abs(s.jdUt - a[i]!.jdUt)).toBeLessThan(1e-4));
+    }
+  });
 });
 
 describe('retrograde periods', () => {
@@ -91,6 +106,22 @@ describe('drawing geometry', () => {
       }
       // seen from Earth, Venus stands with the Sun (within the ~0.1° light-time/aberration slop)
       expect(Math.abs(degDiff(prov.state('venus', j).lon, prov.state('sun', j).lon))).toBeLessThan(0.1);
+    }
+  });
+
+  it('outer planets: opposition puts the planet opposite the Sun, mid-retrograde', () => {
+    for (const b of ['mars', 'jupiter', 'saturn', 'neptune'] as const) {
+      const ops = oppositions(b, 2460000, 2462000), cjs = solarConjunctions(b, 2460000, 2462000);
+      expect(ops.length).toBeGreaterThan(0);
+      expect(cjs.length).toBeGreaterThan(0);
+      const st = findStations(prov, b, 2459800, 2462200);
+      for (const j of ops) {
+        expect(Math.abs(degDiff(prov.state(b, j).lon, prov.state('sun', j).lon + 180))).toBeLessThan(0.1);
+        expect(prov.state(b, j).speed).toBeLessThan(0); // retrograde at opposition
+        const p = retroPeriods(st).find(r => r.sr.jdUt < j && r.sd.jdUt > j);
+        expect(p).toBeDefined();
+      }
+      for (const j of cjs) expect(Math.abs(degDiff(prov.state(b, j).lon, prov.state('sun', j).lon))).toBeLessThan(0.1);
     }
   });
 });
