@@ -23,10 +23,9 @@
 <GlyphDefs style={{ weight: display.weight, slant: display.slant }} />
 
 <header class="rhead">
-  <h1>Planetary Retrogrades</h1>
+  <h1>Planetary Retrogrades <span class="ver">(v{__APP_VERSION__})</span></h1>
   <p>The planets seen from Earth against the fixed stars, from the
-    <a href="https://fairflow.github.io/writing/astro/" target="_blank" rel="noopener">Astrodynamics</a> ephemeris
-    (v{__APP_VERSION__}).</p>
+    <a href="https://fairflow.github.io/writing/astro/" target="_blank" rel="noopener">Astrodynamics</a> ephemeris.</p>
 </header>
 <RetrogradeView {provider} {display} standalone {theme} onthemechange={t => theme = t} />
 
@@ -36,6 +35,7 @@
     display: flex; flex-wrap: wrap; gap: 4px 20px; align-items: baseline; justify-content: space-between;
   }
   .rhead h1 { color: var(--gold); font-weight: 400; font-size: 26px; letter-spacing: .04em; }
+  .rhead .ver { font-size: 15px; letter-spacing: 0; opacity: .8; }
   .rhead p { color: var(--dim); font-size: 13px; max-width: 60ch; }
   .rhead a { color: var(--gold); }
   @media (max-width: 920px) { .rhead { padding-inline: 16px; } }
