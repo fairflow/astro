@@ -187,6 +187,13 @@ see `docs/reports/2026-07-05-implementation-and-deployment.md` for the
 full stack rationale, licensing notes, and other deployment options
 considered.
 
+**Version number.** The app header shows `v<version> · <commit date> ·
+<hash>` and the standalone Retrograde page shows `v<version>`, both from
+`package.json` `"version"` (injected as `__APP_VERSION__`). Bump it
+(`npm version minor --no-git-tag-version`, or patch for fixes) in every
+change that will be deployed, so live builds can be told apart at a
+glance.
+
 ### Automatic deploy to fairflow.co.uk
 
 `.github/workflows/deploy-sftp.yml` runs on every push to `main` (and on

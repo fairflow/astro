@@ -43,6 +43,7 @@
   // hash — matches git's front-truncation and sw.js's cache VERSION.
   const buildDate = __GIT_DATE__;
   const buildHash = __GIT_HASH__.slice(0, 5);
+  const appVersion = __APP_VERSION__;
 
   async function copySnapshot() {
     if (!chart || !current) return;
@@ -208,9 +209,7 @@
 <header class="app">
   <div class="brand">
     <h1>ASTRODYNAMICS</h1>
-    {#if buildDate}
-      <span class="build" title="Latest commit: {buildDate} · {buildHash}">{buildDate} · {buildHash}</span>
-    {/if}
+    <span class="build" title="Version {appVersion}{buildDate ? ` · latest commit ${buildDate} · ${buildHash}` : ''}">v{appVersion}{#if buildDate} · {buildDate} · {buildHash}{/if}</span>
     <span class="tag">charts · offline ephemeris · interpretations</span>
     <span class="spacer"></span>
     {#if chart && mode === 'natal'}
