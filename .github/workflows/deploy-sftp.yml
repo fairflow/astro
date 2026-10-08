@@ -1,0 +1,109 @@
+# Deploy the app to fairflow.co.uk/astro/ over SFTP whenever main changes.
+#
+# Runs the same tools/deploy_sftp.py as a manual deploy from Matthew's Mac,
+# on GitHub's runners (which, unlike Claude's cloud sessions, can reach the
+# host's SSH port). Credentials live only in repository secrets:
+#   SFTP_HOST, SFTP_USER, SFTP_PASSWORD   (required)
+#   SFTP_PORT                             (optional, default 22)
+# and the target directory in the repository variable SFTP_REMOTE
+# (default below). Until the secrets exist, the deploy steps are skipped
+# with a notice rather than failing.
+name: Deploy to fairflow.co.uk
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# one deploy at a time; a newer push waits rather than racing an upload in progress
+concurrency:
+  group: deploy-sftp
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      REMOTE: ${{ vars.SFTP_REMOTE || '/home/fairtlou/fairflow.co.uk/astro' }}
+      SITE: https://fairflow.co.uk/astro/
+    steps:
+      - name: Check deploy credentials are configured
+        id: creds
+        env:
+          SFTP_HOST: ${{ secrets.SFTP_HOST }}
+          SFTP_USER: ${{ secrets.SFTP_USER }}
+          SFTP_PASSWORD: ${{ secrets.SFTP_PASSWORD }}
+        run: |
+          if [ -n "$SFTP_HOST" ] && [ -n "$SFTP_USER" ] && [ -n "$SFTP_PASSWORD" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::SFTP_HOST, SFTP_USER and SFTP_PASSWORD repository secrets are not all set; skipping the deploy."
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      # the same gates a contributor runs locally; a red build never reaches the site
+      - name: Test
+        run: npm test
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - uses: actions/setup-python@v5
+        if: steps.creds.outputs.ok == 'true'
+        with:
+          python-version: '3.12'
+
+      - name: Deploy over SFTP
+        if: steps.creds.outputs.ok == 'true'
+        env:
+          SFTP_HOST: ${{ secrets.SFTP_HOST }}
+          SFTP_PORT: ${{ secrets.SFTP_PORT }}
+          SFTP_USER: ${{ secrets.SFTP_USER }}
+          SFTP_PASSWORD: ${{ secrets.SFTP_PASSWORD }}
+        run: |
+          pip install --quiet paramiko
+          # deploy_sftp.py reads an [ssh] table from a TOML file; write one from the
+          # secrets into the runner's temp dir (deleted with the runner), never into the repo
+          SECRETS="$RUNNER_TEMP/deploy-secrets.toml"
+          umask 077
+          python - "$SECRETS" <<'PY'
+          import json, os, sys
+          port = os.environ.get("SFTP_PORT") or "22"
+          with open(sys.argv[1], "w") as f:
+              f.write("[ssh]\n")
+              # json.dumps gives valid TOML basic strings, escapes included
+              f.write(f"host = {json.dumps(os.environ['SFTP_HOST'])}\n")
+              f.write(f"port = {int(port)}\n")
+              f.write(f"username = {json.dumps(os.environ['SFTP_USER'])}\n")
+              f.write(f"password = {json.dumps(os.environ['SFTP_PASSWORD'])}\n")
+          PY
+          python tools/deploy_sftp.py --secrets "$SECRETS" --remote "$REMOTE" --delete
+          rm -f "$SECRETS"
+
+      - name: Check the live site serves this build
+        if: steps.creds.outputs.ok == 'true'
+        run: |
+          want=$(ls dist/assets/ | grep -E '^index-.*\.js$')
+          for i in 1 2 3 4 5 6; do
+            live=$(curl -fsS "$SITE" | grep -o 'index-[A-Za-z0-9_-]*\.js' | head -1 || true)
+            if [ "$live" = "$want" ]; then echo "Live at $SITE: $live"; exit 0; fi
+            echo "live: '$live', want: '$want'; retrying"; sleep 10
+          done
+          echo "::error::$SITE is not serving this build ($want)"; exit 1

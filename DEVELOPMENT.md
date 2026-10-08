@@ -187,6 +187,24 @@ see `docs/reports/2026-07-05-implementation-and-deployment.md` for the
 full stack rationale, licensing notes, and other deployment options
 considered.
 
+### Automatic deploy to fairflow.co.uk
+
+`.github/workflows/deploy-sftp.yml` runs on every push to `main` (and on
+demand from the Actions tab): `npm ci`, `npm test`, `npm run typecheck`,
+`npm run build`, then the same `tools/deploy_sftp.py --delete`, and finally
+checks that `https://fairflow.co.uk/astro/` serves the new build. It runs
+on GitHub's machines because Claude's cloud sessions cannot reach the
+host's SSH port. Credentials are repository secrets, never in the repo:
+`SFTP_HOST`, `SFTP_USER`, `SFTP_PASSWORD` (and optionally `SFTP_PORT`);
+the target directory is the repository variable `SFTP_REMOTE` (default
+`/home/fairtlou/fairflow.co.uk/astro`). Without the secrets the deploy
+steps are skipped with a notice. A manual deploy from the Mac (HANDOFF.md)
+still works and does the same thing.
+
+The GitHub Pages copy at `fairflow.github.io/writing/astro/` is separate:
+it is a build committed into the `writing` repo (see that repo's
+DEPLOYMENT.md).
+
 ### Standalone Retrograde page (keep in sync)
 
 The Retrograde tab is also published on its own as a claude.ai artifact:
