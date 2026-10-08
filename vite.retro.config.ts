@@ -16,6 +16,9 @@ import { svelte } from '@sveltejs/vite-plugin-svelte';
  * app deploy serves it publicly at <app>/retrograde/ (`npm run build`
  * runs this config after the app build).
  */
+/** Site icon (retro-icon.svg; retro-icon-180.png for home screens), inlined as base64. */
+const icon = (file: string) => readFileSync(resolve(__dirname, file)).toString('base64');
+
 function inlineSingleFile(): Plugin {
   return {
     name: 'inline-single-file',
@@ -38,7 +41,10 @@ function inlineSingleFile(): Plugin {
       writeFileSync(resolve(app, 'index.html'),
         '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n'
         + '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">\n'
-        + '<meta name="theme-color" content="#0e1220">\n</head>\n<body>\n'
+        + '<meta name="theme-color" content="#0e1220">\n'
+        + `<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,${icon('retro-icon.svg')}">\n`
+        + `<link rel="apple-touch-icon" href="data:image/png;base64,${icon('retro-icon-180.png')}">\n`
+        + '</head>\n<body>\n'
         + fragment + '</body>\n</html>\n');
     },
   };
