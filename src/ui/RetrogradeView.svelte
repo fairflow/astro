@@ -48,6 +48,7 @@
   let inferior = $state(kept.inferior);
   let superior = $state(kept.superior);
   let decagram = $state(kept.decagram);
+  let helpOpen = $state(false);
   let view = $state<'earth' | 'sun'>(kept.view);
 
   const plate: PlateState = {
@@ -237,11 +238,19 @@
         <button class:on={view === 'sun'} onclick={() => view = 'sun'}
           title="The Sun stays at the centre; the zodiac travels with Earth">Sun centre</button>
       </span>
+      <button class="q" aria-expanded={helpOpen} aria-label="About the orbit models" onclick={() => helpOpen = !helpOpen}>?</button>
+
       <span class="toggles" role="group" aria-label="Venus conjunction figures">
         <label style="--c:{PALETTE.venus}" title="Inferior conjunctions on the zodiac, as seen from Earth"><input type="checkbox" bind:checked={inferior}> Inferior ☌ pentagram</label>
         <label style="--c:{PALETTE.superior}" title="Superior conjunctions on the zodiac, as seen from Earth"><input type="checkbox" bind:checked={superior}> Superior ☌ pentagram</label>
         <label style="--c:{PALETTE.ink}" title="Both kinds of conjunction as seen from the Sun: Venus's place on its orbit"><input type="checkbox" bind:checked={decagram}> Decagram round the Sun</label>
       </span>
+      {#if helpOpen}
+        <p class="pop" role="note">
+          <b>True orbits</b>: positions from the same ephemeris as the charts; station times match Swiss Ephemeris to within ten minutes (1990–2040). The dot on each orbit marks perihelion.<br>
+          <b>Circular</b>: mean motions on circular orbits, so station dates drift by up to about 5 days for Mercury and 2 for Venus.
+        </p>
+      {/if}
     </div>
 
     <div class="legend">
@@ -262,17 +271,9 @@
     </section>
 
     <p class="note">
-      The plate looks down on the ecliptic from the north; motion is anticlockwise and orbits are to scale.
-      Each planet's lane inside the zodiac is a time spiral: the outer edge is now and older positions sink inward, so a retrograde loop opens out.
-      The zodiac is centred on Earth, because a longitude is a direction seen from Earth: the sight line from Earth through each planet meets the ecliptic exactly where the planet appears.
-      The plain circle round the Sun marks where the Sun-centred ecliptic used to be drawn.
-      On the zodiac, the Venus conjunctions are joined in time order; the faint star is the one from eight years before, and a hollow marker shows the next conjunction.
-      Seen from Earth, inferior and superior conjunctions fall on the same five points of the zodiac. Seen from the Sun (the decagram), they interleave 36° apart, because at an inferior conjunction Venus lies on Earth's side of the Sun and at a superior one on the far side.
-      {#if modelId === 'ephemeris'}
-        Positions come from the same ephemeris as the charts, and station times match Swiss Ephemeris to within ten minutes (1990–2040). The dot on each orbit marks perihelion.
-      {:else}
-        Circular orbits use mean motions, so station dates drift from the real ones: by up to about 5 days for Mercury and 2 for Venus (1990–2040).
-      {/if}
+      Seen from above the north ecliptic pole: motion is anticlockwise and orbits are to scale.
+      The zodiac is centred on Earth, so each sight line meets it where the planet appears.
+      Each planet's lane is a time spiral: the outer edge is now and older positions sink inward, so a retrograde loop opens out.
     </p>
   </div>
 
@@ -403,6 +404,12 @@
   .sw { display: inline-block; width: 18px; height: 3px; border-radius: 2px; }
   .sw.dash { background: repeating-linear-gradient(90deg, var(--d, var(--dim)) 0 4px, transparent 4px 7px); }
   .ring { display: inline-block; width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--d); }
+  .q { width: 26px; height: 26px; padding: 0; border-radius: 50%; font-weight: 600; color: var(--gold); }
+  .pop {
+    flex: 1 1 100%; margin: 0; background: var(--bg2); border: 1px solid var(--gold-dim); border-radius: 8px;
+    padding: 8px 12px; font-size: 12px; line-height: 1.5; color: var(--dim);
+  }
+  .pop b { color: var(--ink); }
   .toggles { display: inline-flex; flex-wrap: wrap; gap: 6px 12px; font-size: 12.5px; }
   .toggles label { color: var(--c); }
   .toggles input { accent-color: var(--c); }

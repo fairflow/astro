@@ -577,7 +577,10 @@ export class OrreryPlate {
         const f = (t - st.jdUt) / win, [x, y] = this.P((rOut - (rOut - rIn) * f) * Rpx, st.lon);
         this.disc(x, y, 3.2, PALETTE.night, st.kind === 'SR' ? PALETTE.retro : PALETTE.direct);
       }
-      const [x, y] = this.P(rOut * Rpx, m.geoLon(b, t)); this.disc(x, y, 4, COLOR[b], PALETTE.night);
+      // head of the spiral; with Earth centred, the sight line's dot on the ecliptic already marks it
+      if (!(s.view === 'earth' && s.sight)) {
+        const [x, y] = this.P(rOut * Rpx, m.geoLon(b, t)); this.disc(x, y, 4, COLOR[b], PALETTE.night);
+      }
     }
 
     { const [x, y] = this.P(R_BAND_IN * Rpx - 3, sunLon); this.disc(x, y, 3.5, PALETTE.brass); }
