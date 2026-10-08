@@ -195,8 +195,8 @@ demand from the Actions tab): `npm ci`, `npm test`, `npm run typecheck`,
 checks that `https://fairflow.co.uk/astro/` serves the new build. It runs
 on GitHub's machines because Claude's cloud sessions cannot reach the
 host's SSH port. Credentials are repository secrets, never in the repo:
-`SFTP_HOST`, `SFTP_USER`, `SFTP_PASSWORD` (and optionally `SFTP_PORT`);
-the target directory is the repository variable `SFTP_REMOTE` (default
+`SSH_HOST`, `SSH_USER`, `SSH_PASSWORD` (and optionally `SSH_PORT`);
+the target directory is the repository variable `SSH_REMOTE` (default
 `/home/fairtlou/fairflow.co.uk/astro`). Without the secrets the deploy
 steps are skipped with a notice. A manual deploy from the Mac (HANDOFF.md)
 still works and does the same thing.

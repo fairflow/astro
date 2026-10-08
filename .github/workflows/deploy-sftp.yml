@@ -2,10 +2,12 @@
 #
 # Runs the same tools/deploy_sftp.py as a manual deploy from Matthew's Mac,
 # on GitHub's runners (which, unlike Claude's cloud sessions, can reach the
-# host's SSH port). Credentials live only in repository secrets:
-#   SFTP_HOST, SFTP_USER, SFTP_PASSWORD   (required)
-#   SFTP_PORT                             (optional, default 22)
-# and the target directory in the repository variable SFTP_REMOTE
+# host's SSH port). SFTP is file transfer inside an SSH connection, so these
+# are the SSH login details (the [ssh] table of the manual deploy's
+# secrets.toml). Credentials live only in repository secrets:
+#   SSH_HOST, SSH_USER, SSH_PASSWORD   (required)
+#   SSH_PORT                           (optional, default 22)
+# and the target directory in the repository variable SSH_REMOTE
 # (default below). Until the secrets exist, the deploy steps are skipped
 # with a notice rather than failing.
 name: Deploy to fairflow.co.uk
@@ -28,21 +30,21 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      REMOTE: ${{ vars.SFTP_REMOTE || '/home/fairtlou/fairflow.co.uk/astro' }}
+      REMOTE: ${{ vars.SSH_REMOTE || '/home/fairtlou/fairflow.co.uk/astro' }}
       SITE: https://fairflow.co.uk/astro/
     steps:
       - name: Check deploy credentials are configured
         id: creds
         env:
-          SFTP_HOST: ${{ secrets.SFTP_HOST }}
-          SFTP_USER: ${{ secrets.SFTP_USER }}
-          SFTP_PASSWORD: ${{ secrets.SFTP_PASSWORD }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
         run: |
-          if [ -n "$SFTP_HOST" ] && [ -n "$SFTP_USER" ] && [ -n "$SFTP_PASSWORD" ]; then
+          if [ -n "$SSH_HOST" ] && [ -n "$SSH_USER" ] && [ -n "$SSH_PASSWORD" ]; then
             echo "ok=true" >> "$GITHUB_OUTPUT"
           else
             echo "ok=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::SFTP_HOST, SFTP_USER and SFTP_PASSWORD repository secrets are not all set; skipping the deploy."
+            echo "::notice::SSH_HOST, SSH_USER and SSH_PASSWORD repository secrets are not all set; skipping the deploy."
           fi
 
       - uses: actions/checkout@v4
@@ -73,10 +75,10 @@ jobs:
       - name: Deploy over SFTP
         if: steps.creds.outputs.ok == 'true'
         env:
-          SFTP_HOST: ${{ secrets.SFTP_HOST }}
-          SFTP_PORT: ${{ secrets.SFTP_PORT }}
-          SFTP_USER: ${{ secrets.SFTP_USER }}
-          SFTP_PASSWORD: ${{ secrets.SFTP_PASSWORD }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
         run: |
           pip install --quiet paramiko
           # deploy_sftp.py reads an [ssh] table from a TOML file; write one from the
@@ -85,14 +87,14 @@ jobs:
           umask 077
           python - "$SECRETS" <<'PY'
           import json, os, sys
-          port = os.environ.get("SFTP_PORT") or "22"
+          port = os.environ.get("SSH_PORT") or "22"
           with open(sys.argv[1], "w") as f:
               f.write("[ssh]\n")
               # json.dumps gives valid TOML basic strings, escapes included
-              f.write(f"host = {json.dumps(os.environ['SFTP_HOST'])}\n")
+              f.write(f"host = {json.dumps(os.environ['SSH_HOST'])}\n")
               f.write(f"port = {int(port)}\n")
-              f.write(f"username = {json.dumps(os.environ['SFTP_USER'])}\n")
-              f.write(f"password = {json.dumps(os.environ['SFTP_PASSWORD'])}\n")
+              f.write(f"username = {json.dumps(os.environ['SSH_USER'])}\n")
+              f.write(f"password = {json.dumps(os.environ['SSH_PASSWORD'])}\n")
           PY
           python tools/deploy_sftp.py --secrets "$SECRETS" --remote "$REMOTE" --delete
           rm -f "$SECRETS"
