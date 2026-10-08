@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Golden reference station times for Mercury and Venus (retrograde view).
+"""Golden reference station times for the planets (Retrograde tab).
 
 A station is the instant geocentric ecliptic-longitude speed changes sign:
 SR (station retrograde, + to -) or SD (station direct, - to +). Uses
@@ -16,7 +16,11 @@ import swisseph as swe
 
 OUT = pathlib.Path(__file__).resolve().parent.parent / "test" / "golden" / "stations.json"
 FLAGS = swe.FLG_MOSEPH | swe.FLG_SPEED
-BODIES = {"mercury": swe.MERCURY, "venus": swe.VENUS}
+BODIES = {
+    "mercury": swe.MERCURY, "venus": swe.VENUS, "mars": swe.MARS,
+    "jupiter": swe.JUPITER, "saturn": swe.SATURN, "uranus": swe.URANUS,
+    "neptune": swe.NEPTUNE, "pluto": swe.PLUTO,
+}
 JD_FROM = 2447892.5  # 1990-01-01
 JD_TO = 2466154.5    # 2040-01-01
 

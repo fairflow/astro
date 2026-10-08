@@ -199,6 +199,14 @@ above). The build (`vite.retro.config.ts`) inlines the JS and CSS into one
 HTML fragment, because the artifact host supplies the page skeleton and
 loads nothing from other origins.
 
+**Branch work goes to a separate artifact.** Unmerged work on the
+Retrograde tab is published to the preview artifact
+<https://claude.ai/artifact/X4MFxJZgbLzS7QnrwBX2JG>, never to the artifact
+above, which must always match `main`. The Artifact tool republishes to
+whatever artifact a file path was last published to, so always pass the
+intended `url` explicitly. When a branch merges, republish `main`'s build
+to the artifact above.
+
 `npm run build` also runs that config, writing the same page as a full
 document to `dist/retrograde/index.html`, so every app deploy serves it
 publicly at `<app>/retrograde/`. The Retrograde tab links to both that

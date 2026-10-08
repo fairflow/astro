@@ -242,7 +242,7 @@
 {#if mode === 'authoring'}
   <AuthoringView />
 {:else if mode === 'retrograde'}
-  <RetrogradeView {provider} {display}
+  <RetrogradeView {provider} {display} theme={display.theme}
     chartJd={current?.jdUt ?? null}
     chartLabel={current ? (current.meta.name || current.meta.date) : ''} />
 {:else if chart && current && mode === 'transits'}
