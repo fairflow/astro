@@ -1,5 +1,5 @@
 import {
-  findStations, geometricLon, helioXY, inferiorConjunctions, PRECESSION_PER_DAY,
+  findStations, geometricLon, helioXY, inferiorConjunctions, superiorConjunctions, PRECESSION_PER_DAY,
   SIDEREAL_DAYS, synodicDays, type InnerPlanet, type OrreryBody, type Station,
 } from '../chart/retrograde.js';
 import { J2000_JD, degDiff, normDeg, type EphemerisProvider } from '../ephemeris/types.js';
@@ -32,6 +32,8 @@ export interface OrreryModel {
   stations(b: InnerPlanet, jd: number): Station[];
   /** Inferior conjunctions covering at least [jd − 10 synodic periods, jd + 1 synodic period]. */
   conjunctions(b: InnerPlanet, jd: number): number[];
+  /** Superior conjunctions, same coverage. */
+  superiorConjunctions(b: InnerPlanet, jd: number): number[];
   /** Orbit outline, AU. */
   orbit(b: OrreryBody, jd: number): [number, number][];
 }
@@ -78,16 +80,19 @@ export function circularModel(): OrreryModel {
     }
     return c.list;
   };
-  const conjunctions = (b: InnerPlanet, jd: number) => {
+  // phase 0: inferior conjunction (same heliocentric longitude); 0.5: superior
+  const phased = (b: InnerPlanet, jd: number, phase: number) => {
     const S = synodicDays(b), k0 = Math.floor(((L(b, jd) - L('earth', jd)) / 360));
     const out: number[] = [];
     for (let k = k0 - 11; k <= k0 + 1; k++) {
-      out.push(J2000_JD + (k * 360 - (L0[b] - L0.earth)) * S / 360);
+      out.push(J2000_JD + ((k + phase) * 360 - (L0[b] - L0.earth)) * S / 360);
     }
     return out;
   };
   return {
-    kind: 'circular', pos, geoLon, rate, stations, conjunctions,
+    kind: 'circular', pos, geoLon, rate, stations,
+    conjunctions: (b, jd) => phased(b, jd, 0),
+    superiorConjunctions: (b, jd) => phased(b, jd, 0.5),
     sunLon: jd => normDeg(L('earth', jd) + 180),
     orbit: b => Array.from({ length: 181 }, (_, i) =>
       [A[b] * Math.cos(i * 2 * D2R), A[b] * Math.sin(i * 2 * D2R)] as [number, number]),
@@ -130,20 +135,22 @@ export function ephemerisModel(provider: EphemerisProvider): OrreryModel {
     }
     return c.list;
   };
-  const cj = new Map<InnerPlanet, { from: number; to: number; list: number[] }>();
-  const conjunctions = (b: InnerPlanet, jd: number) => {
-    const S = synodicDays(b);
-    let c = cj.get(b);
+  const cj = new Map<string, { from: number; to: number; list: number[] }>();
+  const cached = (kind: 'inf' | 'sup', b: InnerPlanet, jd: number) => {
+    const S = synodicDays(b), key = kind + b;
+    let c = cj.get(key);
     if (!c || jd < c.from + 10.5 * S || jd > c.to - S) {
       const from = jd - 13 * S, to = jd + 3 * S;
-      c = { from, to, list: inferiorConjunctions(b, from, to) };
-      cj.set(b, c);
+      c = { from, to, list: (kind === 'inf' ? inferiorConjunctions : superiorConjunctions)(b, from, to) };
+      cj.set(key, c);
     }
     return c.list;
   };
   const orbits = new Map<string, [number, number][]>();
   return {
-    kind: 'ephemeris', geoLon, rate, stations, conjunctions,
+    kind: 'ephemeris', geoLon, rate, stations,
+    conjunctions: (b, jd) => cached('inf', b, jd),
+    superiorConjunctions: (b, jd) => cached('sup', b, jd),
     pos: (b, jd) => helioXY(b, jd),
     sunLon: jd => {
       const e = helioXY('earth', jd);
@@ -172,6 +179,7 @@ export const dateOfJd = (jd: number) => new Date((jd - 2440587.5) * 86400000);
 export const PALETTE = {
   night: '#05080f', sky: '#0a1020', brass: '#d6b46e', retro: '#ff6f7f', direct: '#7fe0a8',
   mercury: '#a8dcec', venus: '#f4c98c', earth: '#7aa9ff', ink: '#e2e8f4', muted: '#8b98b4',
+  superior: '#c39bff',
 };
 const COLOR: Record<OrreryBody, string> = {
   mercury: PALETTE.mercury, venus: PALETTE.venus, earth: PALETTE.earth,
@@ -180,14 +188,23 @@ const EARTH_GLYPH: GlyphDef = { d: 'M50 18 A32 32 0 1 1 49.9 18 Z M50 18 V82 M18
 const GLYPH: Record<OrreryBody, GlyphDef> = {
   mercury: BODY_GLYPHS.mercury, venus: BODY_GLYPHS.venus, earth: EARTH_GLYPH,
 };
-/** Track lanes inside the sphere, AU-scale radii [inner, outer]. */
-const LANE: Record<InnerPlanet, [number, number]> = { mercury: [1.185, 1.262], venus: [1.272, 1.352] };
+/**
+ * The celestial sphere is a ring centred on Earth (geocentric longitude is
+ * a direction from Earth, so a sight line from Earth meets the ring exactly
+ * at the planet's apparent longitude). Radii in AU from Earth; the ring
+ * must clear every orbit wherever Earth is (the far side of Earth's own
+ * orbit is 2.03 AU away).
+ */
+const R_IN = 2.06, R_BAND_IN = 2.40, R_BAND_OUT = 2.62, R_EDGE = 2.68;
+/** Track lanes inside the ring, [inner, outer]. */
+const LANE: Record<InnerPlanet, [number, number]> = { mercury: [2.075, 2.20], venus: [2.215, 2.34] };
+/** Where the Sun-centred ecliptic ring used to be: now a plain circle round the Sun. */
+const OLD_ECLIPTIC = 1.385;
 const CONJ_SHOWN: Record<InnerPlanet, number> = { mercury: 3, venus: 5 };
 // Bright stars near the ecliptic, J2000 longitudes.
 const STARS: [string, number][] = [
   ['Aldebaran', 69.8], ['Pollux', 113.2], ['Regulus', 149.8], ['Spica', 203.8], ['Antares', 249.8],
 ];
-const R_IN = 1.17, R_BAND_IN = 1.385, R_BAND_OUT = 1.52, R_EDGE = 1.56;
 
 export function rgba(hex: string, a: number): string {
   const n = parseInt(hex.slice(1), 16);
@@ -229,16 +246,28 @@ export interface PlateState {
   jdStart: number;
   show: Record<InnerPlanet, boolean>;
   sight: boolean;
-  conj: boolean;
+  /** Inferior-conjunction figures (orbits, and the Venus pentagram on the zodiac). */
+  inferior: boolean;
+  /** Superior-conjunction figures, in their own colour. */
+  superior: boolean;
+  /** Keep Earth (and so the zodiac) still, or the Sun. */
+  view: 'earth' | 'sun';
   pulses: Pulse[];
   glyphStyle: GlyphStyle;
   /** Optional chart moment to mark (natal date) as a ring on Earth's orbit. */
   markJd?: number | null;
 }
 
+type XYp = [number, number];
+
 export class OrreryPlate {
-  private W = 600; private Rpx = 200; private cx = 300; private cy = 300; private dpr = 1;
-  private bg: HTMLCanvasElement | null = null;
+  private W = 600; private Rpx = 100; private dpr = 1;
+  /** Screen positions of the Sun (heliocentric origin) and of Earth (centre of the zodiac). */
+  private O: XYp = [300, 300];
+  private Z: XYp = [300, 300];
+  private view: 'earth' | 'sun' = 'earth';
+  private back: HTMLCanvasElement | null = null;
+  private ring: HTMLCanvasElement | null = null;
   private ctx: CanvasRenderingContext2D;
   constructor(private canvas: HTMLCanvasElement, private font: string) {
     this.ctx = canvas.getContext('2d')!;
@@ -247,35 +276,55 @@ export class OrreryPlate {
   resize(cssWidth: number, dpr: number) {
     this.W = Math.max(280, Math.floor(cssWidth)); this.dpr = Math.min(2, dpr || 1);
     this.canvas.width = this.W * this.dpr; this.canvas.height = this.W * this.dpr;
-    this.cx = this.cy = this.W / 2; this.Rpx = this.W / 2 / (R_EDGE + .03);
-    this.bg = null;
+    this.setScale();
+  }
+  private setScale() {
+    // Sun-centred, the ring wanders with Earth up to ~1 AU, so leave room for it
+    this.Rpx = this.W / 2 / (R_EDGE + .04 + (this.view === 'sun' ? 1.02 : 0));
+    this.back = null; this.ring = null;
   }
 
-  private P(r: number, lon: number): [number, number] {
-    return [this.cx + r * Math.cos(lon * D2R), this.cy - r * Math.sin(lon * D2R)];
+  /** Polar about Earth (the zodiac): r in px, longitude in degrees. */
+  private P(r: number, lon: number): XYp {
+    return [this.Z[0] + r * Math.cos(lon * D2R), this.Z[1] - r * Math.sin(lon * D2R)];
   }
-  private XY(v: [number, number]): [number, number] {
-    return [this.cx + v[0] * this.Rpx, this.cy - v[1] * this.Rpx];
+  /** Polar about the Sun. */
+  private S(r: number, lon: number): XYp {
+    return [this.O[0] + r * Math.cos(lon * D2R), this.O[1] - r * Math.sin(lon * D2R)];
+  }
+  /** Heliocentric AU → screen. */
+  private XY(v: XYp): XYp {
+    return [this.O[0] + v[0] * this.Rpx, this.O[1] - v[1] * this.Rpx];
   }
 
-  private buildBackground(style: GlyphStyle) {
-    const { W, Rpx, cx, cy } = this;
+  private buildBack() {
+    const { W } = this;
     const off = document.createElement('canvas'); off.width = W * this.dpr; off.height = W * this.dpr;
     const g = off.getContext('2d')!; g.scale(this.dpr, this.dpr);
     g.fillStyle = PALETTE.night; g.fillRect(0, 0, W, W);
-    let gr = g.createRadialGradient(cx, cy, 0, cx, cy, Rpx * 1.6);
-    gr.addColorStop(0, 'rgba(40,52,90,.35)'); gr.addColorStop(.6, 'rgba(16,22,44,.25)'); gr.addColorStop(1, 'rgba(5,8,15,0)');
-    g.fillStyle = gr; g.fillRect(0, 0, W, W);
-    const rand = rng(7);
+    const rand = rng(11);
     for (let i = 0; i < 420; i++) {
       const x = rand() * W, y = rand() * W, m = rand(), s = m > .93 ? 1.4 : .8;
       g.fillStyle = `rgba(200,212,240,${.08 + .25 * m * m})`; g.fillRect(x, y, s, s);
     }
-    // the celestial sphere annulus
-    g.save(); g.beginPath(); g.arc(cx, cy, R_EDGE * Rpx, 0, 2 * Math.PI); g.arc(cx, cy, R_IN * Rpx, 0, 2 * Math.PI, true); g.clip();
-    gr = g.createRadialGradient(cx, cy, R_IN * Rpx, cx, cy, R_EDGE * Rpx);
+    this.back = off;
+  }
+
+  /** The zodiac ring with its stars, drawn once and placed on Earth each frame. */
+  private buildRing(style: GlyphStyle) {
+    const { Rpx } = this, k = Rpx * 1.7; // ring-proportional unit for text and ticks
+    const D = Math.ceil(2 * (R_EDGE + .02) * Rpx), h = D / 2;
+    const off = document.createElement('canvas'); off.width = D * this.dpr; off.height = D * this.dpr;
+    const g = off.getContext('2d')!; g.scale(this.dpr, this.dpr);
+    const Q = (r: number, lon: number): XYp => [h + r * Math.cos(lon * D2R), h - r * Math.sin(lon * D2R)];
+    let gr = g.createRadialGradient(h, h, 0, h, h, Rpx * R_EDGE);
+    gr.addColorStop(0, 'rgba(40,52,90,.30)'); gr.addColorStop(.7, 'rgba(16,22,44,.18)'); gr.addColorStop(1, 'rgba(5,8,15,0)');
+    g.fillStyle = gr; g.beginPath(); g.arc(h, h, R_EDGE * Rpx, 0, 7); g.fill();
+    const rand = rng(7);
+    g.save(); g.beginPath(); g.arc(h, h, R_EDGE * Rpx, 0, 2 * Math.PI); g.arc(h, h, R_IN * Rpx, 0, 2 * Math.PI, true); g.clip();
+    gr = g.createRadialGradient(h, h, R_IN * Rpx, h, h, R_EDGE * Rpx);
     gr.addColorStop(0, 'rgba(22,32,62,.15)'); gr.addColorStop(.55, 'rgba(26,38,72,.55)'); gr.addColorStop(1, 'rgba(14,20,40,.9)');
-    g.fillStyle = gr; g.fillRect(0, 0, W, W);
+    g.fillStyle = gr; g.fillRect(0, 0, D, D);
     // Milky Way: the galactic plane crosses the ecliptic near 266° (Sagittarius) and 86° (Gemini/Taurus)
     const mw = (l: number) => {
       const d1 = Math.abs(((l - 266 + 540) % 360) - 180), d2 = Math.abs(((l - 86 + 540) % 360) - 180);
@@ -284,53 +333,54 @@ export class OrreryPlate {
     for (let i = 0; i < 2600; i++) {
       const l = rand() * 360;
       if (rand() > .18 + .82 * mw(l)) continue;
-      const [x, y] = this.P((R_IN + rand() * (R_EDGE - R_IN)) * Rpx, l);
+      const [x, y] = Q((R_IN + rand() * (R_EDGE - R_IN)) * Rpx, l);
       g.fillStyle = `rgba(190,200,235,${.05 + .12 * rand()})`; g.beginPath(); g.arc(x, y, 1.6 + rand() * 3.5, 0, 7); g.fill();
     }
     for (let i = 0; i < 1100; i++) {
-      const l = rand() * 360, [x, y] = this.P((R_IN + rand() * (R_EDGE - R_IN)) * Rpx, l), m = rand();
+      const l = rand() * 360, [x, y] = Q((R_IN + rand() * (R_EDGE - R_IN)) * Rpx, l), m = rand();
       g.fillStyle = rand() < .25 ? `rgba(255,214,170,${.25 + .6 * m * m})` : `rgba(210,224,255,${.2 + .7 * m * m})`;
       const s = m > .96 ? 1.8 : m > .8 ? 1.2 : .7; g.fillRect(x - s / 2, y - s / 2, s, s);
     }
     g.restore();
     g.strokeStyle = rgba(PALETTE.brass, .55); g.lineWidth = 1;
-    for (const r of [R_BAND_IN, R_BAND_OUT]) { g.beginPath(); g.arc(cx, cy, r * Rpx, 0, 2 * Math.PI); g.stroke(); }
+    for (const r of [R_BAND_IN, R_BAND_OUT]) { g.beginPath(); g.arc(h, h, r * Rpx, 0, 2 * Math.PI); g.stroke(); }
     g.strokeStyle = rgba(PALETTE.brass, .18);
-    for (const r of [R_IN, R_EDGE]) { g.beginPath(); g.arc(cx, cy, r * Rpx, 0, 2 * Math.PI); g.stroke(); }
+    for (const r of [R_IN, R_EDGE]) { g.beginPath(); g.arc(h, h, r * Rpx, 0, 2 * Math.PI); g.stroke(); }
     for (let d = 0; d < 360; d++) {
-      const len = d % 10 === 0 ? .03 : d % 5 === 0 ? .02 : .01;
-      const a = this.P(R_BAND_IN * Rpx, d), b = this.P((R_BAND_IN + len) * Rpx, d);
+      const len = (d % 10 === 0 ? .03 : d % 5 === 0 ? .02 : .01) * k;
+      const a = Q(R_BAND_IN * Rpx, d), b = Q(R_BAND_IN * Rpx + len, d);
       g.strokeStyle = rgba(PALETTE.brass, d % 30 === 0 ? .9 : d % 10 === 0 ? .6 : .35); g.lineWidth = d % 30 === 0 ? 1.2 : .8;
       g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke();
     }
-    const gs = Math.max(13, Rpx * .085);
+    const gs = Math.max(13, k * .085);
     for (let s = 0; s < 12; s++) {
-      const a = this.P(R_BAND_IN * Rpx, s * 30), b = this.P(R_BAND_OUT * Rpx, s * 30);
+      const a = Q(R_BAND_IN * Rpx, s * 30), b = Q(R_BAND_OUT * Rpx, s * 30);
       g.strokeStyle = rgba(PALETTE.brass, .5); g.lineWidth = 1; g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke();
-      const [gx, gy] = this.P((R_BAND_IN + R_BAND_OUT) / 2 * Rpx + 2, s * 30 + 15);
+      const [gx, gy] = Q((R_BAND_IN + R_BAND_OUT) / 2 * Rpx + 2, s * 30 + 15);
       drawGlyph(g, SIGN_GLYPHS_SVG[s]!, gx, gy, gs, rgba(PALETTE.brass, .95), style, false);
     }
-    g.font = `${Math.max(8, Rpx * .032)}px ${this.font}`; g.fillStyle = rgba(PALETTE.brass, .55);
+    g.font = `${Math.max(8, k * .032)}px ${this.font}`; g.fillStyle = rgba(PALETTE.brass, .55);
     g.textAlign = 'center'; g.textBaseline = 'middle';
     for (let d = 10; d < 360; d += 10) {
       if (d % 30 === 0) continue;
-      const [x, y] = this.P((R_BAND_IN + .05) * Rpx, d); g.fillText(String(d % 30), x, y);
+      const [x, y] = Q(R_BAND_IN * Rpx + .05 * k, d); g.fillText(String(d % 30), x, y);
     }
+    const rs = R_BAND_IN * Rpx - .017 * k;
     for (const [name, l] of STARS) {
-      const [x, y] = this.P(1.368 * Rpx, l);
+      const [x, y] = Q(rs, l);
       const gl = g.createRadialGradient(x, y, 0, x, y, 6);
       gl.addColorStop(0, 'rgba(255,248,230,.95)'); gl.addColorStop(1, 'rgba(255,248,230,0)');
       g.fillStyle = gl; g.beginPath(); g.arc(x, y, 6, 0, 7); g.fill();
       g.fillStyle = '#fff'; g.beginPath(); g.arc(x, y, 1.3, 0, 7); g.fill();
-      const [lx, ly] = this.P(1.368 * Rpx, l + 2.2), lower = Math.sin(l * D2R) < 0;
+      const [lx, ly] = Q(rs, l + 2.2), lower = Math.sin(l * D2R) < 0;
       g.save(); g.translate(lx, ly); g.rotate(-(l + 2.2) * D2R - Math.PI / 2 + (lower ? Math.PI : 0));
-      g.font = `${Math.max(8, Rpx * .028)}px ${this.font}`; g.fillStyle = 'rgba(235,228,210,.6)';
+      g.font = `${Math.max(8, k * .028)}px ${this.font}`; g.fillStyle = 'rgba(235,228,210,.6)';
       g.textAlign = lower ? 'right' : 'left'; g.fillText(name, 0, 0); g.restore();
     }
-    this.bg = off;
+    this.ring = off;
   }
 
-  private line(a: [number, number], b: [number, number], color: string, w = 1, dash: number[] = []) {
+  private line(a: XYp, b: XYp, color: string, w = 1, dash: number[] = []) {
     const c = this.ctx;
     c.strokeStyle = color; c.lineWidth = w; c.setLineDash(dash);
     c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke(); c.setLineDash([]);
@@ -347,13 +397,14 @@ export class OrreryPlate {
     c.lineWidth = 3.5; c.strokeStyle = rgba(PALETTE.night, .85); c.lineJoin = 'round'; c.strokeText(t, x, y);
     c.fillStyle = color; c.fillText(t, x, y);
   }
-  /** Point where a ray from E (AU) towards `lon` meets the circle of radius R. */
-  private static ray(E: [number, number], lon: number, R: number): [number, number] {
-    const u = [Math.cos(lon * D2R), Math.sin(lon * D2R)], eu = E[0] * u[0]! + E[1] * u[1]!;
-    const s = -eu + Math.sqrt(eu * eu - (E[0] * E[0] + E[1] * E[1]) + R * R);
-    return [E[0] + s * u[0]!, E[1] + s * u[1]!];
+  /** Where a ray from `from` (AU, heliocentric) towards `lon` meets the zodiac circle of radius R round Earth `E`. */
+  private static ray(from: XYp, E: XYp, lon: number, R: number): XYp {
+    const o = [from[0] - E[0], from[1] - E[1]], u = [Math.cos(lon * D2R), Math.sin(lon * D2R)];
+    const ou = o[0]! * u[0]! + o[1]! * u[1]!;
+    const s = -ou + Math.sqrt(Math.max(0, ou * ou - (o[0]! * o[0]! + o[1]! * o[1]!) + R * R));
+    return [from[0] + s * u[0]!, from[1] + s * u[1]!];
   }
-  private path(pts: [number, number][], color: string, w: number, close = false) {
+  private path(pts: XYp[], color: string, w: number, close = false) {
     const c = this.ctx;
     c.strokeStyle = color; c.lineWidth = w; c.beginPath();
     pts.forEach((p, i) => { const [x, y] = this.XY(p); if (i) c.lineTo(x, y); else c.moveTo(x, y); });
@@ -362,57 +413,83 @@ export class OrreryPlate {
   }
 
   /**
-   * The Venus pentagram against the zodiac: the geocentric longitude of
-   * each inferior conjunction (where Venus and the Sun stand together as
-   * seen from Earth), joined in time order. Five synodic periods are 7.99
-   * years, so each new star sits about 2.4° behind the last; the previous
-   * star is drawn faintly to show that slow turn.
+   * A Venus pentagram against the zodiac: the geocentric longitude of each
+   * conjunction, joined in time order. Five synodic periods are 7.99 years,
+   * so each new star sits about 2.4° behind the last; the previous star is
+   * drawn faintly to show that slow turn. The dashed chord runs to the next
+   * conjunction, which has not happened yet.
    */
-  private pentagram(m: OrreryModel, t: number) {
-    const c = this.ctx, R = (R_BAND_IN - .006) * this.Rpx;
-    const all = m.conjunctions('venus', t), past = all.filter(j => j <= t).slice(-10);
-    const next = all.find(j => j > t);
+  private pentagram(m: OrreryModel, t: number, all: number[], col: string, inside: boolean) {
+    const c = this.ctx, R = R_BAND_IN * this.Rpx - 2, k = this.Rpx * 1.7;
+    const past = all.filter(j => j <= t).slice(-10), next = all.find(j => j > t);
     const pts = past.map(j => ({ j, xy: this.P(R, m.geoLon('venus', j)) }));
-    const col = PALETTE.venus;
+    const font = `500 ${Math.max(9, k * .034)}px ${this.font}`;
+    // inferior-conjunction dates sit inside the ring, superior ones a little further in
+    const lab = (lon: number) => this.P(R - (inside ? 20 : 42), lon);
     c.lineJoin = 'round';
     for (let i = 1; i < pts.length; i++) {
       const recent = i >= pts.length - 4; // the latest four chords close the newest star
       const a = pts[i - 1]!.xy, b = pts[i]!.xy;
-      c.strokeStyle = rgba(col, recent ? .7 : .16); c.lineWidth = recent ? 1.6 : 1;
+      c.strokeStyle = rgba(col, recent ? .75 : .16); c.lineWidth = recent ? 1.6 : 1;
       c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke();
     }
     if (next !== undefined && pts.length) {
-      const a = pts.at(-1)!.xy, b = this.P(R, m.geoLon('venus', next));
+      const lon = m.geoLon('venus', next), a = pts.at(-1)!.xy, b = this.P(R, lon);
       this.line(a, b, rgba(col, .45), 1.2, [5, 5]);
       this.disc(b[0], b[1], 5, null, rgba(col, .8));
+      const [lx, ly] = lab(lon), d = dateOfJd(next);
+      this.text(`next ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`, lx, ly, rgba(col, .6), font);
     }
     pts.forEach((p, i) => {
       const recent = i >= pts.length - 5;
       this.disc(p.xy[0], p.xy[1], recent ? 4.5 : 3, recent ? col : rgba(col, .35), PALETTE.night);
       if (recent) {
-        const lon = m.geoLon('venus', p.j), [lx, ly] = this.P(R - 22, lon);
-        const d = dateOfJd(p.j);
-        this.text(`${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`, lx, ly, rgba(col, .85), `500 ${Math.max(9, this.Rpx * .036)}px ${this.font}`);
+        const [lx, ly] = lab(m.geoLon('venus', p.j)), d = dateOfJd(p.j);
+        this.text(`${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`, lx, ly, rgba(col, .85), font);
       }
     });
   }
 
+  /** Conjunction points on a planet's orbit, joined in time order (heliocentric figure). */
+  private orbitFigure(m: OrreryModel, b: InnerPlanet, t: number, all: number[], col: string) {
+    const past = all.filter(j => j <= t).slice(-CONJ_SHOWN[b]), next = all.find(j => j > t);
+    this.path(past.map(j => m.pos(b, j)), rgba(col, .22), 1);
+    for (const j of past) { const [x, y] = this.XY(m.pos(b, j)); this.disc(x, y, 2.4, rgba(col, .6)); }
+    if (next !== undefined) {
+      const [x, y] = this.XY(m.pos(b, next));
+      this.ctx.setLineDash([2, 2]); this.disc(x, y, 4, null, rgba(col, .5)); this.ctx.setLineDash([]);
+    }
+  }
+
   draw(m: OrreryModel, s: PlateState, now: number) {
-    const c = this.ctx, t = s.jd, { Rpx, cx, cy } = this;
-    if (!this.bg) this.buildBackground(s.glyphStyle);
+    const c = this.ctx, t = s.jd;
+    if (s.view !== this.view) { this.view = s.view; this.setScale(); }
+    const { Rpx, W } = this;
+    if (!this.back) this.buildBack();
+    if (!this.ring) this.buildRing(s.glyphStyle);
+    const E = m.pos('earth', t), C = s.view === 'earth' ? E : [0, 0] as XYp;
+    this.O = [W / 2 - C[0] * Rpx, W / 2 + C[1] * Rpx];
+    this.Z = this.XY(E);
+    const { O, Z } = this;
     c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
-    c.drawImage(this.bg!, 0, 0, this.W, this.W);
-    const gsz = Math.max(14, Math.min(22, Rpx * .08));
-    const E = m.pos('earth', t), Ex = this.XY(E);
+    c.drawImage(this.back!, 0, 0, W, W);
+    const D = this.ring!.width / this.dpr;
+    c.drawImage(this.ring!, Z[0] - D / 2, Z[1] - D / 2, D, D);
+    const gsz = Math.max(14, Math.min(22, Rpx * .14));
     const vis = INNER.filter(b => s.show[b]);
     const helioLon = (b: OrreryBody, jd: number) => { const p = m.pos(b, jd); return Math.atan2(p[1], p[0]) * R2D; };
+
+    // a plain circle round the Sun where the Sun-centred ecliptic used to be
+    c.strokeStyle = rgba(PALETTE.brass, .3); c.lineWidth = 1;
+    c.beginPath(); c.arc(O[0], O[1], OLD_ECLIPTIC * Rpx, 0, 2 * Math.PI); c.stroke();
 
     for (const b of [...INNER, 'earth'] as OrreryBody[]) {
       const on = b === 'earth' || s.show[b as InnerPlanet];
       this.path(m.orbit(b, t), rgba(COLOR[b], on ? .38 : .1), 1, m.kind === 'circular');
     }
-    // Sun–Earth line: the synodic reference, carried round by Earth
-    this.line([cx, cy], this.XY(OrreryPlate.ray([0, 0], helioLon('earth', t), R_IN)), rgba(PALETTE.brass, .28));
+    // Sun–Earth line across the zodiac: the synodic reference, and where the Sun appears from Earth
+    const sunLon = m.sunLon(t);
+    this.line(this.P(R_IN * Rpx, sunLon + 180), this.P(R_IN * Rpx, sunLon), rgba(PALETTE.brass, .28));
     if (s.markJd != null) {
       const [x, y] = this.XY(m.pos('earth', s.markJd));
       this.disc(x, y, 7, null, rgba(PALETTE.ink, .7));
@@ -422,20 +499,11 @@ export class OrreryPlate {
     for (const b of vis) {
       // sidereal reference: where the planet was when the counters started, fixed against the stars
       const l0 = helioLon(b, s.jdStart);
-      this.line([cx, cy], this.P(R_IN * Rpx, l0), rgba(COLOR[b], .3), 1, [3, 4]);
+      this.line(O, this.S(OLD_ECLIPTIC * Rpx, l0), rgba(COLOR[b], .3), 1, [3, 4]);
       const [mx, my] = this.XY(m.pos(b, s.jdStart)); this.disc(mx, my, 3, null, rgba(COLOR[b], .55));
 
-      if (s.conj) {
-        // inferior conjunctions: the figure they trace (Venus: a pentagram over 8 years)
-        const all = m.conjunctions(b, t), past = all.filter(j => j <= t).slice(-CONJ_SHOWN[b]);
-        const next = all.find(j => j > t);
-        this.path(past.map(j => m.pos(b, j)), rgba(COLOR[b], .2), 1);
-        for (const j of past) { const [x, y] = this.XY(m.pos(b, j)); this.disc(x, y, 2.4, rgba(COLOR[b], .55)); }
-        if (next !== undefined) {
-          const [x, y] = this.XY(m.pos(b, next));
-          c.setLineDash([2, 2]); this.disc(x, y, 4, null, rgba(COLOR[b], .5)); c.setLineDash([]);
-        }
-      }
+      if (s.inferior) this.orbitFigure(m, b, t, m.conjunctions(b, t), COLOR[b]);
+      if (s.superior) this.orbitFigure(m, b, t, m.superiorConjunctions(b, t), PALETTE.superior);
 
       // the retrograde period nearest now: stretches of both orbits, frozen sight lines at each station
       const ep = nearestPeriod(m.stations(b, t), t);
@@ -447,24 +515,25 @@ export class OrreryPlate {
         for (const st of [ep.sr, ep.sd]) {
           const col = st.kind === 'SR' ? PALETTE.retro : PALETTE.direct;
           const Es = m.pos('earth', st.jdUt), Ps = m.pos(b, st.jdUt);
-          if (s.sight) this.line(this.XY(Es), this.XY(OrreryPlate.ray(Es, st.lon, R_IN)), rgba(col, .35), 1, [5, 4]);
+          if (s.sight) this.line(this.XY(Es), this.XY(OrreryPlate.ray(Es, E, st.lon, R_IN)), rgba(col, .35), 1, [5, 4]);
           const [px, py] = this.XY(Ps), [ex, ey] = this.XY(Es);
           this.disc(px, py, 4.5, null, rgba(col, .9)); this.disc(ex, ey, 4.5, null, rgba(col, .6));
-          const off = this.P((Math.hypot(Ps[0], Ps[1]) + .07) * Rpx, helioLon(b, st.jdUt));
+          const off = this.S(Math.hypot(Ps[0], Ps[1]) * Rpx + 13, helioLon(b, st.jdUt));
           this.text(st.kind === 'SR' ? '℞' : 'D', off[0], off[1], col, `600 ${gsz * .7}px ${this.font}`);
-          this.line(this.P(R_BAND_IN * Rpx, st.lon), this.P((R_BAND_IN - .04) * Rpx, st.lon), col, 2);
+          this.line(this.P(R_BAND_IN * Rpx, st.lon), this.P((R_BAND_IN - .07) * Rpx, st.lon), col, 2);
         }
       }
     }
 
-    if (s.conj && s.show.venus) this.pentagram(m, t);
+    if (s.show.venus && s.inferior) this.pentagram(m, t, m.conjunctions('venus', t), PALETTE.venus, true);
+    if (s.show.venus && s.superior) this.pentagram(m, t, m.superiorConjunctions('venus', t), PALETTE.superior, false);
 
     // apparent tracks: a time spiral in each lane (outer edge = now, older sinks inward)
     c.lineCap = 'round';
     for (const b of vis) {
       const win = synodicDays(b), N = 420, [rIn, rOut] = LANE[b];
       const step = win / N, base = Math.floor(t / step) * step;
-      let prev: [number, number] | null = null;
+      let prev: XYp | null = null;
       for (let i = -1; i <= N; i++) {
         const tt = i < 0 ? t : base - i * step, f = (t - tt) / win;
         const pt = this.P((rOut - (rOut - rIn) * f) * Rpx, m.geoLon(b, tt)), retro = m.rate(b, tt) < 0;
@@ -482,30 +551,27 @@ export class OrreryPlate {
       const [x, y] = this.P(rOut * Rpx, m.geoLon(b, t)); this.disc(x, y, 4, COLOR[b], PALETTE.night);
     }
 
-    { const [x, y] = this.P((R_BAND_IN - .012) * Rpx, m.sunLon(t)); this.disc(x, y, 3.5, PALETTE.brass); }
+    { const [x, y] = this.P(R_BAND_IN * Rpx - 3, sunLon); this.disc(x, y, 3.5, PALETTE.brass); }
 
+    // sight lines from Earth, the centre of the zodiac: each meets the ecliptic exactly at the
+    // planet's apparent longitude
     if (s.sight) for (const b of vis) {
-      const l = m.geoLon(b, t), hit = OrreryPlate.ray(E, l, R_BAND_IN), hx = this.XY(hit);
-      this.line(Ex, hx, rgba(COLOR[b], .6), 1.1);
-      this.line([cx, cy], this.P(LANE[b][1] * Rpx, l), rgba(COLOR[b], .35), 1, [1.5, 3.5]);
-      // where Earth's sight line meets the drawn ecliptic, and the gap to the true direction
-      const ha = Math.atan2(hit[1], hit[0]) * R2D, d = degDiff(l, ha);
-      c.strokeStyle = rgba(COLOR[b], .35); c.lineWidth = 1; c.setLineDash([2, 3]); c.beginPath();
-      c.arc(cx, cy, R_BAND_IN * Rpx, -ha * D2R, -(ha + d) * D2R, d > 0); c.stroke(); c.setLineDash([]);
+      const l = m.geoLon(b, t), hx = this.P(R_BAND_IN * Rpx, l);
+      this.line(Z, hx, rgba(COLOR[b], .6), 1.1);
       this.disc(hx[0], hx[1], 4, COLOR[b], PALETTE.night);
     }
 
-    const sg = c.createRadialGradient(cx, cy, 0, cx, cy, 22);
+    const sg = c.createRadialGradient(O[0], O[1], 0, O[0], O[1], 22);
     sg.addColorStop(0, 'rgba(255,226,150,1)'); sg.addColorStop(.3, 'rgba(255,200,100,.55)'); sg.addColorStop(1, 'rgba(255,180,80,0)');
-    c.fillStyle = sg; c.beginPath(); c.arc(cx, cy, 22, 0, 7); c.fill();
-    this.disc(cx, cy, 6.5, '#ffe7a8');
-    drawGlyph(c, BODY_GLYPHS.sun, cx + 17, cy + 17, gsz * .85, PALETTE.brass, s.glyphStyle);
+    c.fillStyle = sg; c.beginPath(); c.arc(O[0], O[1], 22, 0, 7); c.fill();
+    this.disc(O[0], O[1], 6.5, '#ffe7a8');
+    drawGlyph(c, BODY_GLYPHS.sun, O[0] + 17, O[1] + 17, gsz * .85, PALETTE.brass, s.glyphStyle);
 
     s.pulses.splice(0, s.pulses.length, ...s.pulses.filter(p => now - p.at < 1800));
     for (const p of s.pulses) {
       const age = (now - p.at) / 1800, [x, y] = this.XY(p.xy);
       c.strokeStyle = rgba(p.color, 1 - age); c.lineWidth = 2; c.beginPath(); c.arc(x, y, 6 + 26 * age, 0, 7); c.stroke();
-      if (p.earth) this.line([cx, cy], this.XY(p.earth), rgba(p.color, .8 * (1 - age)), 2);
+      if (p.earth) this.line(O, this.XY(p.earth), rgba(p.color, .8 * (1 - age)), 2);
       this.text(p.label, x, y - 18 - 10 * age, rgba(p.color, 1 - age * .8), `500 ${Math.max(11, gsz * .6)}px ${this.font}`);
     }
 
@@ -516,7 +582,7 @@ export class OrreryPlate {
       c.fillStyle = glow; c.beginPath(); c.arc(x, y, r * 2.6, 0, 7); c.fill();
       const retro = b !== 'earth' && m.rate(b, t) < 0;
       this.disc(x, y, r, COLOR[b], retro ? PALETTE.retro : PALETTE.night);
-      const [gx, gy] = this.P(Math.hypot(v[0], v[1]) * Rpx + 19, helioLon(b, t));
+      const [gx, gy] = this.S(Math.hypot(v[0], v[1]) * Rpx + 19, helioLon(b, t));
       drawGlyph(c, GLYPH[b], gx, gy, gsz, COLOR[b], s.glyphStyle);
     }
   }

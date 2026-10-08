@@ -121,17 +121,31 @@ export function synodicDays(body: InnerPlanet): number {
  * heliocentric longitude) in [jdFrom, jdTo], to ~1 second.
  */
 export function inferiorConjunctions(body: InnerPlanet, jdFrom: number, jdTo: number): number[] {
+  return conjunctions(body, jdFrom, jdTo, 0);
+}
+
+/**
+ * Superior conjunctions (planet passes behind the Sun: heliocentric
+ * longitudes 180° apart) in [jdFrom, jdTo], to ~1 second.
+ */
+export function superiorConjunctions(body: InnerPlanet, jdFrom: number, jdTo: number): number[] {
+  return conjunctions(body, jdFrom, jdTo, 180);
+}
+
+/** Times when planet − Earth heliocentric longitude passes `offset` degrees. */
+function conjunctions(body: InnerPlanet, jdFrom: number, jdTo: number, offset: number): number[] {
   const out: number[] = [];
   const step = 2;
-  let ta = jdFrom, da = helioElongation(body, ta);
+  const d = (jd: number) => degDiff(helioElongation(body, jd), offset);
+  let ta = jdFrom, da = d(ta);
   for (let tb = jdFrom + step; ta < jdTo; tb += step) {
-    const db = helioElongation(body, tb);
+    const db = d(tb);
     // the inner planet gains on Earth, so the difference rises through 0
     if (da < 0 && db >= 0 && db - da < 90) {
       let lo = ta, hi = tb;
       while (hi - lo > 1e-5) {
         const mid = (lo + hi) / 2;
-        if (helioElongation(body, mid) < 0) lo = mid; else hi = mid;
+        if (d(mid) < 0) lo = mid; else hi = mid;
       }
       const jd = (lo + hi) / 2;
       if (jd >= jdFrom && jd <= jdTo) out.push(jd);

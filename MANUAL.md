@@ -23,9 +23,12 @@ install/run instructions, see `GUIDE.md`. For internals, see
   above the north ecliptic pole, inside the zodiac. It works without a
   cast chart; with one, a button jumps to the chart's moment. Shows each
   planet's apparent track as a time spiral, the exact stations (℞ and D)
-  with their dates and longitudes, the retrograde arc, inferior
-  conjunctions (the Venus pentagram), sidereal against synodic periods,
-  and a strip chart of apparent longitude against time. Speed, direction
+  with their dates and longitudes, the retrograde arc, inferior and
+  superior conjunctions (the two Venus pentagrams, each switchable),
+  sidereal against synodic periods,
+  and a strip chart of apparent longitude against time. The zodiac is
+  centred on Earth, so each sight line meets it at the planet's apparent
+  longitude; the view can keep Earth or the Sun still. Speed, direction
   and planets are adjustable. "True orbits" uses the app's ephemeris
   (station times match Swiss Ephemeris to within ten minutes,
   1990–2040, `test/retrograde.spec.ts`); "Circular" is an idealised

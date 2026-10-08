@@ -4,7 +4,7 @@ import { CoreProvider } from '../src/ephemeris/core.js';
 import { degDiff } from '../src/ephemeris/types.js';
 import {
   findStations, geometricLon, inferiorConjunctions, retroArc, retroPeriods,
-  synodicDays, type InnerPlanet,
+  superiorConjunctions, synodicDays, type InnerPlanet,
 } from '../src/chart/retrograde.js';
 
 interface GoldenStation { kind: 'SR' | 'SD'; jdUt: number; lon: number }
@@ -77,5 +77,20 @@ describe('drawing geometry', () => {
     const ic = inferiorConjunctions('mercury', 2460000, 2462000);
     const mean = (ic.at(-1)! - ic[0]!) / (ic.length - 1);
     expect(Math.abs(mean - synodicDays('mercury'))).toBeLessThan(1.5);
+  });
+
+  it('superior conjunctions alternate with inferior ones, with Venus beside the Sun', () => {
+    const inf = inferiorConjunctions('venus', 2460000, 2463000);
+    const sup = superiorConjunctions('venus', 2460000, 2463000);
+    expect(Math.abs(sup.length - inf.length)).toBeLessThanOrEqual(1);
+    for (const j of sup) {
+      const before = inf.filter(x => x < j).at(-1), after = inf.find(x => x > j);
+      if (before !== undefined && after !== undefined) {
+        // roughly midway through the synodic cycle (orbits are slightly eccentric)
+        expect(Math.abs((j - before) / (after - before) - 0.5)).toBeLessThan(0.05);
+      }
+      // seen from Earth, Venus stands with the Sun (within the ~0.1° light-time/aberration slop)
+      expect(Math.abs(degDiff(prov.state('venus', j).lon, prov.state('sun', j).lon))).toBeLessThan(0.1);
+    }
   });
 });
