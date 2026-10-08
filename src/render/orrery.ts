@@ -196,6 +196,14 @@ const GLYPH: Record<OrreryBody, GlyphDef> = {
  * orbit is 2.03 AU away).
  */
 const R_IN = 2.06, R_BAND_IN = 2.40, R_BAND_OUT = 2.62, R_EDGE = 2.68;
+/**
+ * Sun-centred view: the same ring drawn round the Sun instead, scaled so
+ * its edge is 1.56 AU out (clear of Earth's orbit). Ring radii above are
+ * then ring units, not AU; a sight line from Earth meets this ring a few
+ * degrees from the planet's true longitude, because the drawn sphere is
+ * not at infinity.
+ */
+const SUN_RING_EDGE_AU = 1.56;
 /** Track lanes inside the ring, [inner, outer]. */
 const LANE: Record<InnerPlanet, [number, number]> = { mercury: [2.075, 2.20], venus: [2.215, 2.34] };
 /** Where the Sun-centred ecliptic ring used to be: now a plain circle round the Sun. */
@@ -263,7 +271,9 @@ export interface PlateState {
 type XYp = [number, number];
 
 export class OrreryPlate {
-  private W = 600; private Rpx = 100; private dpr = 1;
+  private W = 600; private dpr = 1;
+  /** px per AU (orbits) and px per ring unit (the zodiac ring and its lanes). */
+  private Rpx = 100; private U = 100;
   /** Screen positions of the Sun (heliocentric origin) and of Earth (centre of the zodiac). */
   private O: XYp = [300, 300];
   private Z: XYp = [300, 300];
@@ -281,8 +291,8 @@ export class OrreryPlate {
     this.setScale();
   }
   private setScale() {
-    // Sun-centred, the ring wanders with Earth up to ~1 AU, so leave room for it
-    this.Rpx = this.W / 2 / (R_EDGE + .04 + (this.view === 'sun' ? 1.02 : 0));
+    this.U = this.W / 2 / (R_EDGE + .04);
+    this.Rpx = this.view === 'earth' ? this.U : this.W / 2 / (SUN_RING_EDGE_AU + .03);
     this.back = null; this.ring = null;
   }
 
@@ -314,7 +324,7 @@ export class OrreryPlate {
 
   /** The zodiac ring with its stars, drawn once and placed on Earth each frame. */
   private buildRing(style: GlyphStyle) {
-    const { Rpx } = this, k = Rpx * 1.7; // ring-proportional unit for text and ticks
+    const Rpx = this.U, k = Rpx * 1.7; // ring-proportional unit for text and ticks
     const D = Math.ceil(2 * (R_EDGE + .02) * Rpx), h = D / 2;
     const off = document.createElement('canvas'); off.width = D * this.dpr; off.height = D * this.dpr;
     const g = off.getContext('2d')!; g.scale(this.dpr, this.dpr);
@@ -399,7 +409,7 @@ export class OrreryPlate {
     c.lineWidth = 3.5; c.strokeStyle = rgba(PALETTE.night, .85); c.lineJoin = 'round'; c.strokeText(t, x, y);
     c.fillStyle = color; c.fillText(t, x, y);
   }
-  /** Where a ray from `from` (AU, heliocentric) towards `lon` meets the zodiac circle of radius R round Earth `E`. */
+  /** Where a ray from `from` (AU, heliocentric) towards `lon` meets the zodiac circle of radius R (AU) round `E`. */
   private static ray(from: XYp, E: XYp, lon: number, R: number): XYp {
     const o = [from[0] - E[0], from[1] - E[1]], u = [Math.cos(lon * D2R), Math.sin(lon * D2R)];
     const ou = o[0]! * u[0]! + o[1]! * u[1]!;
@@ -422,7 +432,7 @@ export class OrreryPlate {
    * next conjunction will fall.
    */
   private pentagram(m: OrreryModel, t: number, all: number[], col: string, inside: boolean) {
-    const c = this.ctx, R = R_BAND_IN * this.Rpx - 2, k = this.Rpx * 1.7;
+    const c = this.ctx, R = R_BAND_IN * this.U - 2, k = this.U * 1.7;
     const past = all.filter(j => j <= t).slice(-10), next = all.find(j => j > t);
     const pts = past.map(j => ({ j, xy: this.P(R, m.geoLon('venus', j)) }));
     const font = `500 ${Math.max(9, k * .034)}px ${this.font}`;
@@ -430,7 +440,7 @@ export class OrreryPlate {
     const lab = (lon: number) => this.P(R - (inside ? 20 : 42), lon);
     c.lineJoin = 'round';
     for (let i = 1; i < pts.length; i++) {
-      const recent = i >= pts.length - 4; // the latest four chords close the newest star
+      const recent = i >= pts.length - 5; // the latest five chords: a complete star
       const a = pts[i - 1]!.xy, b = pts[i]!.xy;
       c.strokeStyle = rgba(col, recent ? .75 : .16); c.lineWidth = recent ? 1.6 : 1;
       c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke();
@@ -463,7 +473,7 @@ export class OrreryPlate {
     const pts = past.map(j => this.XY(m.pos('venus', j)));
     c.lineJoin = 'round';
     for (let i = 1; i < pts.length; i++) {
-      const recent = i >= pts.length - 4, a = pts[i - 1]!, b = pts[i]!;
+      const recent = i >= pts.length - 5, a = pts[i - 1]!, b = pts[i]!;
       c.strokeStyle = rgba(col, recent ? .75 : .16); c.lineWidth = recent ? 1.5 : 1;
       c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke();
     }
@@ -481,31 +491,35 @@ export class OrreryPlate {
     for (const j of past) { const [x, y] = this.XY(m.pos(b, j)); this.disc(x, y, 2.4, rgba(col, .6)); }
     if (next !== undefined) {
       const [x, y] = this.XY(m.pos(b, next));
-      this.ctx.setLineDash([2, 2]); this.disc(x, y, 4, null, rgba(col, .5)); this.ctx.setLineDash([]);
+      this.disc(x, y, 4, null, rgba(col, .5));
     }
   }
 
   draw(m: OrreryModel, s: PlateState, now: number) {
     const c = this.ctx, t = s.jd;
     if (s.view !== this.view) { this.view = s.view; this.setScale(); }
-    const { Rpx, W } = this;
+    const { Rpx, U, W } = this;
     if (!this.back) this.buildBack();
     if (!this.ring) this.buildRing(s.glyphStyle);
     const E = m.pos('earth', t), C = s.view === 'earth' ? E : [0, 0] as XYp;
     this.O = [W / 2 - C[0] * Rpx, W / 2 + C[1] * Rpx];
-    this.Z = this.XY(E);
+    // the zodiac's centre: Earth, or the Sun in the Sun-centred view
+    const ringC: XYp = s.view === 'earth' ? E : [0, 0], toAU = U / Rpx;
+    this.Z = this.XY(ringC);
     const { O, Z } = this;
     c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     c.drawImage(this.back!, 0, 0, W, W);
     const D = this.ring!.width / this.dpr;
     c.drawImage(this.ring!, Z[0] - D / 2, Z[1] - D / 2, D, D);
-    const gsz = Math.max(14, Math.min(22, Rpx * .14));
+    const gsz = Math.max(14, Math.min(22, U * .14));
     const vis = INNER.filter(b => s.show[b]);
     const helioLon = (b: OrreryBody, jd: number) => { const p = m.pos(b, jd); return Math.atan2(p[1], p[0]) * R2D; };
 
     // a plain circle round the Sun where the Sun-centred ecliptic used to be
-    c.strokeStyle = rgba(PALETTE.brass, .3); c.lineWidth = 1;
-    c.beginPath(); c.arc(O[0], O[1], OLD_ECLIPTIC * Rpx, 0, 2 * Math.PI); c.stroke();
+    if (s.view === 'earth') {
+      c.strokeStyle = rgba(PALETTE.brass, .3); c.lineWidth = 1;
+      c.beginPath(); c.arc(O[0], O[1], OLD_ECLIPTIC * Rpx, 0, 2 * Math.PI); c.stroke();
+    }
 
     for (const b of [...INNER, 'earth'] as OrreryBody[]) {
       const on = b === 'earth' || s.show[b as InnerPlanet];
@@ -513,7 +527,7 @@ export class OrreryPlate {
     }
     // Sun–Earth line across the zodiac: the synodic reference, and where the Sun appears from Earth
     const sunLon = m.sunLon(t);
-    this.line(this.P(R_IN * Rpx, sunLon + 180), this.P(R_IN * Rpx, sunLon), rgba(PALETTE.brass, .28));
+    this.line(this.P(R_IN * U, sunLon + 180), this.P(R_IN * U, sunLon), rgba(PALETTE.brass, .28));
     if (s.markJd != null) {
       const [x, y] = this.XY(m.pos('earth', s.markJd));
       this.disc(x, y, 7, null, rgba(PALETTE.ink, .7));
@@ -523,7 +537,7 @@ export class OrreryPlate {
     for (const b of vis) {
       // sidereal reference: where the planet was when the counters started, fixed against the stars
       const l0 = helioLon(b, s.jdStart);
-      this.line(O, this.S(OLD_ECLIPTIC * Rpx, l0), rgba(COLOR[b], .3), 1, [3, 4]);
+      this.line(O, this.S(OLD_ECLIPTIC * Rpx, l0), rgba(COLOR[b], .22), 1);
       const [mx, my] = this.XY(m.pos(b, s.jdStart)); this.disc(mx, my, 3, null, rgba(COLOR[b], .55));
 
       // Mercury's faint figures on its orbit; Venus's heliocentric figures are the decagram below
@@ -540,12 +554,12 @@ export class OrreryPlate {
         for (const st of [ep.sr, ep.sd]) {
           const col = st.kind === 'SR' ? PALETTE.retro : PALETTE.direct;
           const Es = m.pos('earth', st.jdUt), Ps = m.pos(b, st.jdUt);
-          if (s.sight) this.line(this.XY(Es), this.XY(OrreryPlate.ray(Es, E, st.lon, R_IN)), rgba(col, .35), 1, [5, 4]);
+          if (s.sight) this.line(this.XY(Es), this.XY(OrreryPlate.ray(Es, ringC, st.lon, R_IN * toAU)), rgba(col, .25), 1);
           const [px, py] = this.XY(Ps), [ex, ey] = this.XY(Es);
           this.disc(px, py, 4.5, null, rgba(col, .9)); this.disc(ex, ey, 4.5, null, rgba(col, .6));
           const off = this.S(Math.hypot(Ps[0], Ps[1]) * Rpx + 13, helioLon(b, st.jdUt));
           this.text(st.kind === 'SR' ? '℞' : 'D', off[0], off[1], col, `600 ${gsz * .7}px ${this.font}`);
-          this.line(this.P(R_BAND_IN * Rpx, st.lon), this.P((R_BAND_IN - .07) * Rpx, st.lon), col, 2);
+          this.line(this.P(R_BAND_IN * U, st.lon), this.P((R_BAND_IN - .07) * U, st.lon), col, 2);
         }
       }
     }
@@ -565,7 +579,7 @@ export class OrreryPlate {
       let prev: XYp | null = null;
       for (let i = -1; i <= N; i++) {
         const tt = i < 0 ? t : base - i * step, f = (t - tt) / win;
-        const pt = this.P((rOut - (rOut - rIn) * f) * Rpx, m.geoLon(b, tt)), retro = m.rate(b, tt) < 0;
+        const pt = this.P((rOut - (rOut - rIn) * f) * U, m.geoLon(b, tt)), retro = m.rate(b, tt) < 0;
         if (prev) {
           c.strokeStyle = rgba(retro ? PALETTE.retro : COLOR[b], (1 - .82 * f) * (retro ? 1 : .8));
           c.lineWidth = retro ? 2.2 : 1.4; c.beginPath(); c.moveTo(prev[0], prev[1]); c.lineTo(pt[0], pt[1]); c.stroke();
@@ -574,19 +588,23 @@ export class OrreryPlate {
       }
       for (const st of m.stations(b, t)) {
         if (st.jdUt > t || st.jdUt < t - win) continue;
-        const f = (t - st.jdUt) / win, [x, y] = this.P((rOut - (rOut - rIn) * f) * Rpx, st.lon);
+        const f = (t - st.jdUt) / win, [x, y] = this.P((rOut - (rOut - rIn) * f) * U, st.lon);
         this.disc(x, y, 3.2, PALETTE.night, st.kind === 'SR' ? PALETTE.retro : PALETTE.direct);
       }
-      const [x, y] = this.P(rOut * Rpx, m.geoLon(b, t)); this.disc(x, y, 4, COLOR[b], PALETTE.night);
+      // head of the spiral; with Earth centred, the sight line's dot on the ecliptic already marks it
+      if (!(s.view === 'earth' && s.sight)) {
+        const [x, y] = this.P(rOut * U, m.geoLon(b, t)); this.disc(x, y, 4, COLOR[b], PALETTE.night);
+      }
     }
 
-    { const [x, y] = this.P(R_BAND_IN * Rpx - 3, sunLon); this.disc(x, y, 3.5, PALETTE.brass); }
+    { const [x, y] = this.P(R_BAND_IN * U - 3, sunLon); this.disc(x, y, 3.5, PALETTE.brass); }
 
-    // sight lines from Earth, the centre of the zodiac: each meets the ecliptic exactly at the
-    // planet's apparent longitude
+    // sight lines from Earth to the ecliptic. With Earth at the centre the dot is exactly the
+    // planet's apparent longitude; round the Sun it falls a little off it (the sphere is drawn
+    // at a finite distance), next to the spiral's head, which marks the true longitude.
     if (s.sight) for (const b of vis) {
-      const l = m.geoLon(b, t), hx = this.P(R_BAND_IN * Rpx, l);
-      this.line(Z, hx, rgba(COLOR[b], .6), 1.1);
+      const l = m.geoLon(b, t), hx = this.XY(OrreryPlate.ray(E, ringC, l, R_BAND_IN * toAU));
+      this.line(this.XY(E), hx, rgba(COLOR[b], .6), 1.1);
       this.disc(hx[0], hx[1], 4, COLOR[b], PALETTE.night);
     }
 
@@ -682,7 +700,7 @@ export class StripChart {
       }
       c.setLineDash([]);
     };
-    plot(t => m.sunLon(t), PALETTE.brass, null, 1, [4, 3]);
+    plot(t => m.sunLon(t), rgba(PALETTE.brass, .7), null, 1);
     for (const b of INNER.filter(x => show[x])) {
       plot(t => m.geoLon(b, t), COLOR[b], t => m.rate(b, t) < 0, 1.3);
       for (const st of m.stations(b, jd)) {
