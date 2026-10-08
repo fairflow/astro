@@ -6,7 +6,7 @@
 # are the SSH login details (the [ssh] table of the manual deploy's
 # secrets.toml). Credentials live only in repository secrets:
 #   SSH_HOST, SSH_USER, SSH_PASSWORD   (required)
-#   SSH_PORT                           (optional, default 22)
+#   SSH_PORT                           (optional, default 722: Krystal's SSH port)
 # and the target directory in the repository variable SSH_REMOTE
 # (default below). Until the secrets exist, the deploy steps are skipped
 # with a notice rather than failing.
@@ -87,7 +87,7 @@ jobs:
           umask 077
           python - "$SECRETS" <<'PY'
           import json, os, sys
-          port = os.environ.get("SSH_PORT") or "22"
+          port = os.environ.get("SSH_PORT") or "722"
           with open(sys.argv[1], "w") as f:
               f.write("[ssh]\n")
               # json.dumps gives valid TOML basic strings, escapes included
