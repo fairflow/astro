@@ -250,6 +250,8 @@ export interface PlateState {
   inferior: boolean;
   /** Superior-conjunction figures, in their own colour. */
   superior: boolean;
+  /** Venus's conjunctions seen from the Sun: the two stars interleave as a decagram. */
+  decagram: boolean;
   /** Keep Earth (and so the zodiac) still, or the Sun. */
   view: 'earth' | 'sun';
   pulses: Pulse[];
@@ -416,8 +418,8 @@ export class OrreryPlate {
    * A Venus pentagram against the zodiac: the geocentric longitude of each
    * conjunction, joined in time order. Five synodic periods are 7.99 years,
    * so each new star sits about 2.4° behind the last; the previous star is
-   * drawn faintly to show that slow turn. The dashed chord runs to the next
-   * conjunction, which has not happened yet.
+   * drawn faintly to show that slow turn. A hollow marker shows where the
+   * next conjunction will fall.
    */
   private pentagram(m: OrreryModel, t: number, all: number[], col: string, inside: boolean) {
     const c = this.ctx, R = R_BAND_IN * this.Rpx - 2, k = this.Rpx * 1.7;
@@ -434,8 +436,7 @@ export class OrreryPlate {
       c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke();
     }
     if (next !== undefined && pts.length) {
-      const lon = m.geoLon('venus', next), a = pts.at(-1)!.xy, b = this.P(R, lon);
-      this.line(a, b, rgba(col, .45), 1.2, [5, 5]);
+      const lon = m.geoLon('venus', next), b = this.P(R, lon);
       this.disc(b[0], b[1], 5, null, rgba(col, .8));
       const [lx, ly] = lab(lon), d = dateOfJd(next);
       this.text(`next ${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`, lx, ly, rgba(col, .6), font);
@@ -448,6 +449,29 @@ export class OrreryPlate {
         this.text(`${MONTHS[d.getUTCMonth()]} ${d.getUTCFullYear()}`, lx, ly, rgba(col, .85), font);
       }
     });
+  }
+
+  /**
+   * One of Venus's conjunction stars as seen from the Sun: Venus's place on
+   * its orbit at each conjunction, joined in time order. Inferior and
+   * superior stars are 180° apart in heliocentric longitude relative to
+   * their geocentric ones, so here they interleave 36° apart: a decagram.
+   */
+  private helioStar(m: OrreryModel, t: number, all: number[], col: string) {
+    const c = this.ctx;
+    const past = all.filter(j => j <= t).slice(-10), next = all.find(j => j > t);
+    const pts = past.map(j => this.XY(m.pos('venus', j)));
+    c.lineJoin = 'round';
+    for (let i = 1; i < pts.length; i++) {
+      const recent = i >= pts.length - 4, a = pts[i - 1]!, b = pts[i]!;
+      c.strokeStyle = rgba(col, recent ? .75 : .16); c.lineWidth = recent ? 1.5 : 1;
+      c.beginPath(); c.moveTo(a[0], a[1]); c.lineTo(b[0], b[1]); c.stroke();
+    }
+    pts.forEach((p, i) => {
+      const recent = i >= pts.length - 5;
+      this.disc(p[0], p[1], recent ? 3.6 : 2.4, recent ? col : rgba(col, .35), PALETTE.night);
+    });
+    if (next !== undefined) { const [x, y] = this.XY(m.pos('venus', next)); this.disc(x, y, 4.5, null, rgba(col, .8)); }
   }
 
   /** Conjunction points on a planet's orbit, joined in time order (heliocentric figure). */
@@ -502,8 +526,9 @@ export class OrreryPlate {
       this.line(O, this.S(OLD_ECLIPTIC * Rpx, l0), rgba(COLOR[b], .3), 1, [3, 4]);
       const [mx, my] = this.XY(m.pos(b, s.jdStart)); this.disc(mx, my, 3, null, rgba(COLOR[b], .55));
 
-      if (s.inferior) this.orbitFigure(m, b, t, m.conjunctions(b, t), COLOR[b]);
-      if (s.superior) this.orbitFigure(m, b, t, m.superiorConjunctions(b, t), PALETTE.superior);
+      // Mercury's faint figures on its orbit; Venus's heliocentric figures are the decagram below
+      if (b === 'mercury' && s.inferior) this.orbitFigure(m, b, t, m.conjunctions(b, t), COLOR[b]);
+      if (b === 'mercury' && s.superior) this.orbitFigure(m, b, t, m.superiorConjunctions(b, t), PALETTE.superior);
 
       // the retrograde period nearest now: stretches of both orbits, frozen sight lines at each station
       const ep = nearestPeriod(m.stations(b, t), t);
@@ -525,6 +550,10 @@ export class OrreryPlate {
       }
     }
 
+    if (s.show.venus && s.decagram) {
+      this.helioStar(m, t, m.conjunctions('venus', t), PALETTE.venus);
+      this.helioStar(m, t, m.superiorConjunctions('venus', t), PALETTE.superior);
+    }
     if (s.show.venus && s.inferior) this.pentagram(m, t, m.conjunctions('venus', t), PALETTE.venus, true);
     if (s.show.venus && s.superior) this.pentagram(m, t, m.superiorConjunctions('venus', t), PALETTE.superior, false);
 

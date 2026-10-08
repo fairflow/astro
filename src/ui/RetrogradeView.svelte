@@ -2,7 +2,7 @@
   // Survives tab switches (the view is destroyed when another tab is shown).
   const kept = {
     jd: NaN, jdStart: NaN, model: 'ephemeris' as 'ephemeris' | 'circular',
-    inferior: true, superior: false, view: 'earth' as 'earth' | 'sun',
+    inferior: true, superior: false, decagram: false, view: 'earth' as 'earth' | 'sun',
   };
 </script>
 
@@ -47,12 +47,13 @@
   let sight = $state(true);
   let inferior = $state(kept.inferior);
   let superior = $state(kept.superior);
+  let decagram = $state(kept.decagram);
   let view = $state<'earth' | 'sun'>(kept.view);
 
   const plate: PlateState = {
     jd: Number.isFinite(kept.jd) ? kept.jd : nowJd(),
     jdStart: Number.isFinite(kept.jdStart) ? kept.jdStart : nowJd(),
-    show: { mercury: true, venus: true }, sight: true, inferior: true, superior: false, view: 'earth', pulses: [],
+    show: { mercury: true, venus: true }, sight: true, inferior: true, superior: false, decagram: false, view: 'earth', pulses: [],
     glyphStyle: { weight: 7, slant: 0 }, markJd: null,
   };
 
@@ -156,8 +157,8 @@
   $effect(() => { kept.model = modelId; });
   $effect(() => {
     plate.show = { ...show }; plate.sight = sight;
-    plate.inferior = inferior; plate.superior = superior; plate.view = view;
-    kept.inferior = inferior; kept.superior = superior; kept.view = view;
+    plate.inferior = inferior; plate.superior = superior; plate.decagram = decagram; plate.view = view;
+    kept.inferior = inferior; kept.superior = superior; kept.decagram = decagram; kept.view = view;
     plate.glyphStyle = { weight: display.weight, slant: display.slant };
     plate.markJd = chartJd;
   });
@@ -236,9 +237,10 @@
         <button class:on={view === 'sun'} onclick={() => view = 'sun'}
           title="The Sun stays at the centre; the zodiac travels with Earth">Sun centre</button>
       </span>
-      <span class="toggles" role="group" aria-label="Venus pentagrams">
-        <label style="--c:{PALETTE.venus}"><input type="checkbox" bind:checked={inferior}> Inferior ☌ pentagram</label>
-        <label style="--c:{PALETTE.superior}"><input type="checkbox" bind:checked={superior}> Superior ☌ pentagram</label>
+      <span class="toggles" role="group" aria-label="Venus conjunction figures">
+        <label style="--c:{PALETTE.venus}" title="Inferior conjunctions on the zodiac, as seen from Earth"><input type="checkbox" bind:checked={inferior}> Inferior ☌ pentagram</label>
+        <label style="--c:{PALETTE.superior}" title="Superior conjunctions on the zodiac, as seen from Earth"><input type="checkbox" bind:checked={superior}> Superior ☌ pentagram</label>
+        <label style="--c:{PALETTE.ink}" title="Both kinds of conjunction as seen from the Sun: Venus's place on its orbit"><input type="checkbox" bind:checked={decagram}> Decagram round the Sun</label>
       </span>
     </div>
 
@@ -250,7 +252,7 @@
       <span><i class="sw dash"></i>Start longitude (sidereal reference)</span>
       <span><i class="sw" style="background:{PALETTE.venus}"></i>Inferior conjunctions (Venus between Sun and Earth)</span>
       <span><i class="sw" style="background:{PALETTE.superior}"></i>Superior conjunctions (Venus behind the Sun)</span>
-      <span><i class="sw dash" style="--d:{PALETTE.venus}"></i>Next conjunction, still to come</span>
+      <span><i class="ring" style="--d:{PALETTE.venus}"></i>Next conjunction, still to come</span>
     </div>
 
     <section class="stripbox">
@@ -264,7 +266,8 @@
       Each planet's lane inside the zodiac is a time spiral: the outer edge is now and older positions sink inward, so a retrograde loop opens out.
       The zodiac is centred on Earth, because a longitude is a direction seen from Earth: the sight line from Earth through each planet meets the ecliptic exactly where the planet appears.
       The plain circle round the Sun marks where the Sun-centred ecliptic used to be drawn.
-      On the zodiac, the Venus conjunctions are joined in time order; the faint star is the one from eight years before, and the dashed chord runs to the next conjunction, which is still to come.
+      On the zodiac, the Venus conjunctions are joined in time order; the faint star is the one from eight years before, and a hollow marker shows the next conjunction.
+      Seen from Earth, inferior and superior conjunctions fall on the same five points of the zodiac. Seen from the Sun (the decagram), they interleave 36° apart, because at an inferior conjunction Venus lies on Earth's side of the Sun and at a superior one on the far side.
       {#if modelId === 'ephemeris'}
         Positions come from the same ephemeris as the charts, and station times match Swiss Ephemeris to within ten minutes (1990–2040). The dot on each orbit marks perihelion.
       {:else}
@@ -338,7 +341,9 @@
         {/each}
         <div>Venus: 5 synodic periods = {(5 * synodicDays('venus') / SIDEREAL_DAYS.earth).toFixed(3)} yr ≈ 8 yr, hence the pentagram.</div>
         <div>Each conjunction falls {(360 - (synodicDays('venus') / SIDEREAL_DAYS.earth % 1) * 360).toFixed(1)}° behind the last in the zodiac (two-fifths of a circle),
-          so joining them in order draws a five-pointed star; after five the star has turned back {(5 * 360 * (1 - synodicDays('venus') / SIDEREAL_DAYS.earth % 1) - 720).toFixed(1)}°.</div>
+          so joining them in order draws a five-pointed star. After five conjunctions ({(5 * synodicDays('venus') / SIDEREAL_DAYS.earth).toFixed(3)} yr) each point has moved
+          back {(5 * 360 * (1 - synodicDays('venus') / SIDEREAL_DAYS.earth % 1) - 720).toFixed(1)}° against the stars, or about 2.3° in zodiac longitude, which itself precesses
+          (measured from the ephemeris, 1700–2200: 2.1°–2.6°). A point takes about 1,200 years to go once round.</div>
       </div>
     </div>
 
@@ -397,6 +402,7 @@
   .legend span { display: inline-flex; align-items: center; gap: 6px; }
   .sw { display: inline-block; width: 18px; height: 3px; border-radius: 2px; }
   .sw.dash { background: repeating-linear-gradient(90deg, var(--d, var(--dim)) 0 4px, transparent 4px 7px); }
+  .ring { display: inline-block; width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--d); }
   .toggles { display: inline-flex; flex-wrap: wrap; gap: 6px 12px; font-size: 12.5px; }
   .toggles label { color: var(--c); }
   .toggles input { accent-color: var(--c); }
