@@ -236,7 +236,7 @@
         <button class:on={view === 'earth'} onclick={() => view = 'earth'}
           title="Earth stays at the centre with the zodiac round it, as the sky is seen; the Sun and orbits move">Earth centre</button>
         <button class:on={view === 'sun'} onclick={() => view = 'sun'}
-          title="The Sun stays at the centre; the zodiac travels with Earth">Sun centre</button>
+          title="The Sun stays at the centre with the zodiac drawn round it; the sight-line dot then sits a little off the planet's true longitude">Sun centre</button>
       </span>
       <button class="q" aria-expanded={helpOpen} aria-label="About the orbit models" onclick={() => helpOpen = !helpOpen}>?</button>
 
@@ -258,7 +258,7 @@
       <span><b style="color:{PALETTE.retro}">℞</b> station retrograde</span>
       <span><b style="color:{PALETTE.direct}">D</b> station direct</span>
       <span><i class="sw" style="background:{PALETTE.brass}"></i>Sun–Earth line (synodic reference)</span>
-      <span><i class="sw dash"></i>Start longitude (sidereal reference)</span>
+      <span><i class="sw" style="background:var(--dim)"></i>Start longitude (sidereal reference)</span>
       <span><i class="sw" style="background:{PALETTE.venus}"></i>Inferior conjunctions (Venus between Sun and Earth)</span>
       <span><i class="sw" style="background:{PALETTE.superior}"></i>Superior conjunctions (Venus behind the Sun)</span>
       <span><i class="ring" style="--d:{PALETTE.venus}"></i>Next conjunction, still to come</span>
@@ -272,7 +272,7 @@
 
     <p class="note">
       Seen from above the north ecliptic pole: motion is anticlockwise and orbits are to scale.
-      The zodiac is centred on Earth, so each sight line meets it where the planet appears.
+      With Earth centred, each sight line meets the zodiac where the planet appears.
       Each planet's lane is a time spiral: the outer edge is now and older positions sink inward, so a retrograde loop opens out.
     </p>
   </div>
@@ -402,7 +402,6 @@
   .legend { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: 12px; color: var(--dim); max-width: 780px; margin: 0 auto; width: 100%; }
   .legend span { display: inline-flex; align-items: center; gap: 6px; }
   .sw { display: inline-block; width: 18px; height: 3px; border-radius: 2px; }
-  .sw.dash { background: repeating-linear-gradient(90deg, var(--d, var(--dim)) 0 4px, transparent 4px 7px); }
   .ring { display: inline-block; width: 9px; height: 9px; border-radius: 50%; border: 1.5px solid var(--d); }
   .q { width: 26px; height: 26px; padding: 0; border-radius: 50%; font-weight: 600; color: var(--gold); }
   .pop {
