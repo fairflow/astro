@@ -6,8 +6,14 @@
  * app only ever talks to this Worker, never to api.anthropic.com directly,
  * so the key never ships in the browser bundle.
  *
- * The client may send ONLY `system` + `messages`. Model, token cap and effort
- * are fixed here so the browser cannot request an expensive configuration.
+ * The client may send ONLY `system`, `messages` and a `preset` id. The preset
+ * is looked up in PRESETS below (model + effort); anything unknown falls back
+ * to the default, and the token cap is fixed here, so the browser cannot
+ * request an arbitrary or expensive configuration.
+ *
+ * Refusal fallbacks are on (`fallbacks: "default"`): if the model's safety
+ * classifiers decline, Anthropic re-runs the request on its recommended
+ * fallback model within the same call.
  *
  * Privacy: this Worker does NOT log request or response bodies. The chart
  * factors pass straight through to Anthropic and back.
@@ -23,14 +29,19 @@ export interface Env {
   ANTHROPIC_API_KEY: string;
   /** Comma-separated allowed site origins. Empty ⇒ allow any (dev only). */
   ALLOWED_ORIGINS?: string;
-  /** Model id (default claude-sonnet-5-5). */
-  MODEL?: string;
-  /** Output token cap (default 6000). */
+  /** Output token cap, thinking included (default 10000). */
   MAX_TOKENS?: string;
 }
 
-const DEFAULT_MODEL = 'claude-sonnet-5-5';
-const DEFAULT_MAX_TOKENS = 6000;
+/** The only model/effort combinations the app may ask for. Keep in step with
+ *  AI_PRESETS in src/ai/config.ts. */
+const PRESETS: Record<string, { model: string; effort: 'medium' | 'high' }> = {
+  'sonnet-medium': { model: 'claude-sonnet-5-5', effort: 'medium' },
+  'sonnet-high': { model: 'claude-sonnet-5-5', effort: 'high' },
+  'opus-medium': { model: 'claude-opus-5-5', effort: 'medium' },
+};
+const DEFAULT_PRESET = 'sonnet-medium';
+const DEFAULT_MAX_TOKENS = 10000;
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 
 export default {
@@ -54,11 +65,13 @@ export default {
       return json({ error: 'messages[] is required' }, 400, cors);
     }
 
+    const preset = (typeof b.preset === 'string' && PRESETS[b.preset]) || PRESETS[DEFAULT_PRESET]!;
     const payload = {
-      model: env.MODEL || DEFAULT_MODEL,
+      model: preset.model,
       max_tokens: Number(env.MAX_TOKENS) || DEFAULT_MAX_TOKENS,
       stream: true,
-      output_config: { effort: 'medium' },
+      output_config: { effort: preset.effort },
+      fallbacks: 'default',
       ...(typeof b.system === 'string' ? { system: b.system } : {}),
       messages,
     };
@@ -71,6 +84,8 @@ export default {
           'content-type': 'application/json',
           'x-api-key': env.ANTHROPIC_API_KEY,
           'anthropic-version': '2023-06-01',
+          // gates `fallbacks: "default"` (refusal → recommended fallback model)
+          'anthropic-beta': 'server-side-fallback-2026-07-01',
         },
         body: JSON.stringify(payload),
       });

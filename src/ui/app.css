@@ -107,7 +107,6 @@ header.app .brand .spacer { flex: 1; }
   padding: 7px 18px; border-radius: 6px;
 }
 .form .go:disabled { background: var(--gold-dim); cursor: not-allowed; }
-.form .tzinfo { color: var(--dim); font-size: 12px; align-self: center; padding-bottom: 8px; }
 .dropdown {
   position: absolute; top: 100%; left: 0; z-index: 30; min-width: 280px;
   background: var(--bg2); border: 1px solid var(--line); border-radius: 8px;
@@ -333,12 +332,6 @@ header.app .copyai {
   border-radius: 14px; padding: 5px 12px; font-size: 12.5px;
 }
 header.app .copyai:hover { border-color: var(--sextile); }
-main.app .copyrow { max-width: 720px; margin: 0 auto 8px; display: flex; justify-content: flex-end; }
-main.app .copyai {
-  background: var(--bg2); color: var(--sextile); border: 1px solid var(--line);
-  border-radius: 14px; padding: 5px 12px; font-size: 12.5px;
-}
-main.app .copyai:hover { border-color: var(--sextile); }
 .aspect-hit { stroke: transparent; stroke-width: 13; fill: none; stroke-linecap: round; }
 /* selecting a planet widens the hit area of ITS aspects (conjunctions
    especially are near-impossible to click otherwise) and shrinks the rest */

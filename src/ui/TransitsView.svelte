@@ -9,7 +9,7 @@
   } from '../chart/relate';
   import { contextReading, LANDMARKS } from '../interpret/contexts';
   import { transitSnapshot } from '../interpret/snapshot';
-  import { copyToClipboard } from './clipboard';
+  import { registerCopy } from './copyctx.svelte';
   import AskClaude from './AskClaude.svelte';
   import { redact } from '../ai/anonymise';
   import { TRANSITS_SYSTEM, TRANSITS_STARTERS, DEFAULT_TRANSITS_REQUEST } from '../interpret/prompts';
@@ -152,19 +152,10 @@
     return redact(text, reds);
   }
 
-  let copied = $state(false);
-  async function copyTransits() {
-    if (!sky) return;
-    const when = `${session.transitDate} ${session.transitTime}`;
-    const couple = session.transitTarget === 'couple' && partnerChart && comp && session.partner
-      ? { partner: partnerChart, partnerName: session.partner.name, composite: comp,
-          toPartner: crossesB, toComposite: crossesC }
-      : null;
-    const ok = await copyToClipboard(transitSnapshot({ natal, meta, sky, when, toNatal: crosses, couple }));
-    if (!ok) return;
-    copied = true;
-    setTimeout(() => copied = false, 2200);
-  }
+  // The header's Copy for AI button copies the full (named) transit snapshot.
+  $effect(() => registerCopy(
+    session.transitTarget === 'couple' ? 'couple transits' : 'transits',
+    sky ? () => trBuild(false) : null));
 </script>
 
 <div class="tview">
@@ -177,14 +168,6 @@
       <button class:on={session.transitTarget === 'couple'} onclick={() => { session.transitTarget = 'couple'; crossSel = null; }}>The couple</button>
     </span>
     <span class="hint">Sky computed for {meta.place.name} ({meta.place.zone}). Tight transit orbs (≤3–4°).</span>
-    {#if sky}
-      <button class="copyai" onclick={copyTransits}
-        title={session.transitTarget === 'couple'
-          ? 'Copy both natals, the composite, the transiting sky and all transits as markdown for an AI conversation'
-          : 'Copy your natal, the transiting sky and the transits to your chart as markdown for an AI conversation'}>
-        {copied ? 'Copied ✓' : session.transitTarget === 'couple' ? 'Copy for AI (couple transits)' : 'Copy for AI (transits)'}
-      </button>
-    {/if}
   </div>
 
   {#if sky}
@@ -329,11 +312,6 @@
     border-radius: 14px; padding: 5px 12px; font-size: 12.5px;
   }
   .target button.on { color: var(--on-gold); background: var(--gold); border-color: var(--gold); font-weight: 600; }
-  .copyai {
-    background: var(--bg2); color: var(--transit); border: 1px solid var(--line);
-    border-radius: 14px; padding: 5px 12px; font-size: 12.5px; align-self: flex-end;
-  }
-  .copyai:hover { border-color: var(--transit); }
   .hint { color: var(--dim); font-size: 12.5px; }
   .landmarks { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 8px; }
   .badge {

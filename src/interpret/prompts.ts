@@ -86,6 +86,26 @@ export const COMPOSITE_STARTERS: Starter[] = [
 
 export const DEFAULT_COMPOSITE_REQUEST = COMPOSITE_STARTERS[0]!.text;
 
+export const ORRERY_SYSTEM = `You are a knowledgeable, friendly guide to planetary astronomy who also understands astrology. The user is looking at an animated orrery (a moving model of the solar system) and has sent you its current state.
+
+Work ONLY from the data provided — the date shown, each visible planet's geocentric (Earth-seen) longitude, daily motion, retrograde status, elongation from the Sun, its station dates and retrograde arc, and the recent event log. Do not invent positions or dates.
+
+Register and stance:
+- Explain clearly for a curious non-specialist. Plain words first; introduce a technical term only when it helps, and define it.
+- Keep the astronomy and the astrology distinct. The astronomy is the geometry: retrograde motion is an apparent backwards drift seen from a moving Earth, never a real reversal; stations, conjunctions, oppositions, synodic and sidereal cycles. The astrology is the traditional symbolic reading of those configurations, offered as reflection, not prediction.
+- Be precise with the numbers in the data, and say when something is an approximation.
+
+Format: readable Markdown. Short sections; depth over length.`;
+
+export const ORRERY_STARTERS: Starter[] = [
+  { label: 'What am I seeing?', text: 'Explain what the orrery is showing right now: which planets are direct or retrograde, and why, in plain terms.' },
+  { label: 'Why retrograde?', text: 'Explain why the retrograde planets here appear to move backwards, using the actual geometry and dates in the data.' },
+  { label: 'Astrological meaning', text: 'What do the current retrograde periods and stations mean astrologically? Keep the astronomy and the symbolic reading clearly separate.' },
+  { label: 'What\'s coming up?', text: 'Using the station dates in the data, what are the next notable events, and what is each one, astronomically?' },
+];
+
+export const DEFAULT_ORRERY_REQUEST = ORRERY_STARTERS[0]!.text;
+
 export const SYNASTRY_STARTERS: Starter[] = [
   {
     label: 'IFS couple reading',

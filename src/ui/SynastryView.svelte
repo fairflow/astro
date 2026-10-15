@@ -4,7 +4,7 @@
   import ExpandableWheel from './ExpandableWheel.svelte';
   import { crossAspects, houseOverlay, midpointContacts } from '../chart/relate';
   import { synastrySnapshot } from '../interpret/snapshot';
-  import { copyToClipboard } from './clipboard';
+  import { registerCopy } from './copyctx.svelte';
   import { contextReading } from '../interpret/contexts';
   import { relationshipsDossier } from '../interpret/dossiers-life';
   import { BODY_NAME, fmtDegInSign, fmtOrb } from '../render/glyphs';
@@ -45,15 +45,6 @@
   const mids = $derived(partnerChart ? midpointContacts(natal, partnerChart) : []);
   const midsRev = $derived(partnerChart ? midpointContacts(partnerChart, natal) : []);
 
-  let copied = $state(false);
-  async function copySynastry() {
-    if (!partnerChart || !session.partner) return;
-    const text = synastrySnapshot(
-      natal, meta, partnerChart, session.partner.name, cross, overlays, mids, midsRev);
-    if (!await copyToClipboard(text)) return;
-    copied = true;
-    setTimeout(() => copied = false, 2200);
-  }
 
   /** Build the synastry snapshot, optionally with names/places redacted. */
   function buildSnapshot(anon: boolean): string {
@@ -72,6 +63,9 @@
       { find: session.partner.place.country, replace: '[country withheld]' },
     ]);
   }
+  // The header's Copy for AI button copies the full (named) synastry.
+  $effect(() => registerCopy('synastry',
+    partnerChart && session.partner ? () => buildSnapshot(false) : null));
 
   const dossier = $derived(partnerChart && session.partner
     ? relationshipsDossier(natal, style, {
@@ -106,12 +100,6 @@
   <div class="pickrow">
     <PartnerPick excludeName={meta.name} selectedId={session.partner?.id ?? null}
       onpick={c => { session.partner = c; sel = null; }} />
-    {#if partnerChart && session.partner}
-      <button class="copyai" onclick={copySynastry}
-        title="Copy both charts + inter-aspects, overlays and midpoint contacts as markdown for an AI conversation">
-        {copied ? 'Copied ✓' : 'Copy for AI (synastry)'}
-      </button>
-    {/if}
   </div>
 
   {#if partnerChart && session.partner}
@@ -183,11 +171,6 @@
   .pickrow { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
   .wheelrow { max-width: 720px; margin: 0 auto 10px; }
   .wheelrow .hint { text-align: center; }
-  .copyai {
-    background: var(--bg2); color: var(--sextile); border: 1px solid var(--line);
-    border-radius: 14px; padding: 5px 12px; font-size: 12.5px; margin-bottom: 12px;
-  }
-  .copyai:hover { border-color: var(--sextile); }
   .cols { display: flex; gap: 14px; align-items: flex-start; }
   .cols > div { flex: 1 1 420px; min-width: 340px; }
   details {

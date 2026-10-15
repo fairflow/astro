@@ -16,6 +16,7 @@
   import { chartSnapshot } from '../interpret/snapshot';
   import { copyToClipboard } from './clipboard';
   import AskClaude from './AskClaude.svelte';
+  import { copyCtx } from './copyctx.svelte';
   import { redact } from '../ai/anonymise';
   import { NATAL_SYSTEM, NATAL_STARTERS, DEFAULT_NATAL_REQUEST } from '../interpret/prompts';
   import { loadTexts } from '../interpret/textstore';
@@ -48,9 +49,23 @@
   const buildHash = __GIT_HASH__.slice(0, 5);
   const appVersion = __APP_VERSION__;
 
+  /**
+   * The one "Copy for AI" button, in the header: Natal is handled here; every
+   * other tab registers its own snapshot builder in copyCtx.
+   */
+  const headerCopy = $derived.by<{ label: string; build: () => string } | null>(() => {
+    if (mode === 'natal') {
+      return chart && current
+        ? { label: 'natal', build: () => chartSnapshot(chart!, current!.meta) }
+        : null;
+    }
+    if (mode === 'authoring' || !copyCtx.build) return null;
+    return { label: copyCtx.label, build: copyCtx.build };
+  });
+
   async function copySnapshot() {
-    if (!chart || !current) return;
-    const ok = await copyToClipboard(chartSnapshot(chart, current.meta));
+    if (!headerCopy) return;
+    const ok = await copyToClipboard(headerCopy.build());
     if (!ok) { banner = 'Clipboard unavailable in this browser context.'; return; }
     copied = true;
     setTimeout(() => copied = false, 2200);
@@ -228,10 +243,10 @@
     <span class="build" title="Version {appVersion}{buildDate ? ` · latest commit ${buildDate} · ${buildHash}` : ''}">v{appVersion}{#if buildDate} · {buildDate} · {buildHash}{/if}</span>
     <span class="tag">charts · offline ephemeris · interpretations</span>
     <span class="spacer"></span>
-    {#if chart && mode === 'natal'}
+    {#if headerCopy}
       <button class="copyai" onclick={copySnapshot}
-        title="Copy this natal chart (only the bodies enabled in Settings) as raw-factors markdown, ready to paste into an AI conversation. Transits, Synastry and Composite tabs each have their own Copy button.">
-        {copied ? 'Copied ✓' : 'Copy for AI'}
+        title="Copy what this tab shows (only the bodies enabled in Settings) as raw-factors markdown, ready to paste into an AI conversation.">
+        {copied ? 'Copied ✓' : `Copy for AI (${headerCopy.label})`}
       </button>
     {/if}
     <SettingsMenu bind:display />
@@ -269,12 +284,6 @@
 {:else}
 <main class="app">
   {#if chart}
-    <div class="copyrow">
-      <button class="copyai" onclick={copySnapshot}
-        title="Copy this natal chart (only the bodies enabled in Settings) as raw-factors markdown, ready to paste into an AI conversation.">
-        {copied ? 'Copied ✓' : 'Copy for AI (natal)'}
-      </button>
-    </div>
     <AskClaude system={NATAL_SYSTEM} starters={NATAL_STARTERS}
       defaultRequest={DEFAULT_NATAL_REQUEST} buildSnapshot={natalSnapshot} accent="var(--sextile)" />
     <div id="wheelwrap">

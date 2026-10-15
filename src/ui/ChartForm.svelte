@@ -1,6 +1,5 @@
 <script lang="ts">
   import { searchPlaces, type Gazetteer } from '../store/gazetteer';
-  import { fmtOffset, localToUt } from '../chart/civil';
   import type { SavedPlace } from '../store/db';
   import type { FormState } from './state';
 
@@ -28,17 +27,6 @@
     open = false;
   }
 
-  const tzInfo = $derived.by(() => {
-    if (!form.place || !form.date) return '';
-    const [y, mo, d] = form.date.split('-').map(Number);
-    const [h, mi] = (form.time || '12:00').split(':').map(Number);
-    try {
-      const r = localToUt(y!, mo!, d!, h ?? 12, mi ?? 0, form.place.zone);
-      return `${form.place.zone} · ${fmtOffset(r.offsetMinutes)} at birth`;
-    } catch {
-      return '';
-    }
-  });
 </script>
 
 <div class="form">
@@ -82,5 +70,4 @@
   <button class="go" disabled={!form.place || !form.date} onclick={onsubmit}>
     Cast chart
   </button>
-  {#if tzInfo}<span class="tzinfo">{tzInfo}</span>{/if}
 </div>

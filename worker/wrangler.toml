@@ -10,5 +10,6 @@ compatibility_date = "2026-10-01"
 # Comma-separated site origins allowed to call this Worker (CORS + guard).
 # Add your production origin here before going live; localhost is for dev.
 ALLOWED_ORIGINS = "https://fairflow.co.uk,http://localhost:8322"
-MODEL = "claude-sonnet-5-5"
-MAX_TOKENS = "6000"
+# Output cap per reading, thinking included. Models + effort are the PRESETS
+# allowlist in src/index.ts (the app's dropdown sends only a preset id).
+MAX_TOKENS = "10000"

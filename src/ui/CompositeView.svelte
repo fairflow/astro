@@ -4,7 +4,7 @@
   import { compositeChart } from '../chart/relate';
   import { contextReading } from '../interpret/contexts';
   import { compositeSnapshot } from '../interpret/snapshot';
-  import { copyToClipboard } from './clipboard';
+  import { registerCopy } from './copyctx.svelte';
   import AskClaude from './AskClaude.svelte';
   import { redact } from '../ai/anonymise';
   import { COMPOSITE_SYSTEM, COMPOSITE_STARTERS, DEFAULT_COMPOSITE_REQUEST } from '../interpret/prompts';
@@ -37,16 +37,6 @@
   const compSun = $derived(comp?.positions.find(p => p.body === 'sun'));
   const compMoon = $derived(comp?.positions.find(p => p.body === 'moon'));
 
-  let copied = $state(false);
-  async function copyComposite() {
-    if (!comp || !session.partner) return;
-    const partner = chartFromSaved(session.partner);
-    const text = compositeSnapshot(comp, meta.name || 'you', natal, partner, session.partner.name);
-    const ok = await copyToClipboard(text);
-    if (!ok) return;
-    copied = true;
-    setTimeout(() => copied = false, 2200);
-  }
 
   /** Composite snapshot for Ask Claude, optionally with names redacted. */
   function compBuild(anon: boolean): string {
@@ -65,6 +55,9 @@
       { find: session.partner.place.country, replace: '[country withheld]' },
     ]);
   }
+  // The header's Copy for AI button copies the full (named) composite.
+  $effect(() => registerCopy('composite',
+    comp && session.partner ? () => compBuild(false) : null));
 
   const caption = $derived(session.partner
     ? [
@@ -80,12 +73,6 @@
   <div class="pickrow">
     <PartnerPick excludeName={meta.name} selectedId={session.partner?.id ?? null}
       onpick={c => { session.partner = c; sel = { kind: 'none' }; }} />
-    {#if comp && session.partner}
-      <button class="copyai" onclick={copyComposite}
-        title="Copy the composite (midpoint) chart plus both natals as markdown for an AI conversation">
-        {copied ? 'Copied ✓' : 'Copy for AI (composite)'}
-      </button>
-    {/if}
   </div>
 
   {#if comp && session.partner}
@@ -133,11 +120,6 @@
 <style>
   .cview { padding: 0 12px; }
   .pickrow { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
-  .copyai {
-    background: var(--bg2); color: var(--syn); border: 1px solid var(--line);
-    border-radius: 14px; padding: 5px 12px; font-size: 12.5px;
-  }
-  .copyai:hover { border-color: var(--syn); }
   .split { display: flex; gap: 12px; align-items: flex-start; }
   .wheelcol { flex: 1 1 560px; min-width: 380px; }
   .listcol { flex: 0 0 400px; }
