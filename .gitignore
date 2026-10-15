@@ -20,3 +20,10 @@ tools/cache/
 
 # Standalone Retrograde page (npm run build:retro)
 dist-retro/
+
+# AI spike: local env + Cloudflare Worker secrets (never commit the API key)
+.env.local
+.env.*.local
+worker/node_modules/
+worker/.dev.vars
+worker/.wrangler/
