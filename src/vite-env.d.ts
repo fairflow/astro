@@ -1,5 +1,11 @@
 /// <reference types="vite/client" />
 
+interface ImportMetaEnv {
+  /** Public URL of the Cloudflare Worker that proxies the Anthropic API
+   *  (the "Ask Claude" spike). Unset ⇒ the feature is disabled. */
+  readonly VITE_AI_WORKER_URL?: string;
+}
+
 // Build-time version stamp, injected by vite.config.ts `define`.
 declare const __GIT_HASH__: string;
 declare const __GIT_DATE__: string;

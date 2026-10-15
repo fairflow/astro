@@ -1,0 +1,13 @@
+{
+  "name": "astro-ai-worker",
+  "private": true,
+  "description": "Cloudflare Worker proxy holding the Anthropic API key for Astrodynamics 'Ask Claude'.",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260101.0",
+    "wrangler": "^3.90.0"
+  }
+}

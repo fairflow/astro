@@ -15,6 +15,10 @@
   import type { ChartMeta } from './state';
   import { session } from './session.svelte';
   import { enabledAspectDefs } from './prefs.svelte';
+  import { askClaude } from '../ai/ask';
+  import { redact } from '../ai/anonymise';
+  import { AI_ENABLED, AI_MODEL_LABEL } from '../ai/config';
+  import { SYNASTRY_SYSTEM, SYNASTRY_STARTERS, DEFAULT_SYNASTRY_REQUEST } from '../interpret/prompts';
 
   let { natal, meta, chartFromSaved, style, display }: {
     natal: Chart;
@@ -51,6 +55,55 @@
     copied = true;
     setTimeout(() => copied = false, 2200);
   }
+
+  // --- Ask Claude (Phase-1 spike) ---------------------------------------
+  let aiAnon = $state(true);
+  let aiQuestion = $state(DEFAULT_SYNASTRY_REQUEST);
+  let aiOut = $state('');
+  let aiBusy = $state(false);
+  let aiErr = $state('');
+  let aiStarted = $state(false);
+  let aiCtrl: AbortController | null = null;
+
+  /** Build the synastry snapshot, optionally with names/places redacted. */
+  function buildSnapshot(anon: boolean): string {
+    if (!partnerChart || !session.partner) return '';
+    const aName = meta.name || 'Person A';
+    const bName = session.partner.name;
+    const text = synastrySnapshot(
+      natal, meta, partnerChart, bName, cross, overlays, mids, midsRev);
+    if (!anon) return text;
+    return redact(text, [
+      { find: aName, replace: 'Person A' },
+      { find: bName, replace: 'Person B' },
+      { find: meta.place.name, replace: '[location withheld]' },
+      { find: meta.place.country, replace: '[country withheld]' },
+      { find: session.partner.place.name, replace: '[location withheld]' },
+      { find: session.partner.place.country, replace: '[country withheld]' },
+    ]);
+  }
+  const aiPreview = $derived(buildSnapshot(aiAnon));
+
+  async function runAsk() {
+    if (aiBusy || !partnerChart || !session.partner) return;
+    aiErr = ''; aiOut = ''; aiStarted = true; aiBusy = true;
+    const ctrl = new AbortController();
+    aiCtrl = ctrl;
+    const q = aiQuestion.trim() || DEFAULT_SYNASTRY_REQUEST;
+    const content = `${buildSnapshot(aiAnon)}\n\n---\n\nRequest: ${q}`;
+    try {
+      await askClaude({
+        system: SYNASTRY_SYSTEM, userContent: content,
+        signal: ctrl.signal, onDelta: t => aiOut += t,
+      });
+    } catch (e) {
+      if (!ctrl.signal.aborted) aiErr = e instanceof Error ? e.message : String(e);
+    } finally {
+      if (aiCtrl === ctrl) aiCtrl = null;
+      aiBusy = false;
+    }
+  }
+  function stopAsk() { aiCtrl?.abort(); }
 
   const dossier = $derived(partnerChart && session.partner
     ? relationshipsDossier(natal, style, {
@@ -94,6 +147,56 @@
   </div>
 
   {#if partnerChart && session.partner}
+    <details class="askai" open>
+      <summary>Ask Claude about this pairing <span class="beta">experimental</span></summary>
+
+      <p class="priv">
+        This sends the raw chart factors (shown below) to Claude through your own API proxy —
+        the first time chart data leaves this device. Model: {AI_MODEL_LABEL}. Nothing is sent
+        until you press <b>Ask Claude</b>.
+      </p>
+
+      <label class="anon">
+        <input type="checkbox" bind:checked={aiAnon} />
+        Anonymise — send “Person A / Person B” and hide place names
+      </label>
+      <div class="anonnote">
+        Even anonymised, a birthplace is still computable from an exact chart’s angles — this hides
+        the labels, not the geometry. Turn off to send real names.
+      </div>
+
+      <div class="starters">
+        {#each SYNASTRY_STARTERS as s (s.label)}
+          <button type="button" class="chip" onclick={() => aiQuestion = s.text}>{s.label}</button>
+        {/each}
+      </div>
+
+      <textarea bind:value={aiQuestion} rows="3" placeholder="Ask about this pairing…"></textarea>
+
+      <div class="askrow">
+        {#if aiBusy}
+          <button type="button" class="ask" onclick={stopAsk}>Stop</button>
+          <span class="spin">Claude is reading…</span>
+        {:else}
+          <button type="button" class="ask" onclick={runAsk} disabled={!AI_ENABLED}>Ask Claude</button>
+        {/if}
+        {#if !AI_ENABLED}
+          <span class="cfg">Set <code>VITE_AI_WORKER_URL</code> to enable (see worker/README.md).</span>
+        {/if}
+      </div>
+
+      {#if aiErr}<div class="aierr">{aiErr}</div>{/if}
+
+      {#if aiStarted && (aiOut || aiBusy)}
+        <div class="aiout">{aiOut}{#if aiBusy}<span class="caret">▍</span>{/if}</div>
+      {/if}
+
+      <details class="peek">
+        <summary>Preview exactly what will be sent{aiAnon ? ' (anonymised)' : ''}</summary>
+        <pre>{aiPreview}</pre>
+      </details>
+    </details>
+
     <div class="wheelrow">
       <ExpandableWheel chart={natal} selection={wheelSel} {display} {caption}
         outer={outerBodies} outerColor="var(--syn)"
@@ -187,5 +290,56 @@
     padding: 0 6px; margin-left: 4px;
   }
   .hint { color: var(--dim); }
+
+  .askai {
+    max-width: 720px; margin: 0 auto 14px; border: 1px solid var(--syn);
+    background: var(--panel); border-radius: 10px; padding: 10px 14px;
+  }
+  .askai > summary { color: var(--syn); font-size: 14px; }
+  .askai .beta {
+    font-size: 9.5px; text-transform: uppercase; letter-spacing: .08em;
+    color: var(--dim); border: 1px solid var(--line); border-radius: 8px;
+    padding: 0 6px; margin-left: 6px;
+  }
+  .askai .priv { font-size: 12px; color: var(--dim); line-height: 1.5; margin: 8px 0; }
+  .askai .anon { display: flex; align-items: center; gap: 7px; font-size: 13px; margin-top: 4px; }
+  .askai .anonnote { font-size: 11.5px; color: var(--dim); line-height: 1.45; margin: 4px 0 10px; }
+  .starters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+  .chip {
+    background: var(--bg2); color: var(--fg); border: 1px solid var(--line);
+    border-radius: 14px; padding: 4px 11px; font-size: 12px; cursor: pointer;
+  }
+  .chip:hover { border-color: var(--syn); }
+  .askai textarea {
+    width: 100%; box-sizing: border-box; background: var(--bg2); color: var(--fg);
+    border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
+    font: inherit; font-size: 13px; resize: vertical;
+  }
+  .askrow { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+  .ask {
+    background: var(--syn); color: #fff; border: none; border-radius: 14px;
+    padding: 6px 16px; font-size: 13px; cursor: pointer;
+  }
+  .ask:disabled { opacity: .5; cursor: not-allowed; }
+  .spin, .cfg { font-size: 12px; color: var(--dim); }
+  .cfg code { font-size: 11px; }
+  .aierr {
+    margin-top: 10px; font-size: 12.5px; color: var(--mars, #d66);
+    border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
+  }
+  .aiout {
+    margin-top: 10px; background: var(--bg2); border: 1px solid var(--line);
+    border-radius: 8px; padding: 12px 14px; font-size: 13.5px; line-height: 1.6;
+    white-space: pre-wrap; word-wrap: break-word;
+  }
+  .caret { color: var(--syn); animation: blink 1s steps(2) infinite; }
+  @keyframes blink { 50% { opacity: 0; } }
+  .peek { margin-top: 10px; border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; }
+  .peek > summary { color: var(--dim); font-size: 12px; }
+  .peek pre {
+    white-space: pre-wrap; word-wrap: break-word; font-size: 11px; color: var(--dim);
+    max-height: 260px; overflow: auto; margin: 8px 0 0;
+  }
+
   @media (max-width: 900px) { .cols { flex-direction: column; } }
 </style>
