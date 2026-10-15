@@ -6,9 +6,12 @@ key never ships in the browser bundle. This is the Phase-1 spike backend.
 
 ## What it does
 
-- Accepts `POST { system, messages }` from the app, CORS-locked to your site.
-- Calls Anthropic with the model/token-cap/effort fixed **here** (not by the
-  client): `claude-sonnet-5-5`, 6000 output tokens, `effort: medium`.
+- Accepts `POST { system, messages, preset }` from the app, CORS-locked to your site.
+- Maps `preset` to a model + effort from its own allowlist (`PRESETS` in
+  `src/index.ts`: Sonnet 5.5 medium (default), Sonnet 5.5 high, Opus 5.5
+  medium), so the client can't request anything else. Output cap 10000 tokens.
+- Refusal fallbacks on (`fallbacks: "default"`): a declined request is re-run
+  on Anthropic's recommended fallback model inside the same call.
 - Streams the Server-Sent-Events response straight back to the browser.
 - **Does not log request or response bodies** — chart factors pass through.
 
@@ -32,21 +35,14 @@ is served from (plus `http://localhost:8322` for local dev), then redeploy.
 
 ## Point the app at it
 
-Build the app with the Worker URL in an env var (Vite reads `VITE_*`):
+The Worker URL is committed in `.env` at the repo root
+(`VITE_AI_WORKER_URL=…`), so every build includes it: local `npm run build`,
+`npm run dev`, and the GitHub Actions deploy alike. It is not a secret (it is
+in the shipped JavaScript anyway). Override it for one build with
+`VITE_AI_WORKER_URL=… npm run build`, or locally with a gitignored `.env.local`.
 
-```bash
-# from the repo root
-VITE_AI_WORKER_URL="https://astro-ai.<your-subdomain>.workers.dev" npm run build
-```
-
-or put it in a `.env.local` at the repo root:
-
-```
-VITE_AI_WORKER_URL=https://astro-ai.<your-subdomain>.workers.dev
-```
-
-With no URL set, the app still builds; the Ask-Claude panel just shows a
-"set VITE_AI_WORKER_URL to enable" note.
+With the URL empty, the app still builds; the Ask Claude panel just says it is
+not available.
 
 ## Local development
 

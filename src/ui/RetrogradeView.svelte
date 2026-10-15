@@ -23,6 +23,10 @@
   import { BODY_NAME, fmtDegInSign } from '../render/glyphs';
   import { J2000_JD, degDiff, normDeg, type EphemerisProvider } from '../ephemeris/types';
   import type { DisplaySettings } from './state';
+  import AskClaude from './AskClaude.svelte';
+  import { registerCopy } from './copyctx.svelte';
+  import { orrerySnapshot, type OrreryPlanetSnap } from '../interpret/snapshot';
+  import { ORRERY_SYSTEM, ORRERY_STARTERS, DEFAULT_ORRERY_REQUEST } from '../interpret/prompts';
 
   let {
     provider, display, chartJd = null, chartLabel = '', standalone = false,
@@ -215,6 +219,31 @@
     return () => { cancelAnimationFrame(raf); obs.disconnect(); removeEventListener('keydown', esc); };
   });
 
+  /** The orrery's current state as markdown, for Ask Claude and Copy for AI. */
+  function buildOrrery(): string {
+    const jd = jdShown; // reactive: the preview follows the animation
+    const planets: OrreryPlanetSnap[] = visible.map(b => {
+      const r = readout(b, jd);
+      const still = Math.abs(r.speed) < (isInner(b) ? 0.15 : 0.005);
+      return {
+        name: BODY_NAME[b], lon: fmtDegInSign(r.lon), speed: r.speed, elong: r.elong,
+        status: still ? 'stationary' : r.speed < 0 ? 'retrograde' : 'direct',
+        next: r.next ? {
+          inRetro: r.next.inRetro,
+          srDate: fmtDate(r.next.sr.jdUt, true), srLon: fmtDegInSign(r.next.sr.lon),
+          sdDate: fmtDate(r.next.sd.jdUt, true), sdLon: fmtDegInSign(r.next.sd.lon),
+          arc: r.next.arc, days: r.next.sd.jdUt - r.next.sr.jdUt,
+        } : undefined,
+      };
+    });
+    return orrerySnapshot({
+      date: fmtDate(jd, true), model: modelId, view, planets,
+      events: log.slice(0, 12).map(e => ({ date: fmtDate(e.jd), text: `${BODY_NAME[e.glyph]} ${e.text}` })),
+    });
+  }
+  // The app header's Copy for AI button (the standalone page has no header).
+  $effect(() => standalone ? undefined : registerCopy('orrery', buildOrrery));
+
   const elapsed = $derived(jdShown - plate.jdStart);
   const fmtSpeed = (v: number) => v < 10 ? `${v.toFixed(1)} d/s` : v < 1000 ? `${Math.round(v)} d/s` : `${(v / 365.25).toFixed(1)} yr/s`;
   const fmtPeriod = (d: number) => d < 1000 ? `${d.toFixed(2)} d` : `${(d / 365.25).toFixed(2)} yr`;
@@ -244,6 +273,12 @@
       {#if show.venus && (superior || decagram)}<span><i class="sw" style="background:{pal.superior}"></i>Superior conjunctions</span>{/if}
       {#if visible.some(b => !isInner(b))}<span class="scale">Distances true to scale out to Mars, then logarithmic: each step out multiplies distance by the same factor.</span>{/if}
     </div>
+
+    <AskClaude system={ORRERY_SYSTEM} starters={ORRERY_STARTERS}
+      defaultRequest={DEFAULT_ORRERY_REQUEST} buildSnapshot={buildOrrery}
+      anonymisable={false} intro="This sends the orrery's current state (shown below) to Claude."
+      tab="orrery" readingKey="orrery" readingGroup="orrery"
+      readingTitle={`Orrery · ${fmtDate(jdShown, true)}`} />
 
     <section class="stripbox">
       <h2>The ecliptic as seen from Earth</h2>
