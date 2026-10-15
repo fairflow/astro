@@ -3,6 +3,7 @@
   import { aiPrefs, setOpen, setPreset } from '../ai/prefs.svelte';
   import { deleteReading, readings, startReading, stopReading } from '../ai/readings.svelte';
   import type { ReadingTab } from '../ai/readingstore';
+  import { renderMarkdown } from '../ai/markdown';
   import { copyToClipboard } from './clipboard';
   import type { Starter } from '../interpret/prompts';
 
@@ -159,7 +160,8 @@
       {shown.busy ? 'Reading now' : `Saved ${fmtWhen(shown.createdAt)}`}{shown.stopped ? ' (stopped early)' : ''}
       · {presetLabel(shown.preset)} · “{excerpt(shown.question)}”
     </div>
-    <div class="aiout">{shown.text}{#if shown.busy}<span class="caret">▍</span>{/if}</div>
+    <!-- renderMarkdown escapes everything and emits only a fixed tag set (see src/ai/markdown.ts) -->
+    <div class="aiout">{@html renderMarkdown(shown.text)}{#if shown.busy}<span class="caret">▍</span>{/if}</div>
   {/if}
 
   {#if savedHere.length}
@@ -234,9 +236,25 @@
   .meta { margin-top: 10px; font-size: 11.5px; color: var(--dim); line-height: 1.4; }
   .aiout {
     margin-top: 4px; background: var(--bg2); border: 1px solid var(--line);
-    border-radius: 8px; padding: 12px 14px; font-size: 13.5px; line-height: 1.6;
-    white-space: pre-wrap; word-wrap: break-word;
+    border-radius: 8px; padding: 14px 18px; font-size: 14px; line-height: 1.6;
+    word-wrap: break-word;
   }
+  /* rendered Markdown (the elements come from {@html}, hence :global) */
+  .aiout :global(h2) { font-size: 17px; color: var(--ac); margin: 4px 0 10px; font-weight: 600; }
+  .aiout :global(h3) { font-size: 15px; color: var(--gold); margin: 18px 0 6px; font-weight: 600; }
+  .aiout :global(h4) { font-size: 14px; color: var(--ink); margin: 14px 0 4px; font-weight: 600; }
+  .aiout :global(p) { margin: 0 0 10px; }
+  .aiout :global(ul), .aiout :global(ol) { margin: 0 0 10px; padding-left: 22px; }
+  .aiout :global(li) { margin: 4px 0; }
+  .aiout :global(li.sub) { margin-left: 20px; list-style-type: circle; }
+  .aiout :global(strong) { color: var(--ink); font-weight: 650; }
+  .aiout :global(blockquote) {
+    margin: 0 0 10px; padding: 2px 12px; border-left: 3px solid var(--ac); color: var(--dim);
+  }
+  .aiout :global(hr) { border: 0; border-top: 1px solid var(--line); margin: 14px 0; }
+  .aiout :global(code) { font-size: 12.5px; background: var(--panel); padding: 0 4px; border-radius: 4px; }
+  .aiout :global(a) { color: var(--ac); }
+  .aiout :global(:last-child) { margin-bottom: 0; }
   .caret { color: var(--ac); animation: blink 1s steps(2) infinite; }
   @keyframes blink { 50% { opacity: 0; } }
   .past, .peek { margin-top: 10px; border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; }
