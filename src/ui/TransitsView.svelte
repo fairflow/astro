@@ -12,6 +12,7 @@
   import { registerCopy } from './copyctx.svelte';
   import AskClaude from './AskClaude.svelte';
   import { redact } from '../ai/anonymise';
+  import { who } from '../ai/readingstore';
   import { TRANSITS_SYSTEM, TRANSITS_STARTERS, DEFAULT_TRANSITS_REQUEST } from '../interpret/prompts';
   import { BODY_NAME, fmtDegInSign, fmtOrb } from '../render/glyphs';
   import { degDiff, type BodyKey, type EphemerisProvider } from '../ephemeris/types';
@@ -152,6 +153,15 @@
     return redact(text, reds);
   }
 
+  // Reading context: solo and couple transits are separate, keyed by date.
+  const trCouple = $derived(session.transitTarget === 'couple' && !!session.partner);
+  const trGroup = $derived(trCouple
+    ? `couple-transits|${who(meta.name, meta.date)}|${who(session.partner!.name, session.partner!.date)}`
+    : `transits|${who(meta.name, meta.date)}`);
+  const trTitle = $derived(trCouple
+    ? `Couple transits · ${meta.name || 'unnamed'} & ${session.partner!.name} · ${session.transitDate}`
+    : `Transits · ${meta.name || 'unnamed'} · ${session.transitDate}`);
+
   // The header's Copy for AI button copies the full (named) transit snapshot.
   $effect(() => registerCopy(
     session.transitTarget === 'couple' ? 'couple transits' : 'transits',
@@ -172,7 +182,9 @@
 
   {#if sky}
     <AskClaude system={TRANSITS_SYSTEM} starters={TRANSITS_STARTERS}
-      defaultRequest={DEFAULT_TRANSITS_REQUEST} buildSnapshot={trBuild} accent="var(--transit)" />
+      defaultRequest={DEFAULT_TRANSITS_REQUEST} buildSnapshot={trBuild} accent="var(--transit)"
+      tab={trCouple ? 'couple-transits' : 'transits'} readingGroup={trGroup}
+      readingKey={`${trGroup}|${session.transitDate}`} readingTitle={trTitle} />
   {/if}
 
   {#if session.transitTarget === 'you'}

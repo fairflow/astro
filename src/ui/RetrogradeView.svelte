@@ -276,7 +276,9 @@
 
     <AskClaude system={ORRERY_SYSTEM} starters={ORRERY_STARTERS}
       defaultRequest={DEFAULT_ORRERY_REQUEST} buildSnapshot={buildOrrery}
-      anonymisable={false} intro="This sends the orrery's current state (shown below) to Claude." />
+      anonymisable={false} intro="This sends the orrery's current state (shown below) to Claude."
+      tab="orrery" readingKey="orrery" readingGroup="orrery"
+      readingTitle={`Orrery · ${fmtDate(jdShown, true)}`} />
 
     <section class="stripbox">
       <h2>The ecliptic as seen from Earth</h2>

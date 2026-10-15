@@ -17,6 +17,7 @@
   import { enabledAspectDefs } from './prefs.svelte';
   import AskClaude from './AskClaude.svelte';
   import { redact } from '../ai/anonymise';
+  import { who } from '../ai/readingstore';
   import { SYNASTRY_SYSTEM, SYNASTRY_STARTERS, DEFAULT_SYNASTRY_REQUEST } from '../interpret/prompts';
 
   let { natal, meta, chartFromSaved, style, display }: {
@@ -103,8 +104,11 @@
   </div>
 
   {#if partnerChart && session.partner}
+    {@const synCtx = `synastry|${who(meta.name, meta.date)}|${who(session.partner.name, session.partner.date)}`}
     <AskClaude system={SYNASTRY_SYSTEM} starters={SYNASTRY_STARTERS}
-      defaultRequest={DEFAULT_SYNASTRY_REQUEST} {buildSnapshot} accent="var(--syn)" />
+      defaultRequest={DEFAULT_SYNASTRY_REQUEST} {buildSnapshot} accent="var(--syn)"
+      tab="synastry" readingKey={synCtx} readingGroup={synCtx}
+      readingTitle={`Synastry · ${meta.name || 'unnamed'} × ${session.partner.name}`} />
 
     <div class="wheelrow">
       <ExpandableWheel chart={natal} selection={wheelSel} {display} {caption}

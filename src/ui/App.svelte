@@ -18,6 +18,7 @@
   import AskClaude from './AskClaude.svelte';
   import { copyCtx } from './copyctx.svelte';
   import { redact } from '../ai/anonymise';
+  import { who } from '../ai/readingstore';
   import { NATAL_SYSTEM, NATAL_STARTERS, DEFAULT_NATAL_REQUEST } from '../interpret/prompts';
   import { loadTexts } from '../interpret/textstore';
   import SynastryView from './SynastryView.svelte';
@@ -284,8 +285,11 @@
 {:else}
 <main class="app">
   {#if chart}
+    {@const natalCtx = `natal|${who(current!.meta.name, current!.meta.date)}`}
     <AskClaude system={NATAL_SYSTEM} starters={NATAL_STARTERS}
-      defaultRequest={DEFAULT_NATAL_REQUEST} buildSnapshot={natalSnapshot} accent="var(--sextile)" />
+      defaultRequest={DEFAULT_NATAL_REQUEST} buildSnapshot={natalSnapshot} accent="var(--sextile)"
+      tab="natal" readingKey={natalCtx} readingGroup={natalCtx}
+      readingTitle={`Natal · ${current!.meta.name || 'unnamed'}`} />
     <div id="wheelwrap">
       <ExpandableWheel {chart} {selection} {display} {caption} onselect={s => selection = s}>
         {#snippet flyout()}

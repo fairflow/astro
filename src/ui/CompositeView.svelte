@@ -7,6 +7,7 @@
   import { registerCopy } from './copyctx.svelte';
   import AskClaude from './AskClaude.svelte';
   import { redact } from '../ai/anonymise';
+  import { who } from '../ai/readingstore';
   import { COMPOSITE_SYSTEM, COMPOSITE_STARTERS, DEFAULT_COMPOSITE_REQUEST } from '../interpret/prompts';
   import { aspectKey } from '../render/wheel';
   import { BODY_NAME, fmtDegInSign, fmtOrb } from '../render/glyphs';
@@ -76,8 +77,11 @@
   </div>
 
   {#if comp && session.partner}
+    {@const compCtx = `composite|${who(meta.name, meta.date)}|${who(session.partner.name, session.partner.date)}`}
     <AskClaude system={COMPOSITE_SYSTEM} starters={COMPOSITE_STARTERS}
-      defaultRequest={DEFAULT_COMPOSITE_REQUEST} buildSnapshot={compBuild} accent="var(--syn)" />
+      defaultRequest={DEFAULT_COMPOSITE_REQUEST} buildSnapshot={compBuild} accent="var(--syn)"
+      tab="composite" readingKey={compCtx} readingGroup={compCtx}
+      readingTitle={`Composite · ${meta.name || 'unnamed'} × ${session.partner.name}`} />
     <div class="split">
       <div class="wheelcol">
         <ExpandableWheel chart={comp} selection={sel} {display} {caption} onselect={s => sel = s} />
