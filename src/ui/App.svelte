@@ -15,6 +15,9 @@
   import Glossary from './Glossary.svelte';
   import { chartSnapshot } from '../interpret/snapshot';
   import { copyToClipboard } from './clipboard';
+  import AskClaude from './AskClaude.svelte';
+  import { redact } from '../ai/anonymise';
+  import { NATAL_SYSTEM, NATAL_STARTERS, DEFAULT_NATAL_REQUEST } from '../interpret/prompts';
   import { loadTexts } from '../interpret/textstore';
   import SynastryView from './SynastryView.svelte';
   import { session, storeSession } from './session.svelte';
@@ -51,6 +54,19 @@
     if (!ok) { banner = 'Clipboard unavailable in this browser context.'; return; }
     copied = true;
     setTimeout(() => copied = false, 2200);
+  }
+
+  /** Natal snapshot for Ask Claude, optionally with name/place redacted. */
+  function natalSnapshot(anon: boolean): string {
+    if (!chart || !current) return '';
+    const text = chartSnapshot(chart, current.meta);
+    if (!anon) return text;
+    const m = current.meta;
+    return redact(text, [
+      { find: m.name, replace: 'the native' },
+      { find: m.place.name, replace: '[location withheld]' },
+      { find: m.place.country, replace: '[country withheld]' },
+    ]);
   }
   let form = $state<FormState>({
     name: '', date: '', time: '12:00', accuracy: 'exact', place: null,
@@ -259,6 +275,8 @@
         {copied ? 'Copied ✓' : 'Copy for AI (natal)'}
       </button>
     </div>
+    <AskClaude system={NATAL_SYSTEM} starters={NATAL_STARTERS}
+      defaultRequest={DEFAULT_NATAL_REQUEST} buildSnapshot={natalSnapshot} accent="var(--sextile)" />
     <div id="wheelwrap">
       <ExpandableWheel {chart} {selection} {display} {caption} onselect={s => selection = s}>
         {#snippet flyout()}

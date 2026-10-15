@@ -5,6 +5,9 @@
   import { contextReading } from '../interpret/contexts';
   import { compositeSnapshot } from '../interpret/snapshot';
   import { copyToClipboard } from './clipboard';
+  import AskClaude from './AskClaude.svelte';
+  import { redact } from '../ai/anonymise';
+  import { COMPOSITE_SYSTEM, COMPOSITE_STARTERS, DEFAULT_COMPOSITE_REQUEST } from '../interpret/prompts';
   import { aspectKey } from '../render/wheel';
   import { BODY_NAME, fmtDegInSign, fmtOrb } from '../render/glyphs';
   import type { Chart } from '../chart/chart';
@@ -45,6 +48,24 @@
     setTimeout(() => copied = false, 2200);
   }
 
+  /** Composite snapshot for Ask Claude, optionally with names redacted. */
+  function compBuild(anon: boolean): string {
+    if (!comp || !session.partner) return '';
+    const partner = chartFromSaved(session.partner);
+    const aName = meta.name || 'Person A';
+    const bName = session.partner.name;
+    const text = compositeSnapshot(comp, aName, natal, partner, bName);
+    if (!anon) return text;
+    return redact(text, [
+      { find: aName, replace: 'Person A' },
+      { find: bName, replace: 'Person B' },
+      { find: meta.place.name, replace: '[location withheld]' },
+      { find: meta.place.country, replace: '[country withheld]' },
+      { find: session.partner.place.name, replace: '[location withheld]' },
+      { find: session.partner.place.country, replace: '[country withheld]' },
+    ]);
+  }
+
   const caption = $derived(session.partner
     ? [
         `Composite: ${meta.name || meta.place.name} + ${session.partner.name}`,
@@ -68,6 +89,8 @@
   </div>
 
   {#if comp && session.partner}
+    <AskClaude system={COMPOSITE_SYSTEM} starters={COMPOSITE_STARTERS}
+      defaultRequest={DEFAULT_COMPOSITE_REQUEST} buildSnapshot={compBuild} accent="var(--syn)" />
     <div class="split">
       <div class="wheelcol">
         <ExpandableWheel chart={comp} selection={sel} {display} {caption} onselect={s => sel = s} />

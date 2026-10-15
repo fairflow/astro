@@ -10,6 +10,9 @@
   import { contextReading, LANDMARKS } from '../interpret/contexts';
   import { transitSnapshot } from '../interpret/snapshot';
   import { copyToClipboard } from './clipboard';
+  import AskClaude from './AskClaude.svelte';
+  import { redact } from '../ai/anonymise';
+  import { TRANSITS_SYSTEM, TRANSITS_STARTERS, DEFAULT_TRANSITS_REQUEST } from '../interpret/prompts';
   import { BODY_NAME, fmtDegInSign, fmtOrb } from '../render/glyphs';
   import { degDiff, type BodyKey, type EphemerisProvider } from '../ephemeris/types';
   import type { StyleId } from '../interpret/types';
@@ -126,6 +129,29 @@
     session.transitTime = `${String(n.getHours()).padStart(2, '0')}:${String(n.getMinutes()).padStart(2, '0')}`;
   }
 
+  /** Transit snapshot for Ask Claude, optionally with names/places redacted. */
+  function trBuild(anon: boolean): string {
+    if (!sky) return '';
+    const when = `${session.transitDate} ${session.transitTime}`;
+    const couple = session.transitTarget === 'couple' && partnerChart && comp && session.partner
+      ? { partner: partnerChart, partnerName: session.partner.name, composite: comp,
+          toPartner: crossesB, toComposite: crossesC }
+      : null;
+    const text = transitSnapshot({ natal, meta, sky, when, toNatal: crosses, couple });
+    if (!anon) return text;
+    const reds = [
+      { find: meta.name, replace: 'the native' },
+      { find: meta.place.name, replace: '[location withheld]' },
+      { find: meta.place.country, replace: '[country withheld]' },
+    ];
+    if (couple && session.partner) {
+      reds.push({ find: session.partner.name, replace: 'their partner' });
+      reds.push({ find: session.partner.place.name, replace: '[location withheld]' });
+      reds.push({ find: session.partner.place.country, replace: '[country withheld]' });
+    }
+    return redact(text, reds);
+  }
+
   let copied = $state(false);
   async function copyTransits() {
     if (!sky) return;
@@ -160,6 +186,11 @@
       </button>
     {/if}
   </div>
+
+  {#if sky}
+    <AskClaude system={TRANSITS_SYSTEM} starters={TRANSITS_STARTERS}
+      defaultRequest={DEFAULT_TRANSITS_REQUEST} buildSnapshot={trBuild} accent="var(--transit)" />
+  {/if}
 
   {#if session.transitTarget === 'you'}
     {#if landmarks.length}
