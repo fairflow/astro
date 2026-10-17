@@ -12,8 +12,20 @@
 export const AI_WORKER_URL: string =
   (import.meta.env.VITE_AI_WORKER_URL ?? '').trim();
 
-/** Whether the "Ask Claude" feature is wired up in this build. */
-export const AI_ENABLED: boolean = AI_WORKER_URL.length > 0;
+/** Page origins the Worker accepts (VITE_AI_ORIGINS; empty = no restriction). */
+export const AI_ORIGINS: string[] = (import.meta.env.VITE_AI_ORIGINS ?? '')
+  .split(',').map(s => s.trim()).filter(Boolean);
+
+/** Ask Claude can work on this page: a Worker URL is built in, and the page's
+ *  origin is one the Worker accepts. Copies served elsewhere (GitHub Pages, a
+ *  claude.ai artifact) would only get refusals, so they do not show the panel. */
+export function aiAvailable(url: string, origins: string[], origin: string | undefined): boolean {
+  return url.length > 0 && (origins.length === 0 || (origin !== undefined && origins.includes(origin)));
+}
+
+/** Whether the "Ask Claude" feature works on this page. */
+export const AI_ENABLED: boolean = aiAvailable(AI_WORKER_URL, AI_ORIGINS,
+  typeof location === 'undefined' ? undefined : location.origin);
 
 /**
  * Model + effort presets the reader can choose. Only the id goes over the
