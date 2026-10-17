@@ -326,16 +326,91 @@ from Ask Claude are the most valuable data the app produces (2026-10-17).
   queue and push later.
 
 **Logins first.** Nothing personal goes to the server before sign-in exists
-(readings hold real names and birth data): a `users` table, password hashes
-(`password_hash`), an HttpOnly + Secure + SameSite=Strict session cookie, rate
-limiting on login. Later the API can issue a short-lived signed token that the
-Ask Claude Worker accepts, so signed-in users get Ask Claude on any copy and
-anonymous visitors still cannot spend credit.
+(readings hold real names and birth data). Shipped in v0.4.0/v0.4.1: password
+hashes (`password_hash`), a random session token in an HttpOnly + SameSite=Strict
+cookie scoped to the API (Secure over HTTPS) and stored only as a hash, lock-out
+after repeated failures, and **sliding 90-day sessions**: a session is renewed
+while in use and ends only by signing out, a password change, removal of the
+account or 90 days unused, never because of an error (Miolingo's users were
+signed out by unreliable credential checks; this must not happen here). Later
+the API issues a short-lived signed token that the Ask Claude Worker accepts, so
+signed-in users get Ask Claude on any copy and anonymous visitors cannot spend
+credit.
+
+### Accounts, roles and the admin panel (agreed 2026-10-17)
+
+**Registration in the app, with approval.** Anyone can register (email and a
+password they choose); a new account is *pending* and cannot sign in until
+Matthew approves it in the admin panel, so nobody unapproved can store data or
+spend Ask Claude credit. The register form gives the same answer whether or not
+the email is already registered, is rate-limited per IP, and links to the
+privacy notice. Passwords: 10 to 72 bytes, and checked against the free Have I
+Been Pwned *Pwned Passwords* range API (no key, no subscription; only the first
+5 hex digits of the password's SHA-1 leave the server, the match is checked
+locally; if the service is unreachable the check is skipped).
+
+**Account states**, enforced by the server on every request, not only in the UI:
+
+| State | Sign in | Read and download own data | Create or change data, Ask Claude | Request removal |
+|---|---|---|---|---|
+| pending (awaiting approval) | no | no | no | no |
+| active | yes | yes | yes | yes |
+| paused | yes | yes | **no** | yes |
+| frozen | **no** (sessions end at once) | no | no | no |
+| deleting (30-day grace) | no | no | no | cancellable by the user or admin |
+
+Removal is open to any active or paused user; the download is offered first. A
+deleting account is purged 30 days after the request (daily cPanel cron, or on
+admin visits), with everything stored for it.
+
+**Roles:** `user` and `admin` (Matthew). The first admin is made once on the
+host (`php api/cli/user.php admin <email>`); after that, accounts are managed in
+the app.
+
+**Admin panel** (inside the app, shown only to admins; every admin request
+re-checks the role and 2FA on the server): a user list (email, state, role,
+registered, last seen, active sessions) and actions *approve*, *set password*
+(ends their sessions), *pause* / *unpause*, *freeze* / *unfreeze*, *delete*
+(starts the 30-day grace) and *cancel deletion*. Every admin action goes into an
+`admin_log` (who, what, to whom, when), shown in the panel.
+
+**Self-service** for active and paused users: download all their data (JSON,
+readings also as Markdown), change password (needs the current one; ends other
+sessions), request removal.
+
+**Two-factor sign-in (a trial):** TOTP (RFC 6238 six-digit codes, any
+authenticator app; 1Password recommended because it keeps the code with the
+login, which avoids the "which app holds this one?" problem). Required for the
+admin account, optional for users. Setup shows a QR code labelled
+"Astrodynamics (fairflow.co.uk) · email" plus the key as text, must be confirmed
+with one code before it is switched on, and issues 10 one-time recovery codes
+(stored hashed); codes from the neighbouring 30-second windows are accepted for
+clock drift; the TOTP secret is stored encrypted with a key kept in
+`~/astro-config`. Passkeys (WebAuthn) are a later option that removes codes.
+
+**Email (later):** sending from a fairflow.co.uk mailbox through the host's mail
+server, for address confirmation at registration, "forgot password" links, and
+notices (to Matthew of new pending registrations; to users when approved). Until
+then Matthew sets forgotten passwords in the admin panel.
+
+**Ask Claude for signed-in users** comes only with a per-account daily cap,
+enforced by the server; paused and frozen accounts get none.
+
+**Privacy notice and retention policy** must be written and published before
+registration or any server-stored personal data is deployed. Saved charts hold
+birth data of third parties (partners, friends) who never signed up, and
+readings name them; once on a server, UK GDPR applies. The notice states what is
+stored, why, where, who can see it, retention (purge 30 days after a removal
+request; sessions 90 days unused; login-failure records one day), users'
+rights (download, removal, cancellation) and a contact.
 
 **Schema sketch** (utf8mb4, `utf8mb4_unicode_ci` set explicitly):
 
 ```
-users(id, email, pass_hash, created_at)
+users(id, email, pass_hash, created_at, status, role, status_changed_at, delete_after)
+sessions(id_hash, user_id, created_at, expires_at, last_seen_at)
+login_failures(k, at)   admin_log(id, admin_id, action, target_id, at)
+totp(user_id, secret_enc, enabled_at)   recovery_codes(user_id, code_hash, used_at)
 readings(id CHAR(36), user_id, key, grp, tab, title, question, preset,
          anonymised, text MEDIUMTEXT, stopped, created_at, updated_at, deleted)
 charts(id CHAR(36), user_id, birth JSON, updated_at, deleted)
@@ -355,15 +430,20 @@ charset and collation stated on every table, UUIDs as `CHAR(36)` (MariaDB's
 `LONGTEXT` with a validity check). Then a move between the two, or to another
 host, is a dump and restore.
 
-**Local development.** PHP's built-in server (`php -S`) serves `api/` behind the
-Vite dev server's proxy, against a local MariaDB (Homebrew), so development
-never touches the live database. This Mac has PHP 8.5 and the host 8.1: code to
-8.1, or move the site to a newer PHP in cPanel first.
+**Local development.** `npm run api` runs PHP's built-in server for `api/`
+behind the Vite dev server's proxy, over a git-ignored SQLite database, so
+development never touches the live database; the SQL is kept portable between
+SQLite and MariaDB (DEVELOPMENT.md, "Server API"). This Mac has PHP 8.5 and the
+host 8.1: code to 8.1, or move the site to a newer PHP in cPanel first.
 
-**Order of work** (beads): astro-4zm spike (done) → astro-yal logins →
-astro-cbi readings sync → astro-ag1 charts and settings → astro-bk6 Ask Claude
-for signed-in users. astro-sx7 (save readings while they stream) shipped in
-v0.3.3 and is independent.
+**Order of work** (beads, epic astro-tbb). Done: astro-4zm spike, astro-yal
+sign-in. Next, in dependency order: astro-tbb.2 account states and roles →
+astro-tbb.6 two-factor → astro-tbb.4 admin panel → astro-tbb.3 registration
+(also needs astro-tbb.1 privacy notice); astro-tbb.5 self-service and
+astro-tbb.9 the first live admin account follow astro-tbb.2; astro-cbi readings
+sync and astro-ag1 charts and settings need astro-tbb.2 and astro-tbb.1;
+astro-tbb.7 the Ask Claude cap comes before astro-bk6; astro-tbb.8 email is
+deferred. astro-sx7 (save readings while they stream) shipped in v0.3.3.
 
 ---
 
