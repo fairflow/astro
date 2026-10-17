@@ -43,9 +43,11 @@ components. `docs/DESIGN.md` is the design of record;
 
 ## Conventions
 
-- The Retrograde tab is also a standalone claude.ai artifact; after
-  changing it, run `npm run build:retro` and republish (see
-  DEVELOPMENT.md, "Standalone Retrograde page").
+- One deployment: fairflow.co.uk/astro (auto-deployed on merge to
+  `main`, standalone orrery at `retrograde/`), plus the local test server
+  on :8322, restarted on `main` after each merge. The claude.ai artifact
+  and the GitHub Pages copy were retired on 2026-10-17 (DEVELOPMENT.md,
+  "Where the app is deployed"); do not republish them.
 - Positions are validated against golden references (Swiss Ephemeris,
   held-out JPL Horizons samples) — never weaken tolerances to pass.
 - Birth data is the source of truth; computed positions are recomputed,
