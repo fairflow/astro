@@ -12,8 +12,17 @@
 
   // Distraction toggles (all planets at once); remembered in this browser across visits.
   const MARKS_KEY = 'astro-orrery-marks';
-  type Marks = { flashRings: boolean; flashLabels: boolean; retroArcs: boolean; stationLabels: boolean };
-  const MARKS_DEFAULT: Marks = { flashRings: true, flashLabels: true, retroArcs: true, stationLabels: true };
+  type Marks = {
+    flashRings: boolean; flashLabels: boolean; retroArcs: boolean; stationLabels: boolean;
+    mercuryInferior: boolean; mercurySuperior: boolean;
+    stationSight: boolean; siderealRefs: boolean; sunEarthLine: boolean;
+  };
+  const MARKS_DEFAULT: Marks = {
+    flashRings: true, flashLabels: true, retroArcs: true, stationLabels: true,
+    mercuryInferior: true, mercurySuperior: false,
+    // the frozen station sight lines repeat what the arcs and ℞/D ticks show: off unless wanted
+    stationSight: false, siderealRefs: true, sunEarthLine: true,
+  };
   function loadMarks(): Marks {
     try {
       const v = JSON.parse(localStorage.getItem(MARKS_KEY) ?? '{}');
@@ -286,9 +295,9 @@
       <span><i class="sw" style="background:{pal.retro}"></i>Retrograde</span>
       <span><b style="color:{pal.retro}">℞</b> station retrograde</span>
       <span><b style="color:{pal.direct}">D</b> station direct</span>
-      <span><i class="sw" style="background:{pal.brass}"></i>Sun–Earth line</span>
-      {#if show.venus && (inferior || decagram)}<span><i class="sw" style="background:{pal.venus}"></i>Inferior conjunctions</span>{/if}
-      {#if show.venus && (superior || decagram)}<span><i class="sw" style="background:{pal.superior}"></i>Superior conjunctions</span>{/if}
+      {#if marks.sunEarthLine}<span><i class="sw" style="background:{pal.brass}"></i>Sun–Earth line</span>{/if}
+      {#if (show.venus && (inferior || decagram)) || (show.mercury && marks.mercuryInferior)}<span><i class="sw" style="background:{show.venus && (inferior || decagram) ? pal.venus : pal.mercury}"></i>Inferior conjunctions</span>{/if}
+      {#if (show.venus && (superior || decagram)) || (show.mercury && marks.mercurySuperior)}<span><i class="sw" style="background:{pal.superior}"></i>Superior conjunctions</span>{/if}
       {#if visible.some(b => !isInner(b))}<span class="scale">Distances true to scale out to Mars, then logarithmic: each step out multiplies distance by the same factor.</span>{/if}
     </div>
 
@@ -446,6 +455,10 @@
   <section>
     <h3>Show</h3>
     <label><input type="checkbox" bind:checked={sight}> Sight lines</label>
+    <label style="--c:{pal.mercury}" title="Mercury's last three inferior conjunctions, joined on its orbit">
+      <input type="checkbox" bind:checked={marks.mercuryInferior}> Mercury inferior ☌ triangle</label>
+    <label style="--c:{pal.superior}" title="The same for its superior conjunctions (behind the Sun)">
+      <input type="checkbox" bind:checked={marks.mercurySuperior}> Mercury superior ☌ triangle</label>
     <label style="--c:{pal.venus}"><input type="checkbox" bind:checked={inferior}> Venus inferior ☌ pentagram</label>
     <label style="--c:{pal.superior}"><input type="checkbox" bind:checked={superior}> Venus superior ☌ pentagram</label>
     <label><input type="checkbox" bind:checked={decagram}> Venus decagram round the Sun</label>
@@ -453,6 +466,16 @@
       <input type="checkbox" bind:checked={marks.retroArcs}> Retrograde arcs on the orbits</label>
     <label title="℞ and D beside the station dots, and on the strip chart">
       <input type="checkbox" bind:checked={marks.stationLabels}> ℞ / D station labels</label>
+  </section>
+
+  <section>
+    <h3>Construction lines</h3>
+    <label title="From Earth through the planet to the zodiac, frozen at the two stations of the retrograde nearest now (three planets or fewer)">
+      <input type="checkbox" bind:checked={marks.stationSight}> Sight lines at the stations</label>
+    <label title="From the Sun through where each planet was when the counters were reset: the start of the sidereal count">
+      <input type="checkbox" bind:checked={marks.siderealRefs}> Sidereal start lines</label>
+    <label title="Through the Sun and Earth across the zodiac: where the Sun appears from Earth, the reference for synodic cycles">
+      <input type="checkbox" bind:checked={marks.sunEarthLine}> Sun–Earth line</label>
   </section>
 
   <section>

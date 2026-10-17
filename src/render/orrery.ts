@@ -382,6 +382,14 @@ export interface PlateState {
   retroArcs: boolean;
   /** ℞ / D text at the stations (also honoured by the strip chart). */
   stationLabels: boolean;
+  /** Mercury's last three inferior (superior) conjunctions joined on its orbit: a triangle. */
+  mercuryInferior: boolean;
+  mercurySuperior: boolean;
+  /** Construction lines: sight lines frozen at the two stations of the nearest retrograde,
+   *  the Sun-to-start-position lines the sidereal counters use, and the Sun–Earth line. */
+  stationSight: boolean;
+  siderealRefs: boolean;
+  sunEarthLine: boolean;
   glyphStyle: GlyphStyle;
   /** Optional chart moment to mark (natal date) as a ring on Earth's orbit. */
   markJd?: number | null;
@@ -648,9 +656,16 @@ export class OrreryPlate {
   /** Mercury's conjunction points on its orbit, joined in time order. */
   private orbitFigure(m: OrreryModel, t: number, all: number[], col: string) {
     const past = all.filter(j => j <= t).slice(-3), next = all.find(j => j > t);
-    this.poly(past.map(j => this.XY(m.pos('mercury', j))), rgba(col, .22), 1);
-    for (const j of past) { const [x, y] = this.XY(m.pos('mercury', j)); this.disc(x, y, 2.4, rgba(col, .6)); }
-    if (next !== undefined) { const [x, y] = this.XY(m.pos('mercury', next)); this.disc(x, y, 4, null, rgba(col, .5)); }
+    const pts = past.map(j => this.XY(m.pos('mercury', j)));
+    this.poly(pts, rgba(col, .5), 1.3);
+    for (const [x, y] of pts) this.disc(x, y, 3, rgba(col, .8));
+    if (next !== undefined) {
+      // the side still being drawn: to the next conjunction, which lands near the oldest
+      // (three synodic periods are about 348 d, a little short of a year), so the triangle turns slowly
+      const q = this.XY(m.pos('mercury', next));
+      if (pts.length) this.poly([pts[pts.length - 1]!, q], rgba(col, .22), 1);
+      this.disc(q[0], q[1], 4, null, rgba(col, .5));
+    }
   }
 
   /** Screen point `px` beyond `p`, directly away from the Sun. */
@@ -705,7 +720,7 @@ export class OrreryPlate {
     }
     // Sun–Earth line across the zodiac: the synodic reference, and where the Sun appears from Earth
     const sunLon = m.sunLon(t);
-    this.line(this.P(R_IN * U, sunLon + 180), this.P(R_IN * U, sunLon), rgba(pal.brass, .28));
+    if (s.sunEarthLine) this.line(this.P(R_IN * U, sunLon + 180), this.P(R_IN * U, sunLon), rgba(pal.brass, .28));
     if (s.markJd != null) {
       const [x, y] = this.XY(m.pos('earth', s.markJd));
       this.disc(x, y, 7, null, rgba(pal.ink, .7));
@@ -714,12 +729,14 @@ export class OrreryPlate {
 
     for (const b of vis) {
       // sidereal reference: where the planet was when the counters started, fixed against the stars
-      const p0 = m.pos(b, s.jdStart);
-      this.poly(this.seg([0, 0], [p0[0] * 1.15, p0[1] * 1.15]), rgba(pal[b], .22), 1);
-      const [mx, my] = this.XY(p0); this.disc(mx, my, 3, null, rgba(pal[b], .55));
+      if (s.siderealRefs) {
+        const p0 = m.pos(b, s.jdStart);
+        this.poly(this.seg([0, 0], [p0[0] * 1.15, p0[1] * 1.15]), rgba(pal[b], .22), 1);
+        const [mx, my] = this.XY(p0); this.disc(mx, my, 3, null, rgba(pal[b], .55));
+      }
 
-      if (b === 'mercury' && s.inferior) this.orbitFigure(m, t, m.midRetro(b, t), pal[b]);
-      if (b === 'mercury' && s.superior) this.orbitFigure(m, t, m.behindSun(b, t), pal.superior);
+      if (b === 'mercury' && s.mercuryInferior) this.orbitFigure(m, t, m.midRetro(b, t), pal[b]);
+      if (b === 'mercury' && s.mercurySuperior) this.orbitFigure(m, t, m.behindSun(b, t), pal.superior);
 
       // the retrograde period nearest now: stretches of both orbits, frozen sight lines at each station
       const ep = nearestPeriod(m.stations(b, t), t);
@@ -742,7 +759,7 @@ export class OrreryPlate {
           const col = st.kind === 'SR' ? pal.retro : pal.direct;
           const Es = m.pos('earth', st.jdUt), Ps = m.pos(b, st.jdUt);
           // frozen sight lines at the stations: only when few planets are shown, or the plate clutters
-          if (s.sight && vis.length <= 3) this.poly(this.sightLine(Es, st.lon, R_IN * U), rgba(col, .25), 1);
+          if (s.stationSight && vis.length <= 3) this.poly(this.sightLine(Es, st.lon, R_IN * U), rgba(col, .25), 1);
           const [px, py] = this.XY(Ps), [ex, ey] = this.XY(Es);
           if (s.retroArcs) { this.disc(px, py, 4.5, null, rgba(col, .9)); this.disc(ex, ey, 4.5, null, rgba(col, .6)); }
           if (s.stationLabels) {
