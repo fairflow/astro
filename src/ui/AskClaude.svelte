@@ -54,20 +54,29 @@
   interface Shown {
     id: number | null; text: string; busy: boolean; err: string;
     question: string; preset: AiPresetId; createdAt: number; stopped: boolean;
+    /** Saved mid-stream by an earlier page that closed before it finished. */
+    interrupted: boolean;
   }
   const shown = $derived.by<Shown | null>(() => {
     const picked = pickedId !== null ? savedHere.find(r => r.id === pickedId) : undefined;
-    if (picked) return { ...picked, busy: false, err: '' };
+    if (picked) return { ...picked, busy: false, err: '', interrupted: !!picked.interrupted };
     if (live) {
       return {
         id: live.savedId, text: live.text, busy: live.busy, err: live.err,
         question: live.question, preset: live.preset, createdAt: live.createdAt,
         stopped: !live.busy && !!live.savedId && !!savedHere.find(r => r.id === live.savedId)?.stopped,
+        interrupted: false,
       };
     }
     const latest = savedHere.find(r => r.key === readingKey);
-    return latest ? { ...latest, busy: false, err: '' } : null;
+    return latest ? { ...latest, busy: false, err: '', interrupted: !!latest.interrupted } : null;
   });
+  /** Saved readings still streaming in this page (their saved copy is a checkpoint). */
+  const streamingIds = $derived(new Set(
+    Object.values(readings.live).filter(l => l.busy && l.savedId !== null).map(l => l.savedId)));
+  const status = (r: { id: number; stopped: boolean; interrupted?: boolean }) =>
+    streamingIds.has(r.id) ? ' (reading now)'
+      : r.interrupted ? ' (interrupted)' : r.stopped ? ' (stopped early)' : '';
 
   const presetLabel = (p: AiPresetId) => AI_PRESETS.find(x => x.id === p)?.label ?? p;
   const fmtWhen = (ms: number) => new Date(ms).toLocaleString('en-GB', {
@@ -156,7 +165,7 @@
 
   {#if shown && (shown.text || shown.busy)}
     <div class="meta">
-      {shown.busy ? 'Reading now' : `Saved ${fmtWhen(shown.createdAt)}`}{shown.stopped ? ' (stopped early)' : ''}
+      {shown.busy ? 'Reading now' : `Saved ${fmtWhen(shown.createdAt)}`}{shown.interrupted ? ' (interrupted: the page closed before it finished)' : shown.stopped ? ' (stopped early)' : ''}
       · {presetLabel(shown.preset)} · “{excerpt(shown.question)}”
     </div>
     <!-- renderMarkdown escapes everything and emits only a fixed tag set (see src/ai/markdown.ts) -->
@@ -171,7 +180,7 @@
           <li class:on={shown?.id === r.id}>
             <button type="button" class="pick" onclick={() => pickedId = r.id}>
               <span class="when">{fmtWhen(r.createdAt)}</span>
-              <span class="ttl">{r.title}{r.stopped ? ' (stopped early)' : ''}</span>
+              <span class="ttl">{r.title}{status(r)}</span>
               <span class="q">{excerpt(r.question, 120)}</span>
             </button>
             <button type="button" class="del" class:armed={armedId === r.id}
