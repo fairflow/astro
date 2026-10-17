@@ -233,13 +233,31 @@ fairflow.co.uk/astro and unregisters its old service worker). Do not
 republish either. `npm run build:retro` still writes the single-file
 fragment `dist-retro/retrograde.html`, which is no longer published.
 
-### Server API (planned)
+### Server API (`api/`)
 
-The API for logins and synced storage will live in this repo and deploy with
-the app to `fairflow.co.uk/astro/api/` (PHP + MariaDB on the same host;
-credentials only in `~/astro-config/db.ini` on the server). Design, sync model
-and local-development setup: `docs/DESIGN.md` §5a; decision record in
-`docs/DECISIONS.md`; work tracked as beads epic astro-tbb.
+PHP beside the app, deployed with it to `fairflow.co.uk/astro/api/`
+(design: `docs/DESIGN.md` §5a; beads epic astro-tbb). The build copies `api/`
+into `dist/api/`. Endpoints are the top-level `api/*.php`; `api/lib/`,
+`api/cli/` and `api/sql/` are refused by `.htaccess` on the host and by the dev
+router locally, and `tools/check_live.sh` checks that after every deploy. The
+service worker never caches `api/`.
+
+- **Config and secrets:** only on the server, in `~/astro-config/db.ini`
+  (outside the web root). Locally `ASTRO_DB_INI` points at a SQLite config.
+- **Schema:** `api/sql/NNN_*.sql`, portable between MariaDB and SQLite
+  (`/*TABLE_OPTIONS*/` is filled per driver). After a deploy that adds one,
+  run on the host: `php ~/fairflow.co.uk/astro/api/cli/migrate.php`.
+- **Accounts** (no public sign-up): on the host,
+  `php ~/fairflow.co.uk/astro/api/cli/user.php add|passwd|remove <email>` or
+  `list`. The password is typed at a hidden prompt (use `ssh -t`).
+- **Local development:** `npm run api` (or the `api` entry in
+  `.claude/launch.json`) runs PHP's built-in server on :8323 over
+  `.local/dev.sqlite` (git-ignored), migrating it first; the Vite dev server
+  proxies `/api/` to it. Add a local account with
+  `ASTRO_DB_INI=$PWD/.local/dev.ini php api/cli/user.php add you@example.test`.
+  Without `npm run api` the app finds no API and hides the Account section.
+- **Tests:** `test/api-logins.spec.ts` runs the real endpoints under `php -S`
+  over a throwaway SQLite database (skipped when PHP is not installed).
 
 ## Contributing
 

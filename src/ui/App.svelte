@@ -1,5 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { refreshAccount } from '../api/account.svelte';
   import AuthoringView from './AuthoringView.svelte';
   import ChartForm from './ChartForm.svelte';
   import ExpandableWheel from './ExpandableWheel.svelte';
@@ -170,6 +171,7 @@
   onMount(async () => {
     // ask the browser to exempt our IndexedDB/localStorage from eviction
     navigator.storage?.persist?.().catch(() => {});
+    void refreshAccount(); // is there an API here, and is this browser signed in?
     restoreLastCast();
     try {
       const [p, g] = await Promise.all([fetchPacks(), fetchGazetteer(), loadTexts()]);
