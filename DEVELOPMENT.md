@@ -242,6 +242,13 @@ into `dist/api/`. Endpoints are the top-level `api/*.php`; `api/lib/`,
 router locally, and `tools/check_live.sh` checks that after every deploy. The
 service worker never caches `api/`.
 
+- **Staying signed in:** a session lasts 90 days from its last use and is
+  renewed (database row and cookie) at most once a day while in use, so a
+  regular user is never signed out. Only signing out, a password change,
+  removing the account or 90 days unused end a session; a database or network
+  error is a 500 that leaves the cookie and the session alone, and the app
+  then says it could not check rather than showing you signed out. The
+  database is MariaDB on the same host as the PHP (no tunnel).
 - **Config and secrets:** only on the server, in `~/astro-config/db.ini`
   (outside the web root). Locally `ASTRO_DB_INI` points at a SQLite config.
 - **Schema:** `api/sql/NNN_*.sql`, portable between MariaDB and SQLite

@@ -10,7 +10,11 @@ declare(strict_types=1);
 
 if (!defined('ASTRO_API')) { http_response_code(404); exit; }
 
-const SESSION_SECONDS = 30 * 24 * 3600;
+/** A session lasts this long after it was last used: anyone who uses the app
+ *  at least every 90 days stays signed in indefinitely (sliding renewal). */
+const SESSION_SECONDS = 90 * 24 * 3600;
+/** How often a session in use is renewed (the database write and a fresh cookie). */
+const RENEW_SECONDS = 24 * 3600;
 const LOGIN_WINDOW = 15 * 60;
 const MAX_FAILS_PER_EMAIL = 5;
 const MAX_FAILS_PER_IP = 20;
@@ -125,10 +129,16 @@ function start_session(string $userId): void {
   $now = time();
   db()->prepare('INSERT INTO sessions (id_hash, user_id, created_at, expires_at, last_seen_at) VALUES (?, ?, ?, ?, ?)')
     ->execute([hash('sha256', $token), $userId, $now, $now + SESSION_SECONDS, $now]);
+  db()->prepare('DELETE FROM sessions WHERE expires_at < ?')->execute([$now]); // tidy expired ones
   set_session_cookie($token, $now + SESSION_SECONDS);
 }
 
-/** The signed-in user ['id','email'], or null. */
+/**
+ * The signed-in user ['id','email'], or null. A session is ended only by
+ * signing out, a password change, removing the account, or 90 days unused:
+ * never by an error. If the database cannot be reached this throws, the
+ * request fails with a 500, and the cookie and the session row are untouched.
+ */
 function current_user(): ?array {
   $token = $_COOKIE[cookie_name()] ?? '';
   if (!is_string($token) || $token === '' || strlen($token) > 100) return null;
@@ -137,8 +147,12 @@ function current_user(): ?array {
   $q->execute([hash('sha256', $token), time()]);
   $row = $q->fetch();
   if (!$row) return null;
-  if (time() - (int)$row['last_seen_at'] > 600) {
-    db()->prepare('UPDATE sessions SET last_seen_at = ? WHERE id_hash = ?')->execute([time(), $row['id_hash']]);
+  $now = time();
+  if ($now - (int)$row['last_seen_at'] >= RENEW_SECONDS) {
+    // in use: push the expiry out again, in the database and in the browser
+    db()->prepare('UPDATE sessions SET last_seen_at = ?, expires_at = ? WHERE id_hash = ?')
+      ->execute([$now, $now + SESSION_SECONDS, $row['id_hash']]);
+    set_session_cookie($token, $now + SESSION_SECONDS);
   }
   return ['id' => $row['id'], 'email' => $row['email']];
 }

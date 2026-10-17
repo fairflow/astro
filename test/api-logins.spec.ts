@@ -2,7 +2,7 @@
 // tools/api-dev-router.php over a throwaway SQLite database. Skipped when PHP
 // (with pdo_sqlite) is not installed.
 import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
-import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -96,6 +96,45 @@ describe.skipIf(!hasPhp)('API logins (php -S + SQLite)', () => {
       + `echo $p->query("SELECT COUNT(*) FROM sessions WHERE id_hash='" . hash('sha256','${token}') . "'")->fetchColumn(),`
       + `'/', $p->query("SELECT COUNT(*) FROM sessions WHERE id_hash='${token}'")->fetchColumn();`;
     expect(spawnSync('php', ['-r', php], { encoding: 'utf8' }).stdout).toBe('1/0');
+  });
+
+  it('a session in use is renewed: expiry pushed out 90 days and a fresh cookie sent', async () => {
+    const token = jar.split('=')[1]!;
+    const sql = (q: string) => spawnSync('php', ['-r',
+      `$p=new PDO('sqlite:${join(dir, 'test.sqlite')}');$h=hash('sha256','${token}');${q}`], { encoding: 'utf8' }).stdout;
+    // pretend it was last used 2 days ago and expires in 1 hour
+    sql(`$p->exec("UPDATE sessions SET last_seen_at=strftime('%s','now')-172800, expires_at=strftime('%s','now')+3600 WHERE id_hash='$h'");`);
+    const r = await call('/api/me.php');
+    expect(r.body.user).not.toBeNull();
+    expect(r.setCookie).toMatch(/^astro_sid=/);
+    const left = Number(sql(`echo $p->query("SELECT expires_at-strftime('%s','now') FROM sessions WHERE id_hash='$h'")->fetchColumn();`));
+    expect(left).toBeGreaterThan(89 * 86400);
+    // used again within a day: no write, no new cookie
+    expect((await call('/api/me.php')).setCookie).toBeNull();
+  });
+
+  it('an expired session is not accepted, but nothing else ends one', async () => {
+    const token = jar.split('=')[1]!;
+    const run = (q: string) => spawnSync('php', ['-r',
+      `$p=new PDO('sqlite:${join(dir, 'test.sqlite')}');$h=hash('sha256','${token}');${q}`], { encoding: 'utf8' });
+    run(`$p->exec("UPDATE sessions SET expires_at=strftime('%s','now')-1 WHERE id_hash='$h'");`);
+    expect((await call('/api/me.php')).body.user).toBeNull();
+    run(`$p->exec("UPDATE sessions SET expires_at=strftime('%s','now')+86400 WHERE id_hash='$h'");`);
+    expect((await call('/api/me.php')).body.user).not.toBeNull();
+  });
+
+  it('a database failure is a 500 and leaves the session alone', async () => {
+    const saved = jar;
+    const ini = join(dir, 'db.ini');
+    const good = readFileSync(ini, 'utf8');
+    writeFileSync(ini, `[db]\ndriver = sqlite\npath = "${join(dir, 'missing', 'nope.sqlite')}"\n`);
+    try {
+      const r = await call('/api/me.php');
+      expect(r.status).toBe(500);
+      expect(r.setCookie).toBeNull();
+    } finally { writeFileSync(ini, good); }
+    jar = saved;
+    expect((await call('/api/me.php')).body.user).not.toBeNull();
   });
 
   it('signing out ends the session', async () => {

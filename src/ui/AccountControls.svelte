@@ -29,6 +29,9 @@
     <button type="submit" disabled={account.busy}>{account.busy ? 'Signing in…' : 'Sign in'}</button>
     <p class="hint">Accounts are by invitation.</p>
   </form>
+{:else if account.status === 'unreachable'}
+  <p class="hint">Could not check your sign-in just now (offline or a server problem). You stay signed
+    in; it is checked again when you come back to the page.</p>
 {/if}
 {#if account.error}<p class="err" role="alert">{account.error}</p>{/if}
 
