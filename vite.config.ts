@@ -1,8 +1,8 @@
-import { execSync } from 'node:child_process';
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { defineConfig, type Plugin } from 'vitest/config';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
+import { buildStamp, stampDefines } from './buildstamp';
 
 // Personal-data guard: reaction exports (a named reader's comments) must never
 // sit under data/ — it is the publicDir, so anything here is bundled into dist/
@@ -33,24 +33,25 @@ function guardNoServedPersonalData(): Plugin {
   };
 }
 
-// Version stamp injected at build time: the deployed bundle differs from its
-// source commit only by these values (see header build tag). Falls back to
-// empty strings outside a git checkout (e.g. a source tarball).
-function gitStamp(): { hash: string; date: string } {
-  try {
-    const hash = execSync('git rev-parse HEAD').toString().trim();
-    const date = execSync("git log -1 --format=%cd --date=format:'%Y-%m-%d %H:%M'")
-      .toString().trim();
-    return { hash, date };
-  } catch {
-    return { hash: '', date: '' };
-  }
-}
+// Build identity (buildstamp.ts), shared with the standalone Retrograde build:
+// version + commit, shown in the header and written to dist/version.json.
+const stamp = buildStamp(__dirname);
+// Matches the header build stamp (App.svelte). Header and cache key stay in sync.
+const hashHead = stamp.short || 'v1';
 
-const git = gitStamp();
-// First 5 hex of the commit hash — matches git's front-truncation convention
-// and the header build stamp (App.svelte). Header and cache key stay in sync.
-const hashHead = git.hash ? git.hash.slice(0, 5) : 'v1';
+// dist/version.json: the build identity in machine-readable form, so the live
+// site can be checked against a commit (deploy workflow; tools/check_live.sh).
+function versionJson(): Plugin {
+  return {
+    name: 'version-json',
+    apply: 'build',
+    closeBundle() {
+      const { version, hash, date, dirty, id } = stamp;
+      writeFileSync(resolve(__dirname, 'dist/version.json'),
+        JSON.stringify({ version, hash, date, dirty, id }, null, 2) + '\n');
+    },
+  };
+}
 
 // sw.js is copied verbatim from publicDir (data/) — `define` doesn't reach
 // it. Patch its cache-key VERSION post-build so every deploy busts old
@@ -72,12 +73,8 @@ function swVersionStamp(): Plugin {
 export default defineConfig({
   // relative base so dist/ works from any subdirectory (e.g. /astro/)
   base: './',
-  plugins: [svelte(), swVersionStamp(), guardNoServedPersonalData()],
-  define: {
-    __GIT_HASH__: JSON.stringify(git.hash),
-    __GIT_DATE__: JSON.stringify(git.date),
-    __APP_VERSION__: JSON.stringify(JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf8')).version),
-  },
+  plugins: [svelte(), swVersionStamp(), versionJson(), guardNoServedPersonalData()],
+  define: stampDefines(stamp),
   // data/ holds the committed ephemeris packs, gazetteer, text packs and
   // web-app files (manifest, service worker, icons); serving it as
   // publicDir exposes them at the site root and copies them into dist/.

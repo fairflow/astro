@@ -49,6 +49,8 @@
   const buildDate = __GIT_DATE__;
   const buildHash = __GIT_HASH__.slice(0, 5);
   const appVersion = __APP_VERSION__;
+  const buildId = __BUILD_ID__;
+  const buildDirty = buildId.endsWith('.dirty');
 
   /**
    * The one "Copy for AI" button, in the header: Natal is handled here; every
@@ -242,7 +244,7 @@
 <header class="app">
   <div class="brand">
     <h1>ASTRODYNAMICS</h1>
-    <span class="build" title="Version {appVersion}{buildDate ? ` · latest commit ${buildDate} · ${buildHash}` : ''}">v{appVersion}{#if buildDate} · {buildDate} · {buildHash}{/if}</span>
+    <span class="build" title="Build {buildId}{buildDate ? ` · commit ${buildDate}` : ''}{buildDirty ? ' · built with uncommitted changes' : ''}">v{appVersion}{#if buildDate} · {buildDate} · {buildHash}{/if}{#if buildDirty} · dirty{/if}</span>
     <span class="tag">charts · offline ephemeris · interpretations</span>
     <span class="spacer"></span>
     {#if headerCopy}

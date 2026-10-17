@@ -2,6 +2,7 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
+import { buildStamp, stampDefines } from './buildstamp';
 
 /**
  * Standalone Retrograde page: `npm run build:retro` writes
@@ -54,9 +55,8 @@ export default defineConfig({
   base: './',
   publicDir: false,
   plugins: [svelte(), inlineSingleFile()],
-  define: {
-    __APP_VERSION__: JSON.stringify(JSON.parse(readFileSync(resolve(__dirname, 'package.json'), 'utf8')).version),
-  },
+  // same build identity as the app (buildstamp.ts), so the two can be checked against each other
+  define: stampDefines(buildStamp(__dirname)),
   build: {
     outDir: 'dist-retro',
     emptyOutDir: true,

@@ -109,3 +109,8 @@ jobs:
             echo "live: '$live', want: '$want'; retrying"; sleep 10
           done
           echo "::error::$SITE is not serving this build ($want)"; exit 1
+
+      # version.json, the standalone retrograde/ page and sw.js all carry this commit's build id
+      - name: Check version alignment on the live site
+        if: steps.creds.outputs.ok == 'true'
+        run: tools/check_live.sh "$SITE" "$GITHUB_SHA"
