@@ -26,6 +26,9 @@ export interface SavedReading {
   /** True if stopped before the end (a partial reading). */
   stopped: boolean;
   createdAt: number;
+  /** Saved mid-stream and never finished: the page was closed or reloaded
+   *  while Claude was still writing. Absent once a reading completes. */
+  interrupted?: boolean;
 }
 
 /** Stable identity for a person in reading keys: name plus birth date. */
@@ -41,7 +44,13 @@ function isSavedReading(v: unknown): v is SavedReading {
     && TABS.includes(r.tab as ReadingTab) && typeof r.title === 'string'
     && typeof r.question === 'string' && isPreset(r.preset)
     && typeof r.anonymised === 'boolean' && typeof r.text === 'string'
-    && typeof r.stopped === 'boolean' && typeof r.createdAt === 'number';
+    && typeof r.stopped === 'boolean' && typeof r.createdAt === 'number'
+    && (r.interrupted === undefined || typeof r.interrupted === 'boolean');
+}
+
+/** `r` first, replacing any reading with the same id; at most `max` kept. */
+export function upsertReading(list: SavedReading[], r: SavedReading, max: number): SavedReading[] {
+  return [r, ...list.filter(x => x.id !== r.id)].slice(0, max);
 }
 
 /** Parse the stored list, newest first; anything malformed is dropped, never thrown. */
