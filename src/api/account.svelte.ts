@@ -7,7 +7,9 @@
 
 const API = 'api/';
 
-export type AccountStatus = 'checking' | 'unavailable' | 'signedOut' | 'signedIn';
+/** 'unreachable': the API exists but could not answer just now (offline, server
+ *  error). Not a sign-out: the session is kept and checked again later. */
+export type AccountStatus = 'checking' | 'unavailable' | 'unreachable' | 'signedOut' | 'signedIn';
 
 export const account = $state<{ status: AccountStatus; email: string; busy: boolean; error: string }>({
   status: 'checking', email: '', busy: false, error: '',
@@ -40,12 +42,23 @@ function signedInAs(user: unknown): void {
 export async function refreshAccount(): Promise<void> {
   try {
     const r = await fetch(`${API}me.php`, { credentials: 'same-origin', cache: 'no-store' });
-    const j = r.ok ? await jsonOf(r) : null;
-    if (!j || !('user' in j)) { account.status = 'unavailable'; return; }
-    signedInAs(j.user);
+    const j = await jsonOf(r);
+    if (r.ok && j && 'user' in j) { signedInAs(j.user); return; }
+    // a JSON error means the API is here but failing; anything else, no API here
+    account.status = j ? 'unreachable' : (account.status === 'checking' ? 'unavailable' : 'unreachable');
   } catch {
-    account.status = 'unavailable';
+    // offline or the request failed: keep any known sign-in, check again later
+    if (account.status !== 'checking' && account.status !== 'unavailable') account.status = 'unreachable';
+    else account.status = 'unavailable';
   }
+}
+
+// check again when the page comes back into view (phones suspend pages; the
+// connection may have returned)
+if (typeof document !== 'undefined') {
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && account.status !== 'unavailable' && account.status !== 'checking') void refreshAccount();
+  });
 }
 
 const post = (path: string, body: unknown) => fetch(API + path, {

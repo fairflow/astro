@@ -19,7 +19,7 @@
       <SettingsControls embedded />
       <div class="sectlabel">Display &amp; theme</div>
       <DisplayControls embedded bind:display />
-      {#if account.status === 'signedIn' || account.status === 'signedOut'}
+      {#if account.status === 'signedIn' || account.status === 'signedOut' || account.status === 'unreachable'}
         <div class="sectlabel">Account</div>
         <AccountControls />
       {/if}
