@@ -57,3 +57,23 @@ describe('redact', () => {
     expect(out).toBe('name is REDACTED (test)');
   });
 });
+
+import { aiAvailable } from '../src/ai/config';
+
+describe('Ask Claude shows only where the Worker accepts the page', () => {
+  const url = 'https://astro-ai.example.workers.dev';
+  const origins = ['https://fairflow.co.uk', 'http://localhost:8322'];
+  it('allowed origins get the panel', () => {
+    expect(aiAvailable(url, origins, 'https://fairflow.co.uk')).toBe(true);
+    expect(aiAvailable(url, origins, 'http://localhost:8322')).toBe(true);
+  });
+  it('other copies (GitHub Pages, a claude.ai artifact) do not', () => {
+    expect(aiAvailable(url, origins, 'https://projects.fairflow.co.uk')).toBe(false);
+    expect(aiAvailable(url, origins, 'null')).toBe(false);
+    expect(aiAvailable(url, origins, undefined)).toBe(false);
+  });
+  it('no Worker URL: never; no origin list: anywhere', () => {
+    expect(aiAvailable('', origins, 'https://fairflow.co.uk')).toBe(false);
+    expect(aiAvailable(url, [], 'https://anywhere.example')).toBe(true);
+  });
+});

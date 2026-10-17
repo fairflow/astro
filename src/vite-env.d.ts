@@ -4,6 +4,8 @@ interface ImportMetaEnv {
   /** Public URL of the Cloudflare Worker that proxies the Anthropic API
    *  (the "Ask Claude" spike). Unset ⇒ the feature is disabled. */
   readonly VITE_AI_WORKER_URL?: string;
+  /** Comma-separated page origins the Worker accepts; elsewhere the panel is hidden. */
+  readonly VITE_AI_ORIGINS?: string;
 }
 
 // Build-time version stamp, injected by vite.config.ts `define`.

@@ -104,6 +104,8 @@
   }
 </script>
 
+<!-- not shown where the Worker would refuse the page's requests (see AI_ENABLED) -->
+{#if AI_ENABLED}
 <details class="askai" style="--ac: {accent}" bind:open={aiPrefs.open}
   ontoggle={e => setOpen((e.currentTarget as HTMLDetailsElement).open)}>
   <summary>
@@ -147,9 +149,6 @@
     {#if shown?.text && !shown.busy}
       <button type="button" class="chip" onclick={copyReading}>{copied ? 'Copied ✓' : 'Copy reading'}</button>
     {/if}
-    {#if !AI_ENABLED}
-      <span class="cfg">Not available in this build.</span>
-    {/if}
   </div>
 
   {#if localErr}<div class="aierr">{localErr}</div>{/if}
@@ -190,6 +189,7 @@
     <pre>{preview}</pre>
   </details>
 </details>
+{/if}
 
 <style>
   .askai {
@@ -228,7 +228,7 @@
     background: var(--bg2); color: var(--ink); border: 1px solid var(--line);
     border-radius: 14px; padding: 4px 8px; font-size: 12px;
   }
-  .spin, .cfg { font-size: 12px; color: var(--dim); }
+  .spin { font-size: 12px; color: var(--dim); }
   .aierr {
     margin-top: 10px; font-size: 12.5px; color: var(--square, #d66);
     border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px;
@@ -254,6 +254,13 @@
   .aiout :global(hr) { border: 0; border-top: 1px solid var(--line); margin: 14px 0; }
   .aiout :global(code) { font-size: 12.5px; background: var(--panel); padding: 0 4px; border-radius: 4px; }
   .aiout :global(a) { color: var(--ac); }
+  .aiout :global(.tablewrap) { overflow-x: auto; margin: 0 0 12px; }
+  .aiout :global(table) { border-collapse: collapse; font-size: 13px; line-height: 1.4; }
+  .aiout :global(th), .aiout :global(td) {
+    border: 1px solid var(--line); padding: 5px 9px; text-align: left; vertical-align: top;
+  }
+  .aiout :global(th) { color: var(--gold); font-weight: 600; background: var(--panel); }
+  .aiout :global(tbody tr:nth-child(even)) { background: color-mix(in srgb, var(--panel) 50%, transparent); }
   .aiout :global(:last-child) { margin-bottom: 0; }
   .caret { color: var(--ac); animation: blink 1s steps(2) infinite; }
   @keyframes blink { 50% { opacity: 0; } }

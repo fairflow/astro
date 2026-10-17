@@ -3,13 +3,15 @@
  *
  * Safe by construction: every piece of text is HTML-escaped first, and the
  * only markup ever generated is a fixed set of tags (h2–h4, p, ul/ol/li,
- * strong, em, code, blockquote, hr, and <a> for http(s) links only). Nothing
+ * strong, em, code, blockquote, hr, table parts, and <a> for http(s) links
+ * only; the only attribute values are fixed strings or a checked URL). Nothing
  * in a reading can inject its own markup or script. (No sanitiser library:
  * DOMPurify is not MIT-licensed, and this project bundles only MIT code.)
  *
  * Covers what readings actually use: headings, paragraphs, bold/italic,
- * bullet and numbered lists (one level of nesting), quotes, rules, inline
- * code and links. Anything else simply shows as plain text.
+ * bullet and numbered lists (one level of nesting), quotes, rules, tables
+ * (GitHub style, with column alignment), inline code and links. Anything
+ * else simply shows as plain text.
  */
 
 const esc = (s: string): string => s
@@ -33,6 +35,35 @@ function inline(s: string): string {
 }
 
 const fmt = (s: string) => inline(esc(s));
+
+/** Cells of a table row: outer pipes optional, `\|` is a literal pipe. */
+function cells(line: string): string[] {
+  let t = line.trim();
+  if (t.startsWith('|')) t = t.slice(1);
+  if (t.endsWith('|') && !t.endsWith('\\|')) t = t.slice(0, -1);
+  return t.split(/(?<!\\)\|/).map(c => c.trim().replace(/\\\|/g, '|'));
+}
+
+type Align = '' | 'left' | 'center' | 'right';
+
+/** The alignments if `line` is a table's separator row (|---|:--:|--:|), else null. */
+function separator(line: string): Align[] | null {
+  if (!line.includes('|') && !line.includes(':')) return null; // a bare --- is a rule
+  const cs = cells(line);
+  if (!cs.length || !cs.every(c => /^:?-+:?$/.test(c))) return null;
+  return cs.map(c => c.startsWith(':') && c.endsWith(':') ? 'center'
+    : c.endsWith(':') ? 'right' : c.startsWith(':') ? 'left' : '');
+}
+
+function table(head: string[], aligns: Align[], body: string[][]): string {
+  const n = head.length;
+  const cell = (tag: 'th' | 'td', text: string, i: number) =>
+    `<${tag}${aligns[i] ? ` style="text-align:${aligns[i]}"` : ''}>${fmt(text)}</${tag}>`;
+  const row = (tag: 'th' | 'td', cs: string[]) =>
+    `<tr>${Array.from({ length: n }, (_, i) => cell(tag, cs[i] ?? '', i)).join('')}</tr>`;
+  return `<div class="tablewrap"><table><thead>${row('th', head)}</thead>`
+    + `<tbody>${body.map(r => row('td', r)).join('')}</tbody></table></div>`;
+}
 
 export function renderMarkdown(src: string): string {
   const lines = src.replace(/\u0000/g, '').replace(/\r\n?/g, '\n').split('\n');
@@ -58,11 +89,21 @@ export function renderMarkdown(src: string): string {
     list.items.push({ text, sub: indent.length >= 2 });
   };
 
-  for (const raw of lines) {
+  for (let k = 0; k < lines.length; k++) {
+    const raw = lines[k]!;
     const line = raw.trimEnd();
     if (!line.trim()) { flushAll(); continue; }
     let m: RegExpExecArray | null;
-    if ((m = /^(#{1,6})\s+(.*)$/.exec(line))) {
+    const aligns = line.includes('|') && k + 1 < lines.length ? separator(lines[k + 1]!) : null;
+    if (aligns && cells(line).length === aligns.length) {
+      // a table: header row, separator row, then |-rows up to a blank or pipe-less line
+      flushAll();
+      const body: string[][] = [];
+      k += 2;
+      while (k < lines.length && lines[k]!.trim() && lines[k]!.includes('|')) body.push(cells(lines[k++]!));
+      k--;
+      out.push(table(cells(line), aligns, body));
+    } else if ((m = /^(#{1,6})\s+(.*)$/.exec(line))) {
       flushAll();
       const level = Math.min(4, m[1]!.length + 1); // # → h2 inside the panel
       out.push(`<h${level}>${fmt(m[2]!.replace(/\s+#+\s*$/, ''))}</h${level}>`);
