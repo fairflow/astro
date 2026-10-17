@@ -35,11 +35,16 @@ export interface DisplaySettings {
   /** Per-aspect colour overrides: CSS var name → hex. Applied inline over the
    *  palette (empty = palette defaults). Ignored while the B/W print skin is on. */
   aspectColors: Record<string, string>;
+  /** Chart wheel width in CSS px, the same on every tab (smaller screens shrink it to fit). */
+  wheelSize: number;
 }
+
+export const WHEEL_SIZE_MIN = 400;
+export const WHEEL_SIZE_MAX = 1000;
 
 export const DEFAULT_DISPLAY: DisplaySettings = {
   glyphScale: 1.25, weight: 7, slant: 0, theme: 'dark', contrast: 'low',
-  skin: 'auto', textScale: 1, aspectEmphasis: 0.5, aspectColors: {},
+  skin: 'auto', textScale: 1, aspectEmphasis: 0.5, aspectColors: {}, wheelSize: 680,
 };
 
 const DISPLAY_KEY = 'astro-display';
@@ -60,7 +65,11 @@ export function loadDisplay(): DisplaySettings {
         c === 'low' || c === 'medium' || c === 'high' ? c
           : (c === true || t === 'hc' || hc === true) ? 'medium' : 'low';
       const theme: DisplaySettings['theme'] = t === 'light' ? 'light' : 'dark';
-      return { ...DEFAULT_DISPLAY, ...(rest as Partial<DisplaySettings>), theme, contrast };
+      const merged = { ...DEFAULT_DISPLAY, ...(rest as Partial<DisplaySettings>), theme, contrast };
+      const w = Number(merged.wheelSize);
+      merged.wheelSize = Number.isFinite(w)
+        ? Math.min(WHEEL_SIZE_MAX, Math.max(WHEEL_SIZE_MIN, w)) : DEFAULT_DISPLAY.wheelSize;
+      return merged;
     }
   } catch { /* fresh defaults */ }
   return { ...DEFAULT_DISPLAY };

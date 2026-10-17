@@ -331,7 +331,7 @@
     border-radius: 12px; padding: 3px 10px; font-size: 12px;
   }
   .split { display: flex; gap: 12px; align-items: flex-start; }
-  .wheelcol { flex: 1 1 560px; min-width: 380px; }
+  .wheelcol { flex: 1 1 var(--wheel-size, 680px); min-width: min(380px, 100%); }
   .listcol { flex: 0 0 380px; }
   details {
     background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
