@@ -9,6 +9,20 @@
       uranus: false, neptune: false, pluto: false,
     } as Record<Planet, boolean>,
   };
+
+  // Distraction toggles (all planets at once); remembered in this browser across visits.
+  const MARKS_KEY = 'astro-orrery-marks';
+  type Marks = { flashRings: boolean; flashLabels: boolean; retroArcs: boolean; stationLabels: boolean };
+  const MARKS_DEFAULT: Marks = { flashRings: true, flashLabels: true, retroArcs: true, stationLabels: true };
+  function loadMarks(): Marks {
+    try {
+      const v = JSON.parse(localStorage.getItem(MARKS_KEY) ?? '{}');
+      const out = { ...MARKS_DEFAULT };
+      for (const k of Object.keys(out) as (keyof Marks)[]) if (typeof v?.[k] === 'boolean') out[k] = v[k];
+      return out;
+    } catch { return { ...MARKS_DEFAULT }; }
+  }
+  function storeMarks(m: Marks) { try { localStorage.setItem(MARKS_KEY, JSON.stringify(m)); } catch { /* private mode */ } }
 </script>
 
 <script lang="ts">
@@ -67,6 +81,7 @@
   let superior = $state(kept.superior);
   let decagram = $state(kept.decagram);
   let view = $state<'earth' | 'sun'>(kept.view);
+  let marks = $state<Marks>(loadMarks());
   let helpOpen = $state(false);
   let panelOpen = $state(false);
   const visible = $derived(PLANETS_IN_ORDER.filter(b => show[b]));
@@ -76,6 +91,7 @@
     jdStart: Number.isFinite(kept.jdStart) ? kept.jdStart : nowJd(),
     show: { ...kept.show }, sight: true, inferior: true, superior: false, decagram: false,
     view: 'earth', theme: 'dark', pulses: [], glyphStyle: { weight: 7, slant: 0 }, markJd: null,
+    ...MARKS_DEFAULT,
   };
 
   // Panel read-outs, refreshed ~10× a second from the animation loop.
@@ -184,6 +200,7 @@
     plate.show = { ...show }; plate.sight = sight; plate.theme = theme;
     plate.inferior = inferior; plate.superior = superior; plate.decagram = decagram; plate.view = view;
     Object.assign(kept, { show: { ...show }, sight, inferior, superior, decagram, view });
+    Object.assign(plate, marks); storeMarks({ ...marks });
     plate.glyphStyle = { weight: display.weight, slant: display.slant };
     plate.markJd = chartJd;
   });
@@ -206,7 +223,7 @@
       const key = `${plate.glyphStyle.weight}/${plate.glyphStyle.slant}`;
       if (key !== styleKey) { styleKey = key; p.resize(plateBox.clientWidth, devicePixelRatio); }
       p.draw(model, plate, now);
-      s.draw(model, plate.jd, plate.show, plate.glyphStyle, plate.theme);
+      s.draw(model, plate.jd, plate.show, plate.glyphStyle, plate.theme, plate.stationLabels);
       if (now - lastPanel > 100) {
         lastPanel = now; jdShown = plate.jd;
         const r: Partial<Record<Planet, Readout>> = {};
@@ -252,7 +269,8 @@
 {#if !standalone}
   <div class="elsewhere">
     <span>This view on its own page:</span>
-    <a href="retrograde/" target="_blank" rel="noopener">Standalone page ↗</a>
+    <!-- retrograde/ exists only in a build (vite.retro.config.ts); the dev server serves the entry itself -->
+    <a href={import.meta.env.DEV ? 'retro.html' : 'retrograde/'} target="_blank" rel="noopener">Standalone page ↗</a>
     <a href={ARTIFACT_URL} target="_blank" rel="noopener"
       title="The same page published on claude.ai; private until shared from its Share menu">claude.ai artifact ↗</a>
   </div>
@@ -431,6 +449,17 @@
     <label style="--c:{pal.venus}"><input type="checkbox" bind:checked={inferior}> Venus inferior ☌ pentagram</label>
     <label style="--c:{pal.superior}"><input type="checkbox" bind:checked={superior}> Venus superior ☌ pentagram</label>
     <label><input type="checkbox" bind:checked={decagram}> Venus decagram round the Sun</label>
+    <label title="The retrograde stretch of each orbit, with dots where the planet and Earth stood at the stations">
+      <input type="checkbox" bind:checked={marks.retroArcs}> Retrograde arcs on the orbits</label>
+    <label title="℞ and D beside the station dots, and on the strip chart">
+      <input type="checkbox" bind:checked={marks.stationLabels}> ℞ / D station labels</label>
+  </section>
+
+  <section>
+    <h3>Event flashes</h3>
+    <p class="hint">Stations, conjunctions and completed orbits flash as they pass. Turn off what distracts; applies to all planets.</p>
+    <label><input type="checkbox" bind:checked={marks.flashRings}> Flashing circles</label>
+    <label><input type="checkbox" bind:checked={marks.flashLabels}> Flashing text</label>
   </section>
 
   <section>
@@ -567,6 +596,7 @@
   .drawer h3 { margin: 0; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); font-weight: 600; }
   .drawer section > label { font-size: 13px; color: var(--c, var(--ink)); }
   .drawer section > label input { accent-color: var(--c, var(--gold)); }
+  .drawer .hint { margin: 0; font-size: 12px; color: var(--dim); line-height: 1.4; }
   .group { border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; display: grid; gap: 6px; }
   .group .gl { font-weight: 600; font-size: 13px; color: var(--ink); }
   .members { display: flex; flex-wrap: wrap; gap: 6px 14px; padding-left: 4px; font-size: 13px; }

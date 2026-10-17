@@ -187,12 +187,19 @@ see `docs/reports/2026-07-05-implementation-and-deployment.md` for the
 full stack rationale, licensing notes, and other deployment options
 considered.
 
-**Version number.** The app header shows `v<version> · <commit date> ·
-<hash>` and the standalone Retrograde page shows `v<version>`, both from
-`package.json` `"version"` (injected as `__APP_VERSION__`). Bump it
-(`npm version minor --no-git-tag-version`, or patch for fixes) in every
-change that will be deployed, so live builds can be told apart at a
-glance.
+**Version number and build id.** `buildstamp.ts` gives both builds one
+identity: `<version>+<5-hex commit>`, with `.dirty` appended when tracked
+files differed from the commit. The app header shows `v<version> · <commit
+date> · <hash>` (plus `· dirty`), the standalone Retrograde page shows
+`(v<version> · <hash>)`, the service worker's cache key is
+`astrodynamics-<hash>`, and `dist/version.json` holds the full record
+(version, full hash, date, dirty, id). The version is `package.json`
+`"version"`; bump it (`npm version minor --no-git-tag-version`, or patch
+for fixes) in every change that will be deployed. `test/version.spec.ts`
+checks `package.json` and `package-lock.json` agree. After a deploy,
+`tools/check_live.sh [SITE] [COMMIT]` checks that version.json, the
+standalone page and sw.js on the live site all carry the expected commit
+and version (the deploy workflow runs it with the merge commit).
 
 ### Automatic deploy to fairflow.co.uk
 

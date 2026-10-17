@@ -375,6 +375,13 @@ export interface PlateState {
   view: 'earth' | 'sun';
   theme: 'dark' | 'light';
   pulses: Pulse[];
+  /** Event flashes (stations, alignments, completed orbits): the expanding ring, and its fading label. */
+  flashRings: boolean;
+  flashLabels: boolean;
+  /** For the retrograde spell nearest now: the arcs of both orbits it covers, with the station dots. */
+  retroArcs: boolean;
+  /** ℞ / D text at the stations (also honoured by the strip chart). */
+  stationLabels: boolean;
   glyphStyle: GlyphStyle;
   /** Optional chart moment to mark (natal date) as a ring on Earth's orbit. */
   markJd?: number | null;
@@ -727,17 +734,21 @@ export class OrreryPlate {
           }
           return v.map(p => this.XY(p));
         };
-        this.poly(span(b), rgba(pal.retro, .55), 3);
-        this.poly(span('earth'), rgba(pal.retro, .4), 3);
+        if (s.retroArcs) {
+          this.poly(span(b), rgba(pal.retro, .55), 3);
+          this.poly(span('earth'), rgba(pal.retro, .4), 3);
+        }
         for (const st of [ep.sr, ep.sd]) {
           const col = st.kind === 'SR' ? pal.retro : pal.direct;
           const Es = m.pos('earth', st.jdUt), Ps = m.pos(b, st.jdUt);
           // frozen sight lines at the stations: only when few planets are shown, or the plate clutters
           if (s.sight && vis.length <= 3) this.poly(this.sightLine(Es, st.lon, R_IN * U), rgba(col, .25), 1);
           const [px, py] = this.XY(Ps), [ex, ey] = this.XY(Es);
-          this.disc(px, py, 4.5, null, rgba(col, .9)); this.disc(ex, ey, 4.5, null, rgba(col, .6));
-          const off = this.away([px, py], 13);
-          this.text(st.kind === 'SR' ? '℞' : 'D', off[0], off[1], col, `600 ${gsz * .7}px ${this.font}`);
+          if (s.retroArcs) { this.disc(px, py, 4.5, null, rgba(col, .9)); this.disc(ex, ey, 4.5, null, rgba(col, .6)); }
+          if (s.stationLabels) {
+            const off = this.away([px, py], 13);
+            this.text(st.kind === 'SR' ? '℞' : 'D', off[0], off[1], col, `600 ${gsz * .7}px ${this.font}`);
+          }
           this.line(this.P(R_BAND_IN * U, st.lon), this.P((R_BAND_IN - .07) * U, st.lon), col, 2);
         }
       }
@@ -801,9 +812,13 @@ export class OrreryPlate {
     s.pulses.splice(0, s.pulses.length, ...s.pulses.filter(p => now - p.at < 1800));
     for (const p of s.pulses) {
       const age = (now - p.at) / 1800, [x, y] = this.XY(p.xy);
-      c.strokeStyle = rgba(p.color, 1 - age); c.lineWidth = 2; c.beginPath(); c.arc(x, y, 6 + 26 * age, 0, 7); c.stroke();
-      if (p.earth) this.poly(this.seg([0, 0], p.earth, 12), rgba(p.color, .8 * (1 - age)), 2);
-      this.text(p.label, x, y - 18 - 10 * age, rgba(p.color, 1 - age * .8), `500 ${Math.max(11, gsz * .6)}px ${this.font}`);
+      if (s.flashRings) {
+        c.strokeStyle = rgba(p.color, 1 - age); c.lineWidth = 2; c.beginPath(); c.arc(x, y, 6 + 26 * age, 0, 7); c.stroke();
+        if (p.earth) this.poly(this.seg([0, 0], p.earth, 12), rgba(p.color, .8 * (1 - age)), 2);
+      }
+      if (s.flashLabels) {
+        this.text(p.label, x, y - 18 - 10 * age, rgba(p.color, 1 - age * .8), `500 ${Math.max(11, gsz * .6)}px ${this.font}`);
+      }
     }
 
     for (const b of [...vis, 'earth'] as OrreryBody[]) {
@@ -844,7 +859,8 @@ export class StripChart {
     this.canvas.width = this.w * this.dpr; this.canvas.height = this.h * this.dpr;
   }
 
-  draw(m: OrreryModel, jd: number, show: Record<Planet, boolean>, style: GlyphStyle, theme: 'dark' | 'light') {
+  draw(m: OrreryModel, jd: number, show: Record<Planet, boolean>, style: GlyphStyle, theme: 'dark' | 'light',
+    stationLabels = true) {
     const c = this.ctx, { w, h } = this, pal = paletteFor(theme);
     c.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
     const padL = 34, padR = 8, padT = 6, padB = 22, iw = w - padL - padR, ih = h - padT - padB;
@@ -900,8 +916,10 @@ export class StripChart {
         const x = X(st.jdUt), yy = Y(st.lon), col = st.kind === 'SR' ? pal.retro : pal.direct;
         c.globalAlpha = st.jdUt > jd ? .5 : 1;
         c.beginPath(); c.arc(x, yy, 3.2, 0, 7); c.fillStyle = pal.sky; c.fill(); c.strokeStyle = col; c.lineWidth = 1.5; c.stroke();
-        c.font = `600 11px ${this.font}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = col;
-        c.fillText(st.kind === 'SR' ? '℞' : 'D', x, yy + (st.kind === 'SR' ? -11 : 11));
+        if (stationLabels) {
+          c.font = `600 11px ${this.font}`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillStyle = col;
+          c.fillText(st.kind === 'SR' ? '℞' : 'D', x, yy + (st.kind === 'SR' ? -11 : 11));
+        }
         c.globalAlpha = 1;
       }
       const x = X(jd), yy = Y(m.geoLon(b, jd));

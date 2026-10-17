@@ -173,7 +173,7 @@
 <style>
   .sview { padding: 0 12px; }
   .pickrow { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; }
-  .wheelrow { max-width: 720px; margin: 0 auto 10px; }
+  .wheelrow { margin: 0 auto 10px; }
   .wheelrow .hint { text-align: center; }
   .cols { display: flex; gap: 14px; align-items: flex-start; }
   .cols > div { flex: 1 1 420px; min-width: 340px; }

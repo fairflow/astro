@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { DisplaySettings } from './state';
+  import { WHEEL_SIZE_MAX, WHEEL_SIZE_MIN, type DisplaySettings } from './state';
   import { BW_SKIN, applySkin, skinById } from './skins';
   import { ASPECT_FAMILIES } from '../render/glyphs';
 
@@ -43,6 +43,10 @@
 </script>
 
 {#snippet content()}
+      <label>Wheel size <span>{display.wheelSize} px</span>
+        <input type="range" min={WHEEL_SIZE_MIN} max={WHEEL_SIZE_MAX} step="20" bind:value={display.wheelSize}
+          title="Width of the chart wheel, the same on every tab; a narrow window shrinks it to fit">
+      </label>
       <label>Glyph size <span>{Math.round(display.glyphScale * 100)}%</span>
         <input type="range" min="0.9" max="1.9" step="0.05" bind:value={display.glyphScale}>
       </label>

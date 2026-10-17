@@ -11,3 +11,5 @@ declare const __GIT_HASH__: string;
 declare const __GIT_DATE__: string;
 /** package.json "version": bump it with each release so builds are told apart at a glance. */
 declare const __APP_VERSION__: string;
+/** '<version>+<5-hex commit>', '.dirty' appended for a build with uncommitted changes (buildstamp.ts). */
+declare const __BUILD_ID__: string;

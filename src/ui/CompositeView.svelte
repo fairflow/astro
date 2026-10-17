@@ -125,7 +125,7 @@
   .cview { padding: 0 12px; }
   .pickrow { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin-bottom: 6px; }
   .split { display: flex; gap: 12px; align-items: flex-start; }
-  .wheelcol { flex: 1 1 560px; min-width: 380px; }
+  .wheelcol { flex: 1 1 var(--wheel-size, 680px); min-width: min(380px, 100%); }
   .listcol { flex: 0 0 400px; }
   details {
     background: var(--panel); border: 1px solid var(--line); border-radius: 10px;

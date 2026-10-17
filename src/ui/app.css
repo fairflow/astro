@@ -121,10 +121,12 @@ header.app .brand .spacer { flex: 1; }
 .dropdown .cc { color: var(--dim); margin-left: 6px; font-size: 12px; }
 
 /* ---- layout ---- */
-main.app { display: flex; align-items: flex-start; max-width: 1220px; margin: 0 auto; }
-#wheelwrap { flex: 1 1 640px; min-width: 420px; padding: 10px; position: relative; }
-#wheelwrap svg { display: block; width: 100%; height: auto; }
-.wheelx { position: relative; }
+/* Wide enough for the open Ask Claude column + the wheel at its set size + the side panel. */
+main.app { display: flex; align-items: flex-start; max-width: max(1220px, calc(var(--wheel-size, 680px) + 830px)); margin: 0 auto; }
+#wheelwrap { flex: 1 1 var(--wheel-size, 680px); min-width: min(420px, 100%); padding: 10px; position: relative; }
+.wheelx > svg { display: block; width: 100%; height: auto; }
+/* One wheel width on every tab (Settings → Wheel size); a narrower column shrinks it to fit. */
+.wheelx { position: relative; width: min(var(--wheel-size, 680px), 100%); margin: 0 auto; }
 .wheelx .exports {
   position: absolute; top: 16px; right: 16px; z-index: 5;
   display: flex; gap: 6px;
