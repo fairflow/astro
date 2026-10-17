@@ -25,7 +25,7 @@
 <header class="rhead">
   <h1>Planetary Retrogrades <span class="ver" title="Build {__BUILD_ID__}">(v{__BUILD_ID__.replace('+', ' · ').replace('.dirty', ' · dirty')})</span></h1>
   <p>The planets seen from Earth against the fixed stars, from the
-    <a href="https://fairflow.github.io/writing/astro/" target="_blank" rel="noopener">Astrodynamics</a> ephemeris.</p>
+    <a href="../">Astrodynamics</a> ephemeris.</p>
 </header>
 <RetrogradeView {provider} {display} standalone {theme} onthemechange={t => theme = t} />
 

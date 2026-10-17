@@ -7,12 +7,12 @@ import { buildStamp, stampDefines } from './buildstamp';
 /**
  * Standalone Retrograde page: `npm run build:retro` writes
  * dist-retro/retrograde.html, one self-contained file (JS and CSS inline)
- * built from the same RetrogradeView as the app's Retrograde tab. It is
- * published as the claude.ai artifact named in DEVELOPMENT.md, so any
- * change to the view should be rebuilt and republished there.
+ * built from the same RetrogradeView as the app's Retrograde tab. It was
+ * published as a claude.ai artifact until 2026-10-17 (retired; see
+ * DEVELOPMENT.md, "Where the app is deployed") and is no longer published.
  *
- * The output is an HTML fragment (title, style, markup, script) because
- * the artifact host supplies the <html>/<head>/<body> skeleton. A full
+ * The output is an HTML fragment (title, style, markup, script), the form
+ * an artifact host wanted (it supplies the <html>/<head>/<body>). A full
  * document of the same page goes to dist/retrograde/index.html, so the
  * app deploy serves it publicly at <app>/retrograde/ (`npm run build`
  * runs this config after the app build).

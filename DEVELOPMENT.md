@@ -215,35 +215,23 @@ the target directory is the repository variable `SSH_REMOTE` (default
 steps are skipped with a notice. A manual deploy from the Mac (HANDOFF.md)
 still works and does the same thing.
 
-The GitHub Pages copy at `fairflow.github.io/writing/astro/` is separate:
-it is a build committed into the `writing` repo (see that repo's
-DEPLOYMENT.md).
+### Where the app is deployed
 
-### Standalone Retrograde page (keep in sync)
+There is one deployment: **fairflow.co.uk/astro**, updated by the workflow
+above on every merge to `main` and checked with `tools/check_live.sh`. The
+standalone Retrograde page is part of it: `npm run build` also runs
+`vite.retro.config.ts`, writing the page as a full document to
+`dist/retrograde/index.html`, served at `<app>/retrograde/`. The local test
+server (`npm run dev`, port 8322) is restarted on `main` after each merge,
+so its header build id matches the live one.
 
-The Retrograde tab is also published on its own as a claude.ai artifact:
-<https://claude.ai/artifact/B7PYodLUsCczgkGTPhCynF>. Matthew wants it to
-track the app, so **any change to `src/ui/RetrogradeView.svelte`,
-`src/render/orrery.ts` or `src/chart/retrograde.ts` must be followed by
-`npm run build:retro` and a republish of `dist-retro/retrograde.html` to
-that artifact URL** (Artifact tool: publish with `url` set to the link
-above). The build (`vite.retro.config.ts`) inlines the JS and CSS into one
-HTML fragment, because the artifact host supplies the page skeleton and
-loads nothing from other origins.
-
-**Branch work goes to a separate artifact.** Unmerged work on the
-Retrograde tab is published to the preview artifact
-<https://claude.ai/artifact/X4MFxJZgbLzS7QnrwBX2JG>, never to the artifact
-above, which must always match `main`. The Artifact tool republishes to
-whatever artifact a file path was last published to, so always pass the
-intended `url` explicitly. When a branch merges, republish `main`'s build
-to the artifact above.
-
-`npm run build` also runs that config, writing the same page as a full
-document to `dist/retrograde/index.html`, so every app deploy serves it
-publicly at `<app>/retrograde/`. The Retrograde tab links to both that
-page and the artifact (the artifact is private until shared from its
-Share menu on claude.ai).
+Retired on 2026-10-17, to stop maintaining copies by hand (Matthew's
+decision): the claude.ai artifact of the Retrograde page (its two artifact
+URLs now show a short page linking to the live one) and the GitHub Pages
+copy in the `writing` repo (`/writing/astro/` now redirects to
+fairflow.co.uk/astro and unregisters its old service worker). Do not
+republish either. `npm run build:retro` still writes the single-file
+fragment `dist-retro/retrograde.html`, which is no longer published.
 
 ## Contributing
 

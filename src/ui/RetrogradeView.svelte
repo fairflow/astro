@@ -68,8 +68,6 @@
     onthemechange?: (t: 'dark' | 'light') => void;
   } = $props();
 
-  /** The standalone build, published on claude.ai (see DEVELOPMENT.md). */
-  const ARTIFACT_URL = 'https://claude.ai/artifact/B7PYodLUsCczgkGTPhCynF';
   const FONT = getComputedStyle(document.documentElement).fontFamily || 'system-ui, sans-serif';
   const models = { ephemeris: ephemerisModel(provider), circular: circularModel() };
   let modelId = $state<'ephemeris' | 'circular'>(kept.model);
@@ -280,8 +278,6 @@
     <span>This view on its own page:</span>
     <!-- retrograde/ exists only in a build (vite.retro.config.ts); the dev server serves the entry itself -->
     <a href={import.meta.env.DEV ? 'retro.html' : 'retrograde/'} target="_blank" rel="noopener">Standalone page ↗</a>
-    <a href={ARTIFACT_URL} target="_blank" rel="noopener"
-      title="The same page published on claude.ai; private until shared from its Share menu">claude.ai artifact ↗</a>
   </div>
 {/if}
 
