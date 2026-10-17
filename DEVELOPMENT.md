@@ -233,6 +233,14 @@ fairflow.co.uk/astro and unregisters its old service worker). Do not
 republish either. `npm run build:retro` still writes the single-file
 fragment `dist-retro/retrograde.html`, which is no longer published.
 
+### Server API (planned)
+
+The API for logins and synced storage will live in this repo and deploy with
+the app to `fairflow.co.uk/astro/api/` (PHP + MariaDB on the same host;
+credentials only in `~/astro-config/db.ini` on the server). Design, sync model
+and local-development setup: `docs/DESIGN.md` §5a; decision record in
+`docs/DECISIONS.md`; work tracked as beads epic astro-tbb.
+
 ## Contributing
 
 Branch off `main`, open a PR — this repository's own convention is small,

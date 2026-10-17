@@ -77,3 +77,15 @@ with a new one that references the old.
 **Decision:** Per `docs/research/2026-07-07-interlingua.md`: one timeboxed experiment (3 authored pairs re-encoded as predicate trees + register realizers, B judges blind). Independent of outcome, adopt composition laws (order-invariance, idempotence of repeated tensions) as property tests. Phase A does not block on it.
 **Rationale:** The engine already has a proto-interlingua (theme vectors, typed modifiers); realization is the weak layer; M's process-calculi framing contributes laws rather than syntax.
 **Rejected:** Full MTT/SFG realizer stacks (too heavy); embedding blends (uninspectable, unlintable).
+
+## 2026-10-17 — One deployment: fairflow.co.uk/astro (artifact and Pages copy retired)
+
+**Decision:** The app is deployed in one place, fairflow.co.uk/astro, by the workflow on every merge to `main` (standalone orrery at `retrograde/`), plus the local test server on :8322 restarted on `main` after each merge. The claude.ai Retrograde artifact now shows a pointer page; the GitHub Pages copy in the `writing` repo redirects and unregisters its service worker.
+**Rationale:** Four copies (artifact, Pages, live, local) had to be kept current by hand and drifted; the live site is just as public and offline-capable as the Pages copy, and CI now deploys without a Claude session.
+**Rejected:** Automating the Pages copy from CI (more machinery for a duplicate); keeping the artifact in sync (only a Claude session can publish it).
+
+## 2026-10-17 — Server storage: same-origin PHP API at /astro/api/ over MariaDB on Matthew's host
+
+**Decision:** Optional server storage for readings, charts and settings, behind logins, via a PHP API shipped from this repo into `dist/api/` and served at fairflow.co.uk/astro/api/, using MariaDB 10.6 (database `fairtlou_astro`) on the same host. The browser remains local-first; sync is append-only for readings and last-write-wins for charts and settings. Details in DESIGN.md §5a; epic astro-tbb. Supersedes DESIGN.md §5's "no cloud, no accounts".
+**Rationale:** Browser-only storage loses data across devices, site copies and cleared storage, and export/import is filing nobody keeps up. Matthew's own host keeps the data his, the same origin avoids CORS and tunnels, and the spike (astro-4zm) showed PHP 8.1 + pdo_mysql reach the database from the web.
+**Rejected:** Cloudflare D1 behind the Worker (data held by a third party); local MySQL mirrored to remote as in Miolingo (two databases to reconcile); export/import alone (inconvenient); a separately deployed `astro-api/` folder (a second deploy path to keep in step).

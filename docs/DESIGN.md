@@ -288,6 +288,83 @@ interpretations_cache(chartId, styleId, sectionId, text, source: library|llm)
 - No cloud, no accounts, by design. (A future optional sync could encrypt-and-push
   the JSON export to any dumb file host; deliberately out of scope.)
 
+*Superseded 2026-10-17 by §5a:* the no-accounts position is replaced by an
+optional same-origin server store on Matthew's own host. The browser stays
+local-first and keeps working offline.
+
+## 5a. Server storage and the API (planned; beads epic astro-tbb)
+
+**Why.** Saved data lived only in one browser on one site; export/import to a
+Downloads folder is the inconvenient kind of filing nobody keeps up. Readings
+from Ask Claude are the most valuable data the app produces (2026-10-17).
+
+**Shape.**
+
+- **Where:** `https://fairflow.co.uk/astro/api/`, the same origin as the app, so
+  no CORS and no tunnel. PHP (8.1 on the host, LiteSpeed) with PDO to
+  **MariaDB 10.6** on the same host (database `fairtlou_astro`, its own user with
+  rights on that database only).
+- **Code:** the PHP lives in this repo and is copied into `dist/api/` by the
+  build, so the normal deploy ships it (`deploy_sftp.py --delete` would remove
+  anything placed under `astro/` by hand). Credentials are never in the repo:
+  the API reads `dirname($_SERVER['DOCUMENT_ROOT']) . '/astro-config/db.ini'`,
+  outside the web root (directory 700, file 600, password generated on the
+  server). Verified by the astro-4zm spike.
+- **The browser stays the working copy.** localStorage/IndexedDB keep
+  everything for offline use; the server is the record and the way between
+  devices and site copies.
+
+**Sync model (deliberately simple).**
+
+- Every record has a stable UUID, `updated_at`, and a `deleted` flag (deletes are
+  tombstones, so they propagate).
+- **Readings are append-only:** written once, never edited, so there is nothing
+  to merge. Charts and settings belong to one person and use last-write-wins
+  per record.
+- One endpoint pair: `GET sync?since=<cursor>` returns records changed since the
+  cursor; `POST sync` sends records the server has not seen. Offline changes
+  queue and push later.
+
+**Logins first.** Nothing personal goes to the server before sign-in exists
+(readings hold real names and birth data): a `users` table, password hashes
+(`password_hash`), an HttpOnly + Secure + SameSite=Strict session cookie, rate
+limiting on login. Later the API can issue a short-lived signed token that the
+Ask Claude Worker accepts, so signed-in users get Ask Claude on any copy and
+anonymous visitors still cannot spend credit.
+
+**Schema sketch** (utf8mb4, `utf8mb4_unicode_ci` set explicitly):
+
+```
+users(id, email, pass_hash, created_at)
+readings(id CHAR(36), user_id, key, grp, tab, title, question, preset,
+         anonymised, text MEDIUMTEXT, stopped, created_at, updated_at, deleted)
+charts(id CHAR(36), user_id, birth JSON, updated_at, deleted)
+settings(user_id, data JSON, updated_at)
+```
+
+Charts store **birth data only**; positions are recomputed, as everywhere else.
+**No images:** wheels are redrawn from birth data (a natal wheel SVG is ~58 KB,
+~10 KB gzipped, against ~110 bytes of birth data). If a frozen image is ever
+needed, store the file outside the web root and index it (path, hash, type,
+size) rather than as a BLOB.
+
+**Portable SQL.** Write SQL that runs on both MariaDB and MySQL: standard types,
+charset and collation stated on every table, UUIDs as `CHAR(36)` (MariaDB's
+`UUID` type needs 10.7+), and no vendor extras such as `INSERT … RETURNING`
+(MariaDB only) or MySQL's binary `JSON` behaviour (in MariaDB, `JSON` is
+`LONGTEXT` with a validity check). Then a move between the two, or to another
+host, is a dump and restore.
+
+**Local development.** PHP's built-in server (`php -S`) serves `api/` behind the
+Vite dev server's proxy, against a local MariaDB (Homebrew), so development
+never touches the live database. This Mac has PHP 8.5 and the host 8.1: code to
+8.1, or move the site to a newer PHP in cPanel first.
+
+**Order of work** (beads): astro-4zm spike (done) → astro-yal logins →
+astro-cbi readings sync → astro-ag1 charts and settings → astro-bk6 Ask Claude
+for signed-in users. astro-sx7 (save readings while they stream) shipped in
+v0.3.3 and is independent.
+
 ---
 
 ## 6. Placidus houses (spec 5)
