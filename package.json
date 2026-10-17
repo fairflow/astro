@@ -1,7 +1,7 @@
 {
   "name": "astro",
   "private": true,
-  "version": "0.3.5",
+  "version": "0.4.0",
   "type": "module",
   "description": "Astrology app compute core (M1): ephemeris providers, houses, aspects",
   "scripts": {
@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "build:retro": "vite build --config vite.retro.config.ts"
+    "build:retro": "vite build --config vite.retro.config.ts",
+    "api": "sh tools/api-dev.sh"
   },
   "dependencies": {
     "astronomy-engine": "^2.1.19",

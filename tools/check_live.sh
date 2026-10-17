@@ -4,6 +4,7 @@
 #   - version.json: hash = expected commit, version = package.json, not dirty
 #   - retrograde/ (standalone page) carries the same build id
 #   - sw.js cache key carries the same 5-hex hash
+#   - api/lib, api/cli and api/sql are not served
 #
 # Usage: tools/check_live.sh [SITE] [COMMIT]
 #   SITE    default https://fairflow.co.uk/astro/
@@ -30,6 +31,12 @@ curl -fsS "${site}retrograde/?nocache=$RANDOM" | grep -qF "$id" \
   || bad "retrograde/ does not carry build id $id"
 curl -fsS "${site}sw.js?nocache=$RANDOM" | grep -qF "astrodynamics-$short" \
   || bad "sw.js cache key is not astrodynamics-$short"
+
+# the API's internal folders must never be served
+for p in api/lib/bootstrap.php api/cli/user.php api/sql/001_users.sql; do
+  code=$(curl -s -o /dev/null -w '%{http_code}' "${site}$p")
+  case "$code" in 403|404) ;; *) bad "${site}$p answered HTTP $code (want 403 or 404)";; esac
+done
 
 if [ "$fail" = 0 ]; then echo "Aligned: $site serves build $id ($want)"; fi
 exit "$fail"

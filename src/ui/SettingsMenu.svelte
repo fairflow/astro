@@ -2,6 +2,8 @@
   import type { DisplaySettings } from './state';
   import SettingsControls from './SettingsControls.svelte';
   import DisplayControls from './DisplayControls.svelte';
+  import AccountControls from './AccountControls.svelte';
+  import { account } from '../api/account.svelte';
 
   // One consolidated panel: bodies/aspects (SettingsControls) + display/theme
   // (DisplayControls), so the header carries a single button instead of two.
@@ -17,6 +19,10 @@
       <SettingsControls embedded />
       <div class="sectlabel">Display &amp; theme</div>
       <DisplayControls embedded bind:display />
+      {#if account.status === 'signedIn' || account.status === 'signedOut'}
+        <div class="sectlabel">Account</div>
+        <AccountControls />
+      {/if}
     </div>
   {/if}
 </div>

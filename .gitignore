@@ -18,6 +18,9 @@ tools/cache/
 .beads-credential-key
 .beads/proxieddb/
 
+# Local API database and config (npm run api)
+.local/
+
 # Standalone Retrograde page (npm run build:retro)
 dist-retro/
 

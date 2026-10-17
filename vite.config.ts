@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { defineConfig, type Plugin } from 'vitest/config';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
@@ -70,16 +70,31 @@ function swVersionStamp(): Plugin {
   };
 }
 
+// The server API (api/, PHP) ships beside the app: dist/api/ is deployed with
+// everything else, so it is served at <app>/api/ (docs/DESIGN.md §5a).
+function copyApi(): Plugin {
+  return {
+    name: 'copy-api',
+    apply: 'build',
+    closeBundle() {
+      cpSync(resolve(__dirname, 'api'), resolve(__dirname, 'dist/api'), { recursive: true });
+    },
+  };
+}
+
 export default defineConfig({
   // relative base so dist/ works from any subdirectory (e.g. /astro/)
   base: './',
-  plugins: [svelte(), swVersionStamp(), versionJson(), guardNoServedPersonalData()],
+  plugins: [svelte(), swVersionStamp(), versionJson(), copyApi(), guardNoServedPersonalData()],
   define: stampDefines(stamp),
   // data/ holds the committed ephemeris packs, gazetteer, text packs and
   // web-app files (manifest, service worker, icons); serving it as
   // publicDir exposes them at the site root and copies them into dist/.
   publicDir: 'data',
-  server: { port: 8322, strictPort: true },
+  // /api/ goes to PHP's built-in server (`npm run api`); without it the app
+  // simply finds no API and hides the account section
+  // (keeping the Host header, so the API's same-origin check sees localhost:8322)
+  server: { port: 8322, strictPort: true, proxy: { '/api/': { target: 'http://127.0.0.1:8323', changeOrigin: false } } },
   test: {
     setupFiles: ['./test/setup.ts'],
   },

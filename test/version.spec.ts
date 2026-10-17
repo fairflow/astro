@@ -26,4 +26,9 @@ describe('version alignment', () => {
     // cache key would silently stop following deploys
     expect(readFileSync(resolve(root, 'data/sw.js'), 'utf8')).toMatch(/const VERSION = '[^']*';/);
   });
+
+  it('the service worker leaves the server API alone (no cached sign-in state)', () => {
+    expect(readFileSync(resolve(root, 'data/sw.js'), 'utf8'))
+      .toContain("if (req.url.startsWith(new URL('api/', self.registration.scope).href)) return;");
+  });
 });

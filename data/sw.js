@@ -40,6 +40,8 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== self.location.origin) return;
+  // the server API (sign-in state, synced data) is always live, never cached
+  if (req.url.startsWith(new URL('api/', self.registration.scope).href)) return;
 
   if (req.mode === 'navigate') {
     event.respondWith(

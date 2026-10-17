@@ -4,13 +4,29 @@
     {
       "name": "dev",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev"],
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
       "port": 8322
+    },
+    {
+      "name": "api",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "api"
+      ],
+      "port": 8323
     },
     {
       "name": "mockup",
       "runtimeExecutable": "python3",
-      "runtimeArgs": ["-m", "http.server", "8321"],
+      "runtimeArgs": [
+        "-m",
+        "http.server",
+        "8321"
+      ],
       "port": 8321
     }
   ]
