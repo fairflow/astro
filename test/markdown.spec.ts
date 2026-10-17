@@ -37,4 +37,41 @@ describe('renderMarkdown', () => {
     // mid-stream: an unclosed bold shows as typed until it closes
     expect(md('half **bold')).toBe('<p>half **bold</p>');
   });
+
+  it('renders GitHub-style tables, with alignment and inline formatting in cells', () => {
+    const html = md([
+      'Approximate values:',
+      '',
+      '| Planet | Synodic period (approx.) | Retrograde frequency |',
+      '|---|:---:|--:|',
+      '| **Mars** | ~780 days | About every 2 years |',
+      '| Jupiter | ~399 days | `yearly` |',
+      '| Saturn | ~378 days |',
+      '',
+      'After.',
+    ].join('\n'));
+    expect(html).toContain('<p>Approximate values:</p>');
+    expect(html).toContain('<thead><tr><th>Planet</th><th style="text-align:center">Synodic period (approx.)</th>'
+      + '<th style="text-align:right">Retrograde frequency</th></tr></thead>');
+    expect(html).toContain('<tr><td><strong>Mars</strong></td><td style="text-align:center">~780 days</td>');
+    expect(html).toContain('<td style="text-align:right"><code>yearly</code></td>');
+    // a short row is padded to the header's width
+    expect(html).toContain('<tr><td>Saturn</td><td style="text-align:center">~378 days</td><td style="text-align:right"></td></tr>');
+    expect(html.match(/<tr>/g)).toHaveLength(4);
+    expect(html).toContain('<p>After.</p>');
+  });
+
+  it('tables: outer pipes optional, escaped pipes kept, no injection through cells', () => {
+    const html = md('a | b\n--- | ---\nx \\| y | <script>alert(1)</script>');
+    expect(html).toContain('<th>a</th><th>b</th>');
+    expect(html).toContain('<td>x | y</td>');
+    expect(html).not.toMatch(/<script/);
+    expect(html).toContain('&lt;script&gt;');
+  });
+
+  it('a pipe without a separator row, or a bare rule, is not a table', () => {
+    expect(md('this | that')).toBe('<p>this | that</p>');
+    expect(md('a | b\n---')).toBe('<p>a | b</p>\n<hr>');
+    expect(md('| a | b |\n|---|---|---|')).not.toContain('<table>'); // column counts differ
+  });
 });
