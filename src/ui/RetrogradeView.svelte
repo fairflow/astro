@@ -269,7 +269,8 @@
 {#if !standalone}
   <div class="elsewhere">
     <span>This view on its own page:</span>
-    <a href="retrograde/" target="_blank" rel="noopener">Standalone page ↗</a>
+    <!-- retrograde/ exists only in a build (vite.retro.config.ts); the dev server serves the entry itself -->
+    <a href={import.meta.env.DEV ? 'retro.html' : 'retrograde/'} target="_blank" rel="noopener">Standalone page ↗</a>
     <a href={ARTIFACT_URL} target="_blank" rel="noopener"
       title="The same page published on claude.ai; private until shared from its Share menu">claude.ai artifact ↗</a>
   </div>
