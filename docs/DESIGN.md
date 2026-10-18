@@ -368,7 +368,7 @@ host (`php api/cli/user.php admin <email>`); after that, accounts are managed in
 the app.
 
 **Admin panel** (inside the app, shown only to admins; every admin request
-re-checks the role and 2FA on the server): a user list (email, state, role,
+re-checks, on the server, the admin role and that the session passed the email-code step): a user list (email, state, role,
 registered, last seen, active sessions) and actions *approve*, *set password*
 (ends their sessions), *pause* / *unpause*, *freeze* / *unfreeze*, *delete*
 (starts the 30-day grace) and *cancel deletion*. Every admin action goes into an
@@ -378,20 +378,31 @@ registered, last seen, active sessions) and actions *approve*, *set password*
 readings also as Markdown), change password (needs the current one; ends other
 sessions), request removal.
 
-**Two-factor sign-in (a trial):** TOTP (RFC 6238 six-digit codes, any
-authenticator app; 1Password recommended because it keeps the code with the
-login, which avoids the "which app holds this one?" problem). Required for the
-admin account, optional for users. Setup shows a QR code labelled
-"Astrodynamics (fairflow.co.uk) · email" plus the key as text, must be confirmed
-with one code before it is switched on, and issues 10 one-time recovery codes
-(stored hashed); codes from the neighbouring 30-second windows are accepted for
-clock drift; the TOTP secret is stored encrypted with a key kept in
-`~/astro-config`. Passkeys (WebAuthn) are a later option that removes codes.
+**Email codes: the second step, and email first (decided 2026-10-18).** The
+app sends mail from a fairflow.co.uk mailbox through the host's mail server
+(the mailbox login lives only in `~/astro-config`; SPF and DKIM checked so the
+mail is not junked). One mechanism, a 6-digit code (valid 10 minutes, stored
+hashed, single use, at most 5 tries, sends rate-limited per account and per IP),
+serves three purposes:
 
-**Email (later):** sending from a fairflow.co.uk mailbox through the host's mail
-server, for address confirmation at registration, "forgot password" links, and
-notices (to Matthew of new pending registrations; to users when approved). Until
-then Matthew sets forgotten passwords in the admin panel.
+- **Registration:** a code sent to the address confirms it before the account
+  goes to Matthew for approval.
+- **Two-step sign-in:** after the password, a code by email finishes signing in.
+  Required for the admin account, optional for users. It works on any machine,
+  with no app and nothing to scan; with 90-day sliding sessions it is needed
+  rarely. A wrong or expired code never ends an existing session.
+- **Forgot password:** a code lets the user set a new password (ending their
+  other sessions).
+
+Also: a notice to Matthew of each new pending registration, and to the user when
+approved. Messages are plain text, without tracking.
+
+**Authenticator-app codes (TOTP): later**, as an alternative second step. When
+built, setup is by copying the key into 1Password or Passwords (or an
+`otpauth:` link) on the same device; a QR code is optional and never required
+(Matthew: a phone-only "scan this with your phone" flow is unacceptable). With
+one-time recovery codes. Passkeys may follow; note that on a borrowed computer
+they also fall back to scanning with a phone.
 
 **Ask Claude for signed-in users** comes only with a per-account daily cap,
 enforced by the server; paused and frozen accounts get none.
@@ -410,7 +421,8 @@ rights (download, removal, cancellation) and a contact.
 users(id, email, pass_hash, created_at, status, role, status_changed_at, delete_after)
 sessions(id_hash, user_id, created_at, expires_at, last_seen_at)
 login_failures(k, at)   admin_log(id, admin_id, action, target_id, at)
-totp(user_id, secret_enc, enabled_at)   recovery_codes(user_id, code_hash, used_at)
+email_codes(id, user_id, purpose, code_hash, expires_at, tries, used_at)
+sessions gains second_step_at (when the email step was passed)
 readings(id CHAR(36), user_id, key, grp, tab, title, question, preset,
          anonymised, text MEDIUMTEXT, stopped, created_at, updated_at, deleted)
 charts(id CHAR(36), user_id, birth JSON, updated_at, deleted)
@@ -437,13 +449,13 @@ SQLite and MariaDB (DEVELOPMENT.md, "Server API"). This Mac has PHP 8.5 and the
 host 8.1: code to 8.1, or move the site to a newer PHP in cPanel first.
 
 **Order of work** (beads, epic astro-tbb). Done: astro-4zm spike, astro-yal
-sign-in. Next, in dependency order: astro-tbb.2 account states and roles →
-astro-tbb.6 two-factor → astro-tbb.4 admin panel → astro-tbb.3 registration
-(also needs astro-tbb.1 privacy notice); astro-tbb.5 self-service and
-astro-tbb.9 the first live admin account follow astro-tbb.2; astro-cbi readings
-sync and astro-ag1 charts and settings need astro-tbb.2 and astro-tbb.1;
-astro-tbb.7 the Ask Claude cap comes before astro-bk6; astro-tbb.8 email is
-deferred. astro-sx7 (save readings while they stream) shipped in v0.3.3.
+sign-in. Ready now: astro-tbb.1 privacy notice, astro-tbb.2 account states and
+roles, astro-tbb.8 outgoing email with codes. Then astro-tbb.10 two-step sign-in
+by email code (needs .2 and .8) → astro-tbb.4 admin panel → astro-tbb.3
+registration (also needs .8 and .1). astro-tbb.5 self-service, astro-tbb.9 the
+first live admin and astro-tbb.7 the Ask Claude cap follow .2; astro-bk6 needs
+.7; astro-cbi and astro-ag1 need .2 and .1. astro-tbb.6 TOTP is later.
+astro-sx7 (save readings while they stream) shipped in v0.3.3.
 
 ---
 
