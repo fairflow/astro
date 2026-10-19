@@ -258,8 +258,26 @@ service worker never caches `api/`.
   `php ~/fairflow.co.uk/astro/api/cli/user.php` with `add|passwd|remove <email>`,
   `admin <email>` / `role <email> user|admin`,
   `state <email> active|paused|frozen|pending`, `delete|undelete <email>`
-  (30-day grace), `purge`, or `list`. The password is typed at a hidden prompt
-  (use `ssh -t`).
+  (30-day grace), `purge`, or `list`. Locally the password is typed at a hidden
+  prompt. The host disables `shell_exec`, so typing cannot be hidden there and
+  the command refuses a terminal; pipe the password from your own machine
+  instead (`read -s` hides it locally, nothing is stored):
+  `read -rs PW && printf '%s\n' "$PW" | ssh -p 722 USER@HOST 'php ~/fairflow.co.uk/astro/api/cli/user.php add you@example.com'; unset PW`
+- **Email** (`api/lib/mail.php`): PHP `mail()` through the host's mail server
+  from `noreply@fairflow.co.uk` (envelope sender set with `-f`, so SPF and the
+  host's DKIM signature apply; no mailbox password is stored). Under PHP's
+  built-in server (`npm run api`, tests) messages are appended to `mail.log`
+  beside the config instead (`.local/mail.log` locally), unless the config's
+  `[mail]` table sets `transport = mail`. Check delivery from the host with
+  `php ~/fairflow.co.uk/astro/api/cli/mail_test.php you@example.com`.
+- **Email codes**: 6 digits, 10 minutes, single use, 5 tries, at most 3 per
+  address and purpose (10 per IP) per 15 minutes, and at most 20 wrong codes
+  per address per day (otherwise fresh codes would allow ~40% a year of
+  guessing one); only `sha256(id:code)` is
+  stored. Used now for "forgot password" (`reset_request.php`, which answers
+  the same whether or not the address has an account, and `reset_confirm.php`,
+  which sets the password, ends the account's other sessions and signs in);
+  registration and two-step sign-in reuse them (astro-tbb.3, astro-tbb.10).
 - **Account states** (DESIGN.md §5a) are enforced in `api/lib/bootstrap.php`:
   only active and paused accounts can sign in or keep a session; endpoints that
   create or change data must call `require_writer()` (refuses paused), admin

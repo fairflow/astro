@@ -12,9 +12,12 @@
  *   php api/cli/user.php delete <email>    schedule deletion in 30 days (ends sessions); undelete <email> cancels
  *   php api/cli/user.php purge             remove accounts whose 30 days have run out
  *
- * On the server: php ~/fairflow.co.uk/astro/api/cli/user.php add you@example.com
- * The password is typed at a hidden prompt; when standard input is not a
- * terminal (tests), it is read from the first line of input.
+ * Locally the password is typed at a hidden prompt. On the server, where
+ * shell_exec is disabled and typing cannot be hidden, pipe it in from your own
+ * machine (read -s hides it there; nothing is stored):
+ *   read -rs PW && printf '%s\n' "$PW" | ssh -p 722 USER@HOST \
+ *     'php ~/fairflow.co.uk/astro/api/cli/user.php add you@example.com'; unset PW
+ * When standard input is not a terminal, the first line of input is the password.
  */
 declare(strict_types=1);
 if (PHP_SAPI !== 'cli') { http_response_code(404); exit; }
@@ -25,6 +28,14 @@ function fail(string $m): never { fwrite(STDERR, "$m\n"); exit(1); }
 
 function ask_password(string $prompt): string {
   $tty = stream_isatty(STDIN);
+  // the host disables shell_exec even for command-line PHP, so typing cannot be
+  // hidden there: refuse rather than echo a password, and say how to pipe it in
+  $canHide = function_exists('shell_exec');
+  if ($tty && !$canHide) {
+    fail("Can't hide typing on this server. Pipe the password in instead, from your own machine:\n"
+      . "  read -rs PW && printf '%s\\n' \"\$PW\" | ssh -p 722 USER@HOST 'php ~/fairflow.co.uk/astro/api/cli/user.php "
+      . ($GLOBALS['argv'][1] ?? 'add') . ' ' . ($GLOBALS['argv'][2] ?? 'you@example.com') . "'; unset PW");
+  }
   if ($tty) { fwrite(STDERR, $prompt); shell_exec('stty -echo'); }
   $line = fgets(STDIN);
   if ($tty) { shell_exec('stty echo'); fwrite(STDERR, "\n"); }
