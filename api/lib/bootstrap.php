@@ -288,3 +288,5 @@ function record_login_failure(string $email, string $ip): void {
 function clear_login_failures(string $email): void {
   db()->prepare('DELETE FROM login_failures WHERE k = ?')->execute(['email:' . hash('sha256', $email)]);
 }
+
+require __DIR__ . '/mail.php';

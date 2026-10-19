@@ -96,6 +96,40 @@ export async function signIn(email: string, password: string): Promise<boolean> 
   }
 }
 
+/** Ask for a password-reset code. The answer is the same whether or not the address has an account. */
+export async function requestReset(email: string): Promise<string | null> {
+  account.busy = true; account.error = '';
+  try {
+    const r = await post('reset_request.php', { email });
+    const j = await jsonOf(r);
+    if (r.ok && j && typeof j.message === 'string') return j.message;
+    account.error = typeof j?.error === 'string' && r.status === 400 ? 'Enter your email address.' : `Request failed (HTTP ${r.status}).`;
+    return null;
+  } catch {
+    account.error = 'Could not reach the server. Check your connection.';
+    return null;
+  } finally {
+    account.busy = false;
+  }
+}
+
+/** Set a new password with the emailed code; on success the browser is signed in. */
+export async function confirmReset(email: string, code: string, password: string): Promise<boolean> {
+  account.busy = true; account.error = '';
+  try {
+    const r = await post('reset_confirm.php', { email, code, password });
+    const j = await jsonOf(r);
+    if (r.ok && j) { signedInAs(j.user); return true; }
+    account.error = typeof j?.message === 'string' ? j.message : `Failed (HTTP ${r.status}).`;
+    return false;
+  } catch {
+    account.error = 'Could not reach the server. Check your connection.';
+    return false;
+  } finally {
+    account.busy = false;
+  }
+}
+
 export async function signOut(): Promise<void> {
   account.busy = true; account.error = '';
   try {
