@@ -4,8 +4,13 @@
  *
  *   php api/cli/user.php add <email>       create an account (asks for the password twice)
  *   php api/cli/user.php passwd <email>    set a new password (signs out every session)
- *   php api/cli/user.php remove <email>    delete the account and its sessions
- *   php api/cli/user.php list              list accounts
+ *   php api/cli/user.php remove <email>    delete the account and its sessions now
+ *   php api/cli/user.php list              list accounts with state and role
+ *   php api/cli/user.php admin <email>     make the account an admin (role <email> user|admin to change back)
+ *   php api/cli/user.php state <email> active|paused|frozen|pending
+ *                                          set the account state (frozen and pending end its sessions)
+ *   php api/cli/user.php delete <email>    schedule deletion in 30 days (ends sessions); undelete <email> cancels
+ *   php api/cli/user.php purge             remove accounts whose 30 days have run out
  *
  * On the server: php ~/fairflow.co.uk/astro/api/cli/user.php add you@example.com
  * The password is typed at a hidden prompt; when standard input is not a
@@ -41,7 +46,8 @@ function find_user(string $email): ?array {
 
 $cmd = $argv[1] ?? '';
 $email = normal_email($argv[2] ?? '');
-if (in_array($cmd, ['add', 'passwd', 'remove'], true) && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+if (in_array($cmd, ['add', 'passwd', 'remove', 'admin', 'role', 'state', 'delete', 'undelete'], true)
+    && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
   fail("Give an email address: php api/cli/user.php $cmd you@example.com");
 }
 
@@ -64,10 +70,46 @@ switch ($cmd) {
     echo "Removed $email\n";
     break;
   case 'list':
-    $rows = db()->query('SELECT email, created_at FROM users ORDER BY created_at')->fetchAll();
-    foreach ($rows as $r) echo $r['email'], '  created ', gmdate('Y-m-d H:i', (int)$r['created_at']), " UTC\n";
+    $rows = db()->query('SELECT email, created_at, status, role, delete_after FROM users ORDER BY created_at')->fetchAll();
+    foreach ($rows as $r) {
+      echo $r['email'], '  ', $r['status'], $r['role'] === 'admin' ? ' admin' : '',
+        '  created ', gmdate('Y-m-d H:i', (int)$r['created_at']), ' UTC',
+        $r['delete_after'] ? '  deleted on ' . gmdate('Y-m-d', (int)$r['delete_after']) : '', "\n";
+    }
     if (!$rows) echo "No accounts.\n";
     break;
+  case 'admin':
+  case 'role':
+    $u = find_user($email) ?? fail("No account for $email.");
+    $role = $cmd === 'admin' ? 'admin' : ($argv[3] ?? '');
+    if (!in_array($role, ROLES, true)) fail('Role must be user or admin.');
+    set_role($u['id'], $role);
+    echo "$email is now $role\n";
+    break;
+  case 'state':
+    $u = find_user($email) ?? fail("No account for $email.");
+    $state = $argv[3] ?? '';
+    if (!in_array($state, ['active', 'paused', 'frozen', 'pending'], true)) {
+      fail('State must be active, paused, frozen or pending (use delete / undelete for deletion).');
+    }
+    set_status($u['id'], $state);
+    echo "$email is now $state", in_array($state, SIGN_IN_STATES, true) ? '' : '; its sessions were ended', "\n";
+    break;
+  case 'delete':
+    $u = find_user($email) ?? fail("No account for $email.");
+    set_status($u['id'], 'deleting');
+    echo "$email will be deleted on ", gmdate('Y-m-d', time() + DELETE_GRACE), " unless cancelled (undelete); signed out now\n";
+    break;
+  case 'undelete':
+    $q = db()->prepare("SELECT id FROM users WHERE email = ? AND status = 'deleting'");
+    $q->execute([$email]);
+    $id = $q->fetchColumn() ?: fail("$email is not scheduled for deletion.");
+    echo "Deletion of $email cancelled; it is ", cancel_deletion($id), " again\n";
+    break;
+  case 'purge':
+    echo 'Removed ', purge_due_deletions(), " account(s) past their 30 days\n";
+    break;
   default:
-    fail('Usage: php api/cli/user.php add|passwd|remove <email>, or list');
+    fail('Usage: php api/cli/user.php add|passwd|remove|admin|delete|undelete <email>, role <email> user|admin,'
+      . ' state <email> active|paused|frozen|pending, list, purge');
 }

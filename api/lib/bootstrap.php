@@ -20,6 +20,17 @@ const MAX_FAILS_PER_EMAIL = 5;
 const MAX_FAILS_PER_IP = 20;
 const MAX_BODY_BYTES = 16 * 1024;
 
+/**
+ * Account states (docs/DESIGN.md §5a): pending (awaiting approval), active,
+ * paused (sign in, read and download own data, request removal; no new data,
+ * no Ask Claude), frozen (no sign-in; sessions ended), deleting (no sign-in;
+ * purged DELETE_GRACE after the request unless cancelled).
+ */
+const STATES = ['pending', 'active', 'paused', 'frozen', 'deleting'];
+const SIGN_IN_STATES = ['active', 'paused'];
+const ROLES = ['user', 'admin'];
+const DELETE_GRACE = 30 * 24 * 3600;
+
 /** The [db] table of the config: ASTRO_DB_INI if set (local dev, tests), else ~/astro-config/db.ini. */
 function config(): array {
   static $cfg = null;
@@ -134,19 +145,22 @@ function start_session(string $userId): void {
 }
 
 /**
- * The signed-in user ['id','email'], or null. A session is ended only by
- * signing out, a password change, removing the account, or 90 days unused:
- * never by an error. If the database cannot be reached this throws, the
- * request fails with a 500, and the cookie and the session row are untouched.
+ * The signed-in user ['id','email','status','role'], or null. A session is ended
+ * only by signing out, a password change, a change of state that bars sign-in
+ * (frozen, deleting, pending), removing the account, or 90 days unused: never
+ * by an error. If the database cannot be reached this throws, the request
+ * fails with a 500, and the cookie and the session row are untouched.
  */
 function current_user(): ?array {
   $token = $_COOKIE[cookie_name()] ?? '';
   if (!is_string($token) || $token === '' || strlen($token) > 100) return null;
-  $q = db()->prepare('SELECT u.id, u.email, s.id_hash, s.last_seen_at FROM sessions s JOIN users u ON u.id = s.user_id
-    WHERE s.id_hash = ? AND s.expires_at > ?');
+  $q = db()->prepare('SELECT u.id, u.email, u.status, u.role, s.id_hash, s.last_seen_at
+    FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.id_hash = ? AND s.expires_at > ?');
   $q->execute([hash('sha256', $token), time()]);
   $row = $q->fetch();
-  if (!$row) return null;
+  // a state that bars sign-in also bars an existing session (set_status ends
+  // those sessions anyway; this covers any made before the change)
+  if (!$row || !in_array($row['status'], SIGN_IN_STATES, true)) return null;
   $now = time();
   if ($now - (int)$row['last_seen_at'] >= RENEW_SECONDS) {
     // in use: push the expiry out again, in the database and in the browser
@@ -154,7 +168,78 @@ function current_user(): ?array {
       ->execute([$now, $now + SESSION_SECONDS, $row['id_hash']]);
     set_session_cookie($token, $now + SESSION_SECONDS);
   }
-  return ['id' => $row['id'], 'email' => $row['email']];
+  return ['id' => $row['id'], 'email' => $row['email'], 'status' => $row['status'], 'role' => $row['role']];
+}
+
+/** The signed-in user, or a 401. */
+function require_user(): array {
+  return current_user() ?? reply(401, ['error' => 'not signed in']);
+}
+
+/** The signed-in user if they may create or change data (and use Ask Claude): not paused. */
+function require_writer(): array {
+  $u = require_user();
+  if ($u['status'] !== 'active') reply(403, ['error' => 'paused', 'message' => 'This account is paused: you can read and download your data, but not add to it.']);
+  return $u;
+}
+
+/** The signed-in admin, or a 403. (The email second step joins this check in astro-tbb.10.) */
+function require_admin(): array {
+  $u = require_user();
+  if ($u['role'] !== 'admin') reply(403, ['error' => 'admin only']);
+  return $u;
+}
+
+/** What the reader is told when a correct password meets a state that bars sign-in. */
+function barred_message(string $status): string {
+  return match ($status) {
+    'pending' => 'Your account is waiting for approval.',
+    'frozen' => 'This account is frozen. Contact the site owner.',
+    'deleting' => 'This account is scheduled for deletion. Contact the site owner to cancel.',
+    default => 'This account cannot sign in.',
+  };
+}
+
+/**
+ * Move an account to a state. Barring states end its sessions at once;
+ * 'deleting' starts the DELETE_GRACE clock and remembers the state it left,
+ * so cancelling restores that (a paused account does not come back active).
+ */
+function set_status(string $userId, string $status): void {
+  if (!in_array($status, STATES, true)) throw new InvalidArgumentException("unknown state $status");
+  $now = time();
+  if ($status === 'deleting') {
+    db()->prepare("UPDATE users SET state_before_delete = status WHERE id = ? AND status <> 'deleting'")->execute([$userId]);
+  }
+  db()->prepare('UPDATE users SET status = ?, status_changed_at = ?, delete_after = ? WHERE id = ?')
+    ->execute([$status, $now, $status === 'deleting' ? $now + DELETE_GRACE : null, $userId]);
+  if (!in_array($status, SIGN_IN_STATES, true)) {
+    db()->prepare('DELETE FROM sessions WHERE user_id = ?')->execute([$userId]);
+  }
+}
+
+/** Cancel a scheduled deletion: back to the state the account had before. Returns that state. */
+function cancel_deletion(string $userId): string {
+  $q = db()->prepare("SELECT state_before_delete FROM users WHERE id = ? AND status = 'deleting'");
+  $q->execute([$userId]);
+  $before = $q->fetchColumn();
+  if ($before === false) throw new RuntimeException('not scheduled for deletion');
+  $state = in_array($before, STATES, true) && $before !== 'deleting' ? $before : 'active';
+  set_status($userId, $state);
+  db()->prepare('UPDATE users SET state_before_delete = NULL WHERE id = ?')->execute([$userId]);
+  return $state;
+}
+
+function set_role(string $userId, string $role): void {
+  if (!in_array($role, ROLES, true)) throw new InvalidArgumentException("unknown role $role");
+  db()->prepare('UPDATE users SET role = ? WHERE id = ?')->execute([$role, $userId]);
+}
+
+/** Remove accounts whose deletion grace has run out (their sessions go with them). Returns how many. */
+function purge_due_deletions(): int {
+  $q = db()->prepare("DELETE FROM users WHERE status = 'deleting' AND delete_after IS NOT NULL AND delete_after <= ?");
+  $q->execute([time()]);
+  return $q->rowCount();
 }
 
 function end_session(): void {

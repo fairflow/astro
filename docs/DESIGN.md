@@ -418,7 +418,8 @@ rights (download, removal, cancellation) and a contact.
 **Schema sketch** (utf8mb4, `utf8mb4_unicode_ci` set explicitly):
 
 ```
-users(id, email, pass_hash, created_at, status, role, status_changed_at, delete_after)
+users(id, email, pass_hash, created_at, status, role, status_changed_at, delete_after,
+      state_before_delete)
 sessions(id_hash, user_id, created_at, expires_at, last_seen_at)
 login_failures(k, at)   admin_log(id, admin_id, action, target_id, at)
 email_codes(id, user_id, purpose, code_hash, expires_at, tries, used_at)

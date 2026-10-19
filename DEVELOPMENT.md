@@ -254,9 +254,18 @@ service worker never caches `api/`.
 - **Schema:** `api/sql/NNN_*.sql`, portable between MariaDB and SQLite
   (`/*TABLE_OPTIONS*/` is filled per driver). After a deploy that adds one,
   run on the host: `php ~/fairflow.co.uk/astro/api/cli/migrate.php`.
-- **Accounts** (no public sign-up): on the host,
-  `php ~/fairflow.co.uk/astro/api/cli/user.php add|passwd|remove <email>` or
-  `list`. The password is typed at a hidden prompt (use `ssh -t`).
+- **Accounts** (no public sign-up yet): on the host,
+  `php ~/fairflow.co.uk/astro/api/cli/user.php` with `add|passwd|remove <email>`,
+  `admin <email>` / `role <email> user|admin`,
+  `state <email> active|paused|frozen|pending`, `delete|undelete <email>`
+  (30-day grace), `purge`, or `list`. The password is typed at a hidden prompt
+  (use `ssh -t`).
+- **Account states** (DESIGN.md §5a) are enforced in `api/lib/bootstrap.php`:
+  only active and paused accounts can sign in or keep a session; endpoints that
+  create or change data must call `require_writer()` (refuses paused), admin
+  endpoints `require_admin()`. Frozen, pending and deleting end the account's
+  sessions at once. Deletions past their 30 days are purged on any `me.php` or
+  sign-in request, and by `user.php purge`.
 - **Local development:** `npm run api` (or the `api` entry in
   `.claude/launch.json`) runs PHP's built-in server on :8323 over
   `.local/dev.sqlite` (git-ignored), migrating it first; the Vite dev server
