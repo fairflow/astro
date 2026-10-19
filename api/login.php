@@ -21,7 +21,8 @@ handle(function (): void {
     reply(429, ['error' => 'too many attempts', 'retryAfter' => $wait], ['Retry-After' => (string)$wait]);
   }
 
-  $q = db()->prepare('SELECT id, email, pass_hash FROM users WHERE email = ?');
+  purge_due_deletions(); // an indexed query; me.php runs it too, so the 30 days hold without a cron job
+  $q = db()->prepare('SELECT id, email, pass_hash, status, role FROM users WHERE email = ?');
   $q->execute([$email]);
   $u = $q->fetch() ?: null;
   $ok = password_verify($pw, $u['pass_hash'] ?? DUMMY_HASH);
@@ -29,10 +30,15 @@ handle(function (): void {
     record_login_failure($email, $ip);
     reply(401, ['error' => 'wrong email or password']);
   }
+  // only someone who knows the password learns the account's state
+  if (!in_array($u['status'], SIGN_IN_STATES, true)) {
+    clear_login_failures($email);
+    reply(403, ['error' => $u['status'], 'message' => barred_message($u['status'])]);
+  }
   if (password_needs_rehash($u['pass_hash'], PASSWORD_DEFAULT)) {
     db()->prepare('UPDATE users SET pass_hash = ? WHERE id = ?')->execute([hash_password($pw), $u['id']]);
   }
   clear_login_failures($email);
   start_session($u['id']); // a new token on every sign-in
-  reply(200, ['user' => ['email' => $u['email']]]);
+  reply(200, ['user' => ['email' => $u['email'], 'status' => $u['status'], 'role' => $u['role']]]);
 });

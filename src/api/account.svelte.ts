@@ -11,14 +11,22 @@ const API = 'api/';
  *  error). Not a sign-out: the session is kept and checked again later. */
 export type AccountStatus = 'checking' | 'unavailable' | 'unreachable' | 'signedOut' | 'signedIn';
 
-export const account = $state<{ status: AccountStatus; email: string; busy: boolean; error: string }>({
-  status: 'checking', email: '', busy: false, error: '',
+/** The account's state on the server (docs/DESIGN.md §5a); only active and paused accounts can be signed in. */
+export type AccountState = 'active' | 'paused';
+
+export const account = $state<{
+  status: AccountStatus; email: string; state: AccountState; admin: boolean; busy: boolean; error: string;
+}>({
+  status: 'checking', email: '', state: 'active', admin: false, busy: false, error: '',
 });
 
 /** What to tell the reader for a failed sign-in response. */
 export function signInMessage(status: number, body: unknown): string {
   const retry = (body as { retryAfter?: unknown } | null)?.retryAfter;
   if (status === 401) return 'Wrong email or password.';
+  // a correct password on an account that cannot sign in (pending, frozen, deleting): the server says why
+  const message = (body as { message?: unknown } | null)?.message;
+  if (status === 403 && typeof message === 'string') return message;
   if (status === 429) {
     const mins = typeof retry === 'number' ? Math.max(1, Math.ceil(retry / 60)) : 15;
     return `Too many attempts. Try again in ${mins} minute${mins === 1 ? '' : 's'}.`;
@@ -34,9 +42,14 @@ async function jsonOf(r: Response): Promise<Record<string, unknown> | null> {
 }
 
 function signedInAs(user: unknown): void {
-  const email = (user as { email?: unknown } | null)?.email;
-  if (typeof email === 'string') { account.status = 'signedIn'; account.email = email; }
-  else { account.status = 'signedOut'; account.email = ''; }
+  const u = user as { email?: unknown; status?: unknown; role?: unknown } | null;
+  if (typeof u?.email === 'string') {
+    account.status = 'signedIn'; account.email = u.email;
+    account.state = u.status === 'paused' ? 'paused' : 'active';
+    account.admin = u.role === 'admin';
+  } else {
+    account.status = 'signedOut'; account.email = ''; account.state = 'active'; account.admin = false;
+  }
 }
 
 export async function refreshAccount(): Promise<void> {
@@ -87,7 +100,7 @@ export async function signOut(): Promise<void> {
   account.busy = true; account.error = '';
   try {
     const r = await post('logout.php', {});
-    if (r.ok) { account.status = 'signedOut'; account.email = ''; }
+    if (r.ok) signedInAs(null);
     else account.error = `Sign-out failed (HTTP ${r.status}).`;
   } catch {
     account.error = 'Could not reach the server.';

@@ -14,7 +14,10 @@
 
 {#if account.status === 'signedIn'}
   <div class="acct">
-    <p>Signed in as <b>{account.email}</b>.</p>
+    <p>Signed in as <b>{account.email}</b>{#if account.admin} <span class="badge">admin</span>{/if}.</p>
+    {#if account.state === 'paused'}
+      <p class="note">This account is paused: you can read and download your data, but not add to it.</p>
+    {/if}
     <button type="button" onclick={signOut} disabled={account.busy}>Sign out</button>
     <p class="hint">Saving readings to your account comes next; for now they stay in this browser.</p>
   </div>
@@ -50,5 +53,8 @@
   }
   button:disabled { opacity: .6; cursor: default; }
   .hint { color: var(--dim); font-size: 12px; }
+  .note { color: var(--ink); font-size: 12.5px; border-left: 2px solid var(--gold-dim); padding-left: 8px; }
+  .badge { font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--gold);
+    border: 1px solid var(--gold-dim); border-radius: 8px; padding: 0 6px; }
   .err { color: var(--square); font-size: 12.5px; margin: 6px 0 0; }
 </style>

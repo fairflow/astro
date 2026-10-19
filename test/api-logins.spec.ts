@@ -123,6 +123,16 @@ describe.skipIf(!hasPhp)('API logins (php -S + SQLite)', () => {
     expect((await call('/api/me.php')).body.user).not.toBeNull();
   });
 
+  it('a signed-out visitor gets {user: null} even when the database is down (no false "could not check")', async () => {
+    const saved = jar; jar = '';
+    const ini = join(dir, 'db.ini');
+    const good = readFileSync(ini, 'utf8');
+    writeFileSync(ini, `[db]\ndriver = sqlite\npath = "${join(dir, 'missing', 'nope.sqlite')}"\n`);
+    try {
+      expect(await call('/api/me.php')).toMatchObject({ status: 200, body: { user: null } });
+    } finally { writeFileSync(ini, good); jar = saved; }
+  });
+
   it('a database failure is a 500 and leaves the session alone', async () => {
     const saved = jar;
     const ini = join(dir, 'db.ini');
@@ -169,4 +179,95 @@ describe.skipIf(!hasPhp)('API logins (php -S + SQLite)', () => {
     const r = await call('/api/login.php', { method: 'POST', headers: { 'x-astro': '1', 'content-type': 'application/json' }, body: 'not json' });
     expect(r.status).toBe(400);
   });
+
+  // ---- account states and roles (astro-tbb.2) ----
+
+  const S_EMAIL = 'states@example.com';
+  const S_PW = 'states password 1';
+  const signIn = () => post('/api/login.php', { email: S_EMAIL, password: S_PW });
+  const user = (...a: string[]) => cli(['api/cli/user.php', ...a]);
+  /** Run a guard from api/lib with the current session cookie; prints 'allowed' or the refusal JSON. */
+  const guard = (fn: string) => spawnSync('php', ['-r',
+    `define('ASTRO_API',1);$_COOKIE['astro_sid']=${JSON.stringify(jar.split('=')[1] ?? '')};`
+    + `$_SERVER['SCRIPT_NAME']='/api/x.php';require 'api/lib/bootstrap.php';${fn}();echo 'allowed';`],
+  { cwd: root, env, encoding: 'utf8' }).stdout;
+
+  it('migration 002 adds states and roles; accounts start active users', () => {
+    expect(cli(['api/cli/migrate.php']).stdout).toContain('already up to date');
+    expect(cli(['api/cli/user.php', 'add', S_EMAIL], `${S_PW}\n`).stdout).toContain('Created');
+    expect(user('list').stdout).toMatch(/states@example\.com {2}active {2}created/);
+  });
+
+  it('sign-in and me report the state and role', async () => {
+    jar = '';
+    expect(await signIn()).toMatchObject({ status: 200, body: { user: { email: S_EMAIL, status: 'active', role: 'user' } } });
+    expect((await call('/api/me.php')).body.user).toMatchObject({ status: 'active', role: 'user' });
+    expect(guard('require_writer')).toBe('allowed');
+    expect(guard('require_admin')).toContain('admin only');
+  });
+
+  it('paused: still signed in and can read, but writes are refused', async () => {
+    expect(user('state', S_EMAIL, 'paused').stdout).toContain('is now paused');
+    expect((await call('/api/me.php')).body.user).toMatchObject({ status: 'paused' });
+    expect(guard('require_user')).toBe('allowed');
+    expect(guard('require_writer')).toContain('"error":"paused"');
+    expect(user('state', S_EMAIL, 'active').stdout).toContain('is now active');
+    expect(guard('require_writer')).toBe('allowed');
+  });
+
+  it('frozen: sessions end at once and sign-in is refused, but only a correct password learns why', async () => {
+    expect(user('state', S_EMAIL, 'frozen').stdout).toContain('sessions were ended');
+    expect((await call('/api/me.php')).body.user).toBeNull();
+    const refused = await signIn();
+    expect(refused).toMatchObject({ status: 403, body: { error: 'frozen' } });
+    expect(refused.setCookie).toBeNull(); // no new session is issued
+    expect(await post('/api/login.php', { email: S_EMAIL, password: 'not the password' }))
+      .toMatchObject({ status: 401, body: { error: 'wrong email or password' } });
+  });
+
+  it('pending: sign-in refused with "waiting for approval"', async () => {
+    user('state', S_EMAIL, 'pending');
+    const r = await signIn();
+    expect(r).toMatchObject({ status: 403, body: { error: 'pending' } });
+    expect(r.body.message).toContain('waiting for approval');
+  });
+
+  it('admin role: require_admin passes, and it can be taken away', async () => {
+    user('state', S_EMAIL, 'active');
+    expect(user('admin', S_EMAIL).stdout).toContain('is now admin');
+    expect((await signIn()).body.user).toMatchObject({ role: 'admin' });
+    expect(guard('require_admin')).toBe('allowed');
+    expect(user('role', S_EMAIL, 'user').stdout).toContain('is now user');
+    expect(guard('require_admin')).toContain('admin only');
+  });
+
+  it('deletion: 30 days of grace, cancellable, then purged on the next page load', async () => {
+    expect(user('delete', S_EMAIL).stdout).toMatch(/will be deleted on \d{4}-\d\d-\d\d/);
+    expect((await call('/api/me.php')).body.user).toBeNull();
+    expect(await signIn()).toMatchObject({ status: 403, body: { error: 'deleting' } });
+    expect(user('undelete', S_EMAIL).stdout).toContain('cancelled; it is active again');
+    expect((await signIn()).status).toBe(200);
+
+    user('delete', S_EMAIL);
+    // the 30 days have passed
+    spawnSync('php', ['-r', `$p=new PDO('sqlite:${join(dir, 'test.sqlite')}');`
+      + `$p->exec("UPDATE users SET delete_after=strftime('%s','now')-1 WHERE email='${S_EMAIL}'");`]);
+    await call('/api/me.php');
+    expect(user('list').stdout).not.toContain(S_EMAIL);
+    expect(await signIn()).toMatchObject({ status: 401 });
+  });
+
+  it('cancelling a deletion restores the earlier state (a paused account stays paused)', () => {
+    expect(cli(['api/cli/user.php', 'add', 'p@example.com'], `${S_PW}\n`).stdout).toContain('Created');
+    user('state', 'p@example.com', 'paused');
+    user('delete', 'p@example.com');
+    expect(user('undelete', 'p@example.com').stdout).toContain('it is paused again');
+    expect(user('list').stdout).toMatch(/p@example\.com {2}paused/);
+  });
+
+  it('the account command rejects unknown states and roles', () => {
+    expect(user('state', 'matthew@example.com', 'deleting').stderr).toContain('use delete / undelete');
+    expect(user('role', 'matthew@example.com', 'owner').stderr).toContain('user or admin');
+  });
 });
+
