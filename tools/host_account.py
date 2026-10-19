@@ -1,17 +1,17 @@
 """Run the server API's account commands on the host, without typing its SSH details.
 
-Uses the SSH login in the [ssh] table of the deploy secrets file (as
-tools/deploy_sftp.py does) and prints only the commands' output. Passwords
+Uses the SSH login in the [ssh] table of ~/.config/fairflow/hosting.toml
+(as tools/deploy_sftp.py does; --secrets names another file) and prints only the commands' output. Passwords
 for new accounts are asked for here, hidden, and passed to the server on
 standard input: never stored, never on a command line.
 
-  .venv/bin/python tools/host_account.py --secrets PATH migrate
-  .venv/bin/python tools/host_account.py --secrets PATH list
-  .venv/bin/python tools/host_account.py --secrets PATH add EMAIL        (asks for the password twice)
-  .venv/bin/python tools/host_account.py --secrets PATH passwd EMAIL     (asks for the new password twice)
-  .venv/bin/python tools/host_account.py --secrets PATH admin EMAIL
-  .venv/bin/python tools/host_account.py --secrets PATH state EMAIL active|paused|frozen|pending
-  .venv/bin/python tools/host_account.py --secrets PATH mail-test EMAIL
+  .venv/bin/python tools/host_account.py migrate
+  .venv/bin/python tools/host_account.py list
+  .venv/bin/python tools/host_account.py add EMAIL        (asks for the password twice)
+  .venv/bin/python tools/host_account.py passwd EMAIL     (asks for the new password twice)
+  .venv/bin/python tools/host_account.py admin EMAIL
+  .venv/bin/python tools/host_account.py state EMAIL active|paused|frozen|pending
+  .venv/bin/python tools/host_account.py mail-test EMAIL
 
 Run from the repo root (it imports tools/deploy_sftp.py).
 """
@@ -22,7 +22,7 @@ import shlex
 import sys
 
 sys.path.insert(0, 'tools')
-from deploy_sftp import connect  # noqa: E402
+from deploy_sftp import DEFAULT_SECRETS, connect  # noqa: E402
 
 API = '~/fairflow.co.uk/astro/api'
 EMAIL = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
@@ -50,7 +50,7 @@ def new_password() -> str:
 
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('--secrets', required=True, help='deploy secrets file with an [ssh] table')
+    ap.add_argument('--secrets', default=DEFAULT_SECRETS, help=f'file with an [ssh] table (default {DEFAULT_SECRETS})')
     ap.add_argument('command', choices=['migrate', 'list', 'add', 'passwd', 'admin', 'state', 'mail-test'])
     ap.add_argument('args', nargs='*')
     a = ap.parse_args()

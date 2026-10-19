@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 """Deploy dist/ to a shared host over SFTP.
 
-Credentials are NEVER stored in this repo: pass a TOML file containing an
-[ssh] table (host, port, username, password) — e.g. a .streamlit/secrets.toml.
+Credentials are NEVER stored in this repo: they come from a TOML file with an
+[ssh] table (host, port, username, password), by default
+~/.config/fairflow/hosting.toml (the Krystal hosting account's login, readable
+only by its owner); --secrets names another.
 
 Usage:
   .venv/bin/python tools/deploy_sftp.py \
-      --secrets ~/path/to/secrets.toml \
-      --remote /home/USER/site.example/astro [--delete]
+      --remote /home/USER/site.example/astro [--delete] [--secrets PATH]
 
 Uploads the contents of dist/ into --remote (created if missing).
 --delete removes remote files that no longer exist locally (stale hashed
@@ -26,7 +27,10 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent
 DIST = ROOT / "dist"
 
 
-def connect(secrets_path: str) -> paramiko.SSHClient:
+DEFAULT_SECRETS = "~/.config/fairflow/hosting.toml"
+
+
+def connect(secrets_path: str = DEFAULT_SECRETS) -> paramiko.SSHClient:
     with open(pathlib.Path(secrets_path).expanduser(), "rb") as f:
         cfg = tomllib.load(f)["ssh"]
     client = paramiko.SSHClient()
@@ -67,7 +71,7 @@ def remote_files(sftp: paramiko.SFTPClient, base: str) -> set[str]:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--secrets", required=True)
+    ap.add_argument("--secrets", default=DEFAULT_SECRETS, help=f"default {DEFAULT_SECRETS}")
     ap.add_argument("--remote", required=True, help="absolute remote directory")
     ap.add_argument("--delete", action="store_true")
     args = ap.parse_args()

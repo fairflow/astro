@@ -264,8 +264,9 @@ service worker never caches `api/`.
   instead (`read -s` hides it locally, nothing is stored):
   `read -rs PW && printf '%s\n' "$PW" | ssh -p 722 USER@HOST 'php ~/fairflow.co.uk/astro/api/cli/user.php add you@example.com'; unset PW`
 - **From your Mac, without typing the host's SSH details:**
-  `.venv/bin/python tools/host_account.py --secrets <deploy secrets.toml> migrate|list|add|passwd|admin|state|mail-test …`
-  reads the `[ssh]` login from the secrets file (as the deploy does), asks
+  `.venv/bin/python tools/host_account.py migrate|list|add|passwd|admin|state|mail-test …`
+  reads the hosting account's `[ssh]` login from `~/.config/fairflow/hosting.toml`
+  (as `tools/deploy_sftp.py` does; readable only by you, never in a repo), asks
   for any new password hidden on your Mac and passes it on standard input.
 - **Email** (`api/lib/mail.php`): PHP `mail()` through the host's mail server
   from `noreply@fairflow.co.uk` (envelope sender set with `-f`, so SPF and the
