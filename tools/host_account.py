@@ -76,12 +76,12 @@ def main() -> None:
     client = connect(a.secrets)
     try:
         code = run(client, cmd, stdin)
+    finally:
+        client.close()
     if code == 255:
         print('PHP stopped with an error on the host (details go to its error log). '
               'If the database has not been set up yet, run "migrate" first.', file=sys.stderr)
     sys.exit(code)
-    finally:
-        client.close()
 
 
 if __name__ == '__main__':
