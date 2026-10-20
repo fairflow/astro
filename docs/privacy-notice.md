@@ -35,8 +35,14 @@ We store, on our web host's server in London, UK (Krystal Hosting):
   address is removed from this record.
 - **Email codes** we send you to confirm your address, to finish signing in,
   or to set a new password (stored only as a hash, and deleted within a day).
-- **When we add this feature:** your saved charts and Ask Claude readings, so
-  they are available on all your devices.
+- **Your Ask Claude readings**, so they are on all your devices: the text of
+  each reading, the question asked, when it was made, and which chart it was
+  about, labelled with the names and birth dates as you entered them (even when
+  names were hidden from Claude). Readings already in your browser are saved to
+  your account when you sign in there. Deleting a reading deletes its content
+  from our server too; only a note that it was deleted (with no content) is
+  kept, so your other devices remove it as well.
+- **When we add this feature:** your saved charts.
 
 **Choosing a password.** When you register or set a new password, we check it
 against the Have I Been Pwned list of passwords exposed in data breaches. Only
@@ -59,7 +65,8 @@ do not sell it, and do not share it except with the services that run the site
 
 | What | Kept for |
 |---|---|
-| Your account (and, once added, charts and readings) | Until you close your account or delete them |
+| Your account and your readings (and, once added, charts) | Until you close your account or delete them |
+| A deleted reading | Its content at once; the note that it was deleted, with your account |
 | A registration whose address was never confirmed | 7 days |
 | After you ask to close your account | 30 days (so you can change your mind), then deleted permanently |
 | Sessions | Ended when you sign out, or after 90 days unused |

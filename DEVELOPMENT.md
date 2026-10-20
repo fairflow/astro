@@ -312,6 +312,19 @@ service worker never caches `api/`.
   make_user; checked against the account's state, never on the admin's own
   account) and `admin_log.php`. Every action goes into `admin_log`; an
   approved user is emailed. The panel is a modal `<dialog>` (`AdminPanel.svelte`).
+- **Readings sync** (astro-cbi): `api/readings.php`, GET `?since=REV` (pages of
+  200, `cursor` and `more`) and POST `{readings, deleted}`; table `readings`
+  keyed by (user, UUID), so one account cannot write over another's. A
+  deletion clears the content and leaves a tombstone, and a deleted reading
+  cannot be brought back by a device that has not heard yet. The cursor is
+  server time in microseconds and a pull that reaches the end stays 5 s behind
+  the present, so a late commit is not missed. Limits: 1000 readings and
+  200 KB per reading per account, 2 MB per request; paused accounts may pull
+  and delete but not upload. In the browser, `src/ai/readingsync.svelte.ts`
+  runs on sign-in, when a reading finishes or is deleted, and when the page
+  comes back into view; readings made signed out go to the next account signed
+  in on that browser, and a reading uploaded to one account is never sent to
+  another (`toUpload`, `mergePulled` in `readingstore.ts`, unit-tested).
 - **Account states** (DESIGN.md §5a) are enforced in `api/lib/bootstrap.php`:
   only active and paused accounts can sign in or keep a session; endpoints that
   create or change data must call `require_writer()` (refuses paused), admin
@@ -331,8 +344,8 @@ service worker never caches `api/`.
   Codes sent locally are in `.local/mail.log`. To try signed-out flows while
   the `localhost` tab is signed in, open `http://[::1]:8322/` (cookies are kept
   per host name).
-- **Tests:** `test/api-logins.spec.ts`, `test/api-email-codes.spec.ts` and
-  `test/api-accounts.spec.ts` run the real endpoints under `php -S` over a
+- **Tests:** `test/api-logins.spec.ts`, `test/api-email-codes.spec.ts`,
+  `test/api-accounts.spec.ts` and `test/api-readings.spec.ts` run the real endpoints under `php -S` over a
   throwaway SQLite database, reading codes from its `mail.log` (skipped when
   PHP is not installed).
 

@@ -3,6 +3,9 @@
     account, confirmRegistration, confirmReset, register, requestReset, setTwoStep, signIn, signOut,
   } from '../api/account.svelte';
   import AdminPanel from './AdminPanel.svelte';
+  import { sync, syncNow } from '../ai/readingsync.svelte';
+
+  const time = (t: number) => new Date(t).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
   // Sign in to the Astrodynamics server (only where the app is served with its
   // API; see account.svelte.ts), register, or reset a forgotten password. Every
@@ -79,7 +82,13 @@
       {/if}
     {/if}
     <button type="button" onclick={signOut} disabled={account.busy}>Sign out</button>
-    <p class="hint">Saving readings to your account comes next; for now they stay in this browser.
+    <p class="hint" aria-live="polite">
+      {#if sync.state === 'syncing'}Saving your Ask Claude readings to your account…
+      {:else if sync.state === 'error'}Readings not synced just now ({sync.error}); they are kept here and tried again.
+        <button type="button" class="link" onclick={() => syncNow()}>Try now</button>
+      {:else if sync.state === 'paused'}Paused: readings on your account can be read and deleted; new ones stay in this browser.
+      {:else}Your Ask Claude readings are saved to your account ({sync.count}){#if sync.waiting}, {sync.waiting} waiting{/if}{#if sync.last}, checked {time(sync.last)}{/if}.
+      {/if}
       {@render privacy()}</p>
   </div>
 {:else if account.status === 'signedOut' && mode === 'code'}
@@ -165,7 +174,8 @@
       <button type="button" class="link" onclick={() => go('reset-ask')}>Forgot password?</button>
       <button type="button" class="link" onclick={() => { go('register'); password = ''; }}>Create an account</button>
     </div>
-    <p class="hint">New accounts are approved by the site owner. {@render privacy()}</p>
+    <p class="hint">Signing in saves the Ask Claude readings in this browser to your account, so they are
+      on all your devices. New accounts are approved by the site owner. {@render privacy()}</p>
   </form>
 {:else if account.status === 'unreachable'}
   <p class="hint">Could not check your sign-in just now (offline or a server problem). You stay signed

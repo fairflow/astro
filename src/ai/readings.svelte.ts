@@ -1,7 +1,7 @@
 import { askClaude } from './ask.js';
 import type { AiPresetId } from './config.js';
 import {
-  parseSaved, upsertReading, writeWithPruning, type ReadingTab, type SavedReading,
+  newUid, parseSaved, upsertReading, writeWithPruning, type ReadingTab, type SavedReading,
 } from './readingstore.js';
 
 /**
@@ -12,6 +12,10 @@ import {
  * first, capped at MAX. A reading is also saved while it streams (every
  * CHECKPOINT_MS, and when the page is hidden or closed), marked `interrupted`
  * until it finishes, so a reload keeps what had arrived.
+ *
+ * When signed in, readingsync.svelte.ts keeps this list in step with the
+ * account's copy on the server (astro-cbi); this module only records what
+ * changed (onReadingsChange) and which deletions the server has yet to hear of.
  */
 
 const KEY = 'astro-readings';
@@ -35,10 +39,48 @@ function readRaw(): string | null {
   try { return storage?.getItem(KEY) ?? null; } catch { return null; }
 }
 
+const DELETED_KEY = 'astro-readings-deleted';
+
+// readings saved before sync existed get their server identity now
+const loaded = parseSaved(readRaw());
+const needUid = loaded.some(r => !r.uid);
+for (const r of loaded) r.uid ??= newUid();
+
 export const readings = $state<{ saved: SavedReading[]; live: Record<string, LiveReading> }>({
-  saved: parseSaved(readRaw()),
+  saved: loaded,
   live: {},
 });
+if (needUid) queueMicrotask(() => persist());
+
+const listeners = new Set<() => void>();
+/** Call `f` whenever a reading is finished or deleted (the sync module listens). */
+export function onReadingsChange(f: () => void): void { listeners.add(f); }
+const changed = () => { for (const f of listeners) f(); };
+
+/** Ids of the readings still streaming in this page (not uploaded until they finish). */
+export const streamingIds = (): Set<number> => new Set(checkpoints.keys());
+
+/** Server ids of deleted readings, by account, that the server has yet to hear of. */
+export function deletionsPending(): Record<string, string[]> {
+  try {
+    const v: unknown = JSON.parse(storage?.getItem(DELETED_KEY) ?? '{}');
+    return v && typeof v === 'object' ? v as Record<string, string[]> : {};
+  } catch { return {}; }
+}
+export function setDeletionsPending(d: Record<string, string[]>): void {
+  try { storage?.setItem(DELETED_KEY, JSON.stringify(d)); } catch { /* kept for this session only */ }
+}
+export function queueDeletion(account: string, uid: string): void {
+  const d = deletionsPending();
+  d[account] = [...new Set([...(d[account] ?? []), uid])];
+  setDeletionsPending(d);
+}
+
+/** Replace the whole list (the sync module, after merging the server's copy) and store it. */
+export function replaceSaved(list: SavedReading[]): void {
+  readings.saved = list;
+  persist();
+}
 
 const controllers = new Map<string, AbortController>();
 /** Save-now functions of the readings streaming in this page, by reading id. */
@@ -74,6 +116,7 @@ export function startReading(o: {
   };
   const cur = readings.live[o.key]!;
   const id = cur.createdAt;
+  const uid = newUid();
   let lastSave = 0;
 
   /** Save what has arrived; `done` marks the reading finished (not interrupted). */
@@ -82,7 +125,7 @@ export function startReading(o: {
     const r: SavedReading = {
       id, key: o.key, group: o.group, tab: o.tab, title: o.title,
       question: o.question, preset: o.preset, anonymised: o.anonymised,
-      text: cur.text, stopped: done ? c.signal.aborted : true, createdAt: id,
+      text: cur.text, stopped: done ? c.signal.aborted : true, createdAt: id, uid,
       ...(done ? {} : { interrupted: true }),
     };
     readings.saved = upsertReading(readings.saved, r, MAX);
@@ -106,6 +149,7 @@ export function startReading(o: {
       checkpoints.delete(id);
       cur.busy = false;
       save(true);
+      changed();
     }
   })();
 }
@@ -121,8 +165,12 @@ export function deleteReading(id: number): void {
     discarded.add(id);
     for (const [k, l] of Object.entries(readings.live)) if (l.savedId === id) stopReading(k);
   }
+  const gone = readings.saved.find(r => r.id === id);
+  // on the server already: the deletion goes there too
+  if (gone?.uid && gone.account) queueDeletion(gone.account, gone.uid);
   readings.saved = readings.saved.filter(r => r.id !== id);
   persist();
+  changed();
   for (const [k, l] of Object.entries(readings.live)) {
     if (l.savedId === id) delete readings.live[k];
   }

@@ -121,10 +121,10 @@ function self_origin(): string {
   return (is_https() ? 'https' : 'http') . '://' . ($_SERVER['HTTP_HOST'] ?? '');
 }
 
-/** The JSON object in the request body (at most MAX_BODY_BYTES). */
-function json_body(): array {
-  $raw = file_get_contents('php://input', false, null, 0, MAX_BODY_BYTES + 1);
-  if ($raw === false || strlen($raw) > MAX_BODY_BYTES) reply(413, ['error' => 'request too large']);
+/** The JSON object in the request body (at most $max bytes; MAX_BODY_BYTES unless an endpoint needs more). */
+function json_body(int $max = MAX_BODY_BYTES): array {
+  $raw = file_get_contents('php://input', false, null, 0, $max + 1);
+  if ($raw === false || strlen($raw) > $max) reply(413, ['error' => 'request too large']);
   $v = json_decode($raw, true);
   if (!is_array($v)) reply(400, ['error' => 'expected a JSON object']);
   return $v;
