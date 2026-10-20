@@ -1,5 +1,6 @@
 <script lang="ts">
   import { AI_ENABLED, AI_PRESETS, isPreset, type AiPresetId } from '../ai/config';
+  import { account } from '../api/account.svelte';
   import { aiPrefs, setOpen, setPreset } from '../ai/prefs.svelte';
   import { deleteReading, readings, startReading, stopReading } from '../ai/readings.svelte';
   import type { ReadingTab } from '../ai/readingstore';
@@ -145,7 +146,10 @@
       <button type="button" class="ask" onclick={() => stopReading(readingKey)}>Stop</button>
       <span class="spin">Claude is reading…</span>
     {:else}
-      <button type="button" class="ask" onclick={run} disabled={!AI_ENABLED}>Ask Claude</button>
+      <button type="button" class="ask" onclick={run} disabled={!AI_ENABLED || account.status === 'signedOut'}>Ask Claude</button>
+      {#if account.status === 'signedOut'}
+        <span class="spin">Ask Claude needs an account: sign in, or create one, in Settings, Account.</span>
+      {/if}
     {/if}
     <select class="model" aria-label="Model" disabled={busy}
       title={AI_PRESETS.find(p => p.id === aiPrefs.preset)?.hint}

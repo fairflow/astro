@@ -295,6 +295,8 @@ function housekeeping(): void {
   // the admin log keeps no address of an account that no longer exists
   db()->exec('UPDATE admin_log SET target_email = NULL
     WHERE target_email IS NOT NULL AND target_id IS NOT NULL AND target_id NOT IN (SELECT id FROM users)');
+  // Ask Claude passes: the limit needs only the last 24 hours (last, as the newest table)
+  db()->prepare('DELETE FROM ask_passes WHERE created_at < ?')->execute([time() - 2 * 86400]);
 }
 
 /** Remove accounts whose deletion grace has run out (their sessions go with them). Returns how many. */
@@ -438,6 +440,33 @@ function require_own_password(array $u, string $pw): void {
     reply(400, ['error' => 'current password', 'message' => 'That is not your current password.']);
   }
   clear_login_failures($u['email']);
+}
+
+// ---- Ask Claude passes (astro-tbb.7) -------------------------------------------
+
+const ASK_PASS_SECONDS = 120;   // a pass must be used within two minutes
+const ASK_WINDOW = 86400;       // the daily limit counts the last 24 hours
+
+/** Readings per account per 24 hours ([askclaude] daily_limit, default 20); admins have no limit. */
+function ask_daily_limit(): int {
+  $n = (int)(config_table('askclaude')['daily_limit'] ?? 20);
+  return $n > 0 ? $n : 20;
+}
+
+/** [used in the last 24 hours, passes issued and not yet used or expired, when the oldest use leaves the window]. */
+function ask_usage(string $userId): array {
+  $now = time();
+  $q = db()->prepare('SELECT COUNT(*) AS n, MIN(used_at) AS first FROM ask_passes WHERE user_id = ? AND used_at > ?');
+  $q->execute([$userId, $now - ASK_WINDOW]);
+  $r = $q->fetch();
+  $o = db()->prepare('SELECT COUNT(*) FROM ask_passes WHERE user_id = ? AND used_at IS NULL AND expires_at > ?');
+  $o->execute([$userId, $now]);
+  return [(int)$r['n'], (int)$o->fetchColumn(), $r['first'] === null ? null : (int)$r['first'] + ASK_WINDOW];
+}
+
+function ask_limit_message(?int $nextAt): string {
+  return 'You have used your ' . ask_daily_limit() . ' Ask Claude readings for the last 24 hours.'
+    . ($nextAt ? ' The next is available at ' . gmdate('H:i', $nextAt) . ' UTC.' : '');
 }
 
 require __DIR__ . '/mail.php';

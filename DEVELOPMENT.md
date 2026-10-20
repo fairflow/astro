@@ -335,6 +335,19 @@ service worker never caches `api/`.
   `updatedAt` and signals changes (`onChartsChange`), which also refreshes
   the chart lists when sync brings changes. Display settings are not synced
   (they suit each screen).
+- **Ask Claude for accounts only** (astro-tbb.7, astro-bk6): before each
+  reading the app gets a one-use pass from `ask_pass.php` (active accounts;
+  `[askclaude] daily_limit`, default 20 per 24 hours, counting passes used and
+  still open; admins unlimited; migration 007). The relay Worker checks the
+  pass with `ask_consume.php` at its `API_BASE` (server to server; marks it
+  used, re-checks the limit) before calling Claude, and refuses requests
+  without one ("sign in"). No shared secret. On localhost (whose passes the
+  live API cannot know) the Worker accepts its secret `DEV_KEY` instead, sent
+  by the dev server only from `VITE_AI_DEV_KEY` in `.env.local`; without it,
+  Ask Claude from localhost is refused. The gate is `gate()` in
+  `worker/src/index.ts` (`test/worker-gate.spec.ts`). Deploy order: the site
+  first (Ask Claude keeps working with the current Worker), then the Worker
+  (`cd worker && npx wrangler deploy`), which makes sign-in required.
 - **Self-service** (astro-tbb.5; Settings → Account → "Your account and data",
   `AccountSelf.svelte`): `account_export.php` (everything stored for the
   account: account, live readings, admin actions on it; never hashes or
@@ -366,7 +379,8 @@ service worker never caches `api/`.
   per host name).
 - **Tests:** `test/api-logins.spec.ts`, `test/api-email-codes.spec.ts`,
   `test/api-accounts.spec.ts`, `test/api-readings.spec.ts`,
-  `test/api-self-service.spec.ts` and `test/api-charts.spec.ts` run the real endpoints under `php -S` over a
+  `test/api-self-service.spec.ts`, `test/api-charts.spec.ts` and
+  `test/api-ask.spec.ts` run the real endpoints under `php -S` over a
   throwaway SQLite database, reading codes from its `mail.log` (skipped when
   PHP is not installed).
 

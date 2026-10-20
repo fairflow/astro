@@ -6,6 +6,9 @@ interface ImportMetaEnv {
   readonly VITE_AI_WORKER_URL?: string;
   /** Comma-separated page origins the Worker accepts; elsewhere the panel is hidden. */
   readonly VITE_AI_ORIGINS?: string;
+  /** Development only (.env.local, never committed): the relay's DEV_KEY, so
+   *  Ask Claude works from the dev server on localhost without a pass. */
+  readonly VITE_AI_DEV_KEY?: string;
 }
 
 // Build-time version stamp, injected by vite.config.ts `define`.
