@@ -7,10 +7,11 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { freePort } from './freeport.js';
 
 const root = resolve(__dirname, '..');
 const hasPhp = spawnSync('php', ['-r', 'exit(extension_loaded("pdo_sqlite") ? 0 : 1);']).status === 0;
-const PORT = 8790 + Math.floor(Math.random() * 100);
+const PORT = freePort();
 const BASE = `http://127.0.0.1:${PORT}`;
 const ME = 'self@example.com';
 const BOSS = 'boss@example.com';
@@ -56,7 +57,7 @@ describe.skipIf(!hasPhp)('API self-service (php -S + SQLite)', () => {
       try { await fetch(`${BASE}/api/me.php`); break; } catch { await new Promise(r => setTimeout(r, 100)); }
     }
     expect((await signIn('laptop')).status).toBe(200);
-  });
+  }, 30_000); // setup runs migrations, bcrypt and php -S: more room than the 10 s default
   afterAll(() => { server?.kill(); rmSync(dir, { recursive: true, force: true }); });
 
   it('download my data: the account, live readings (not deleted ones) and admin actions on it', async () => {

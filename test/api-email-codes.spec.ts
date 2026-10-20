@@ -6,10 +6,11 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { freePort } from './freeport.js';
 
 const root = resolve(__dirname, '..');
 const hasPhp = spawnSync('php', ['-r', 'exit(extension_loaded("pdo_sqlite") ? 0 : 1);']).status === 0;
-const PORT = 8490 + Math.floor(Math.random() * 100);
+const PORT = freePort();
 const BASE = `http://127.0.0.1:${PORT}`;
 const EMAIL = 'reset@example.com';
 const OLD_PW = 'old password 123';
@@ -52,7 +53,7 @@ describe.skipIf(!hasPhp)('API email codes and password reset (php -S + SQLite)',
       try { await fetch(`${BASE}/api/me.php`); return; } catch { await new Promise(r => setTimeout(r, 100)); }
     }
     throw new Error('php -S did not start');
-  });
+  }, 30_000); // setup runs migrations, bcrypt and php -S: more room than the 10 s default
   afterAll(() => { server?.kill(); rmSync(dir, { recursive: true, force: true }); });
 
   it('asking for a code gives the same answer for an account and for an unknown address', async () => {
