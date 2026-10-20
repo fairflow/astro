@@ -456,7 +456,10 @@ astro-tbb.10 two-step sign-in by email code, astro-tbb.4 the admin panel and
 astro-tbb.3 registration with approval (details in DEVELOPMENT.md, "Server API");
 in v0.6.0, astro-cbi readings synced to the account; in v0.7.0, astro-tbb.5
 self-service (download, change password, close and cancel); in v0.8.0,
-astro-ag1 saved charts synced (display settings stay per device). astro-tbb.5 self-service, astro-tbb.9 the
+astro-ag1 saved charts synced (display settings stay per device); in v0.9.0,
+astro-tbb.7 and astro-bk6: Ask Claude for signed-in accounts only, 20 readings
+per account per 24 hours (Matthew, 2026-10-20), by one-use passes the relay
+checks with the API. astro-tbb.5 self-service, astro-tbb.9 the
 first live admin and astro-tbb.7 the Ask Claude cap follow .2; astro-bk6 needs
 .7; astro-cbi and astro-ag1 need .2 and .1. astro-tbb.6 TOTP is later.
 astro-sx7 (save readings while they stream) shipped in v0.3.3.

@@ -33,6 +33,20 @@ npx wrangler deploy
 Edit `wrangler.toml` → `ALLOWED_ORIGINS` so it lists the exact origin(s) the app
 is served from (plus `http://localhost:8322` for local dev), then redeploy.
 
+**Accounts only (v0.9.0).** Every request must carry a one-use pass that the
+site's API issued to a signed-in account (`x-astro-pass`); the Worker checks it
+with `API_BASE` + `ask_consume.php` before calling Claude, which also applies
+the daily limit. Requests without a pass get 401 "sign in". For development on
+localhost, set a secret and give the dev server the same value:
+
+```
+npx wrangler secret put DEV_KEY            # any long random string
+echo 'VITE_AI_DEV_KEY=<the same string>' >> ../.env.local   # git-ignored
+```
+
+Deploy the site first, then this Worker: the site's passes are ignored by the
+old Worker, so nothing breaks in between.
+
 ## Point the app at it
 
 The Worker URL is committed in `.env` at the repo root

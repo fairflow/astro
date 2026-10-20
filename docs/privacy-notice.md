@@ -12,11 +12,14 @@ Charts, settings and Ask Claude readings are kept **in your own browser**
 (its local storage) and are not sent to us. They stay on that device until you
 clear them.
 
-When you choose **Ask Claude**, the chart factors shown in the panel's preview
+**Ask Claude** is for signed-in accounts. When you choose it, the chart factors shown in the panel's preview
 (names and places hidden unless you untick that) are sent through our relay to
 Anthropic, whose model writes the reading. Anthropic's handling is covered by
 its own terms. Our relay does not record what you send, and we keep no copy;
-Cloudflare, which runs the relay, keeps only counts of requests.
+Cloudflare, which runs the relay, keeps only counts of requests. To apply the
+daily limit of readings per account, our server records when each reading
+was started (the time only, nothing of its content) and deletes that record
+after two days.
 
 ## If you have an account
 
@@ -76,6 +79,7 @@ do not sell it, and do not share it except with the services that run the site
 | Sessions | Ended when you sign out, or after 90 days unused |
 | Failed sign-in records | 1 day |
 | Email codes | 10 minutes; used and expired codes are deleted within a day |
+| When you started each Ask Claude reading (time only) | 2 days |
 | The host's backups | 30 days, then overwritten (so deleted data can remain in a backup for up to 30 days) |
 
 ## Your rights

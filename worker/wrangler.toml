@@ -14,3 +14,9 @@ ALLOWED_ORIGINS = "https://fairflow.co.uk,http://localhost:8322"
 # Output cap per reading, thinking included. Models + effort are the PRESETS
 # allowlist in src/index.ts (the app's dropdown sends only a preset id).
 MAX_TOKENS = "10000"
+# The site's API: issues one-use passes to signed-in accounts and checks them
+# (ask_consume.php) before each reading; Ask Claude is for accounts only.
+API_BASE = "https://fairflow.co.uk/astro/api/"
+# Optional secret for development on localhost (no pass needed):
+#   npx wrangler secret put DEV_KEY      and put the same value in the app's
+#   .env.local as VITE_AI_DEV_KEY (git-ignored; used only by the dev server).
