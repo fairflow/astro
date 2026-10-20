@@ -252,9 +252,14 @@ service worker never caches `api/`.
 - **Config and secrets:** only on the server, in `~/astro-config/db.ini`
   (outside the web root). Locally `ASTRO_DB_INI` points at a SQLite config.
 - **Schema:** `api/sql/NNN_*.sql`, portable between MariaDB and SQLite
-  (`/*TABLE_OPTIONS*/` is filled per driver). After a deploy that adds one,
-  run on the host: `php ~/fairflow.co.uk/astro/api/cli/migrate.php`.
-- **Accounts** (no public sign-up yet): on the host,
+  (`/*TABLE_OPTIONS*/` is filled per driver). Run on the host:
+  `php ~/fairflow.co.uk/astro/api/cli/migrate.php`. When new code needs the
+  new columns, migrate BEFORE merging, from the branch:
+  `.venv/bin/python tools/host_account.py migrate --local-sql` uploads the SQL
+  files the host lacks, then runs them (fine when the migration only adds, so
+  the code already live keeps working).
+- **Accounts from the command line** (the first admin, and emergencies; people
+  otherwise register in the app): on the host,
   `php ~/fairflow.co.uk/astro/api/cli/user.php` with `add|passwd|remove <email>`,
   `admin <email>` / `role <email> user|admin`,
   `state <email> active|paused|frozen|pending`, `delete|undelete <email>`
@@ -279,26 +284,57 @@ service worker never caches `api/`.
   address and purpose (10 per IP) per 15 minutes, and at most 20 wrong codes
   per address per day (otherwise fresh codes would allow ~40% a year of
   guessing one); only `sha256(id:code)` is
-  stored. Used now for "forgot password" (`reset_request.php`, which answers
+  stored. Three uses: "forgot password" (`reset_request.php`, which answers
   the same whether or not the address has an account, and `reset_confirm.php`,
-  which sets the password, ends the account's other sessions and signs in);
-  registration and two-step sign-in reuse them (astro-tbb.3, astro-tbb.10).
+  which sets the password, ends the account's other sessions and signs in),
+  registration and two-step sign-in (below).
+- **Two-step sign-in** (astro-tbb.10): for admins always, for users if they
+  tick it in Settings → Account (`two_step.php`). `login.php` answers a correct
+  password with `{step: 'code'}` and emails a code, without a session; the app
+  then sends email, password and code together, so a code is useless without
+  the password. Sessions record `second_step_at`; `require_admin()` refuses a
+  session without it (one made before this existed, or a password-only one),
+  and a password reset by code counts as the step. Turning two-step off needs
+  a session that passed it; admins cannot turn it off.
+- **Registration** (astro-tbb.3): `register.php` (email, password) makes a
+  *pending* account with an unconfirmed address and emails a code; an address
+  that already has an account gets a notice instead, with the same answer, and
+  nothing changes. `register_confirm.php` (email, code) confirms the address
+  and emails the active admins. The account cannot sign in until approved.
+  Unconfirmed registrations are removed after 7 days; at most 5 registrations
+  per IP per 15 minutes. New passwords (registration, reset, admin) are 10–72
+  bytes and checked against Have I Been Pwned's range API (`pwned_count`: SHA-1
+  prefix only, padded; skipped if unreachable, or with `[passwords]
+  pwned_check = off` in the config, as the tests do).
+- **Admin panel** (astro-tbb.4; Settings → Account → Admin panel):
+  `admin_users.php` (list), `admin_action.php` (approve, reject, pause, unpause,
+  freeze, unfreeze, delete, cancel_delete, set_password, sign_out, make_admin,
+  make_user; checked against the account's state, never on the admin's own
+  account) and `admin_log.php`. Every action goes into `admin_log`; an
+  approved user is emailed. The panel is a modal `<dialog>` (`AdminPanel.svelte`).
 - **Account states** (DESIGN.md §5a) are enforced in `api/lib/bootstrap.php`:
   only active and paused accounts can sign in or keep a session; endpoints that
   create or change data must call `require_writer()` (refuses paused), admin
   endpoints `require_admin()`. Frozen, pending and deleting end the account's
   sessions at once. Every `me.php` request (each page load) runs
   `housekeeping()`: accounts past their 30 days are purged, and failure/send
-  records and email codes older than a day deleted, which is the retention the
-  privacy notice promises; sign-in and `user.php purge` also purge accounts.
+  records and email codes older than a day deleted, unconfirmed registrations
+  older than 7 days removed, and the address of a removed account cleared from
+  `admin_log`, which is the retention the privacy notice promises; sign-in and
+  `user.php purge` also purge accounts.
 - **Local development:** `npm run api` (or the `api` entry in
   `.claude/launch.json`) runs PHP's built-in server on :8323 over
   `.local/dev.sqlite` (git-ignored), migrating it first; the Vite dev server
   proxies `/api/` to it. Add a local account with
   `ASTRO_DB_INI=$PWD/.local/dev.ini php api/cli/user.php add you@example.test`.
   Without `npm run api` the app finds no API and hides the Account section.
-- **Tests:** `test/api-logins.spec.ts` runs the real endpoints under `php -S`
-  over a throwaway SQLite database (skipped when PHP is not installed).
+  Codes sent locally are in `.local/mail.log`. To try signed-out flows while
+  the `localhost` tab is signed in, open `http://[::1]:8322/` (cookies are kept
+  per host name).
+- **Tests:** `test/api-logins.spec.ts`, `test/api-email-codes.spec.ts` and
+  `test/api-accounts.spec.ts` run the real endpoints under `php -S` over a
+  throwaway SQLite database, reading codes from its `mail.log` (skipped when
+  PHP is not installed).
 
 ## Contributing
 

@@ -28,11 +28,20 @@ We store, on our web host's server in London, UK (Krystal Hosting):
   stored only as a hash, with when it was last used), and short-lived records
   of failed sign-in attempts to stop password guessing.
 - **Your account's state** (waiting for approval, active, paused, frozen or
-  scheduled for deletion) and role.
+  scheduled for deletion), role, whether you chose two-step sign-in, and when
+  you last used the app.
+- **A record of admin actions on your account**, such as approving or pausing
+  it: what was done, by whom and when. When your account is deleted, your
+  address is removed from this record.
 - **Email codes** we send you to confirm your address, to finish signing in,
   or to set a new password (stored only as a hash, and deleted within a day).
 - **When we add this feature:** your saved charts and Ask Claude readings, so
   they are available on all your devices.
+
+**Choosing a password.** When you register or set a new password, we check it
+against the Have I Been Pwned list of passwords exposed in data breaches. Only
+the first 5 characters of a one-way hash of the password are sent; the
+password itself never leaves our server, and nothing sent identifies you.
 
 **About other people's data.** Saved charts can include birth details of other
 people (a partner, a friend), and readings can mention them by name. Please add
@@ -51,6 +60,7 @@ do not sell it, and do not share it except with the services that run the site
 | What | Kept for |
 |---|---|
 | Your account (and, once added, charts and readings) | Until you close your account or delete them |
+| A registration whose address was never confirmed | 7 days |
 | After you ask to close your account | 30 days (so you can change your mind), then deleted permanently |
 | Sessions | Ended when you sign out, or after 90 days unused |
 | Failed sign-in records | 1 day |
