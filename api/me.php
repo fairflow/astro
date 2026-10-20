@@ -7,7 +7,7 @@ handle(function (): void {
   require_method('GET');
   // housekeeping on every page load (see login.php); it must never fail the request,
   // e.g. for a visitor who is not signed in, or before the tables exist
-  try { purge_due_deletions(); } catch (Throwable $e) { error_log('astro api purge: ' . $e->getMessage()); }
+  try { housekeeping(); } catch (Throwable $e) { error_log('astro api housekeeping: ' . $e->getMessage()); }
   $u = current_user();
   reply(200, ['user' => $u ? ['email' => $u['email'], 'status' => $u['status'], 'role' => $u['role']] : null]);
 });

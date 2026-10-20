@@ -158,6 +158,14 @@ describe.skipIf(!hasPhp)('API email codes and password reset (php -S + SQLite)',
     expect(spawnSync('php', ['-r', php], { encoding: 'utf8' }).stdout).toBe('0');
   });
 
+  it('page loads tidy codes and failure records older than a day (the privacy notice promises it)', async () => {
+    const db = (q: string) => spawnSync('php', ['-r', `$p=new PDO('sqlite:${join(dir, 'test.sqlite')}');${q}`], { encoding: 'utf8' }).stdout;
+    db(`$p->exec("INSERT INTO email_codes (id, email, purpose, code_hash, created_at, expires_at, tries) VALUES ('old-code', 'x@example.com', 'reset', 'h', 0, strftime('%s','now')-90000, 0)");`
+      + `$p->exec("INSERT INTO login_failures (k, at) VALUES ('ip:old', strftime('%s','now')-90000)");`);
+    await me();
+    expect(db(`echo $p->query("SELECT COUNT(*) FROM email_codes WHERE id='old-code'")->fetchColumn(), '/', $p->query("SELECT COUNT(*) FROM login_failures WHERE k='ip:old'")->fetchColumn();`)).toBe('0/0');
+  });
+
   it('the mail test command refuses a bad address', () => {
     expect(cli(['api/cli/mail_test.php', 'not-an-address']).stderr).toContain('Usage');
   });

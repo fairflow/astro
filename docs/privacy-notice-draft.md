@@ -1,18 +1,17 @@
 # Astrodynamics: privacy notice (DRAFT for Matthew's decision)
 
-Status: draft, 2026-10-19, astro-tbb.1. Not legal advice. Items marked
-**[DECIDE]** need Matthew's choice before publication. Once agreed, this is
-published as a page in the app, linked from the registration form and from
-Settings → Account, and nothing stored on the server is deployed before it.
+Status: decisions made by Matthew 2026-10-20 (astro-tbb.1); for his final read
+before it is published as a page in the app, linked from the registration form
+and Settings → Account. Not legal advice. Nothing that stores personal data
+on the server for other users is deployed before it is published.
 
 ---
 
 ## Who we are
 
-Astrodynamics (fairflow.co.uk/astro) is run by **[DECIDE: "Matthew Fairtlough"
-or "Fairflow"]**, who decides how your data is used (the "controller" under UK
-data protection law). Contact: **[DECIDE: an address for privacy questions,
-e.g. privacy@fairflow.co.uk]**.
+Astrodynamics (fairflow.co.uk/astro) is run by Matthew Fairtlough, who decides
+how your data is used (the "controller" under UK data protection law).
+Contact: admin@fairflow.co.uk.
 
 ## Using the app without an account
 
@@ -29,8 +28,7 @@ only request counts.)
 
 ## If you have an account
 
-We store, on our own server in the UK **[DECIDE: confirm the host's data
-centre location]**:
+We store, on our web host's server in London, UK (Krystal Hosting):
 
 - **Your email address** and a **hash** of your password (never the password
   itself).
@@ -63,8 +61,8 @@ do not sell it, and do not share it except with the services that run the site
 | After you ask to close your account | 30 days (so you can change your mind), then deleted permanently |
 | Sessions | Ended when you sign out, or after 90 days unused |
 | Failed sign-in records | 1 day |
-| Email sign-in codes | 10 minutes; used codes are not kept **[DECIDE]** |
-| Server backups | Up to **[DECIDE: the host's backup period]**, then overwritten |
+| Email codes | 10 minutes; used and expired codes are deleted within a day |
+| The host's backups | 30 days, then overwritten (so deleted data can remain in a backup for up to 30 days) |
 
 ## Your rights
 
@@ -89,11 +87,14 @@ Last updated: **[date of publication]**.
 
 ### Notes for Matthew (not part of the notice)
 
-1. **ICO data protection fee.** Anyone controlling personal data in the UK may
-   owe the ICO an annual fee unless exempt; a non-commercial hobby service may
-   be. Worth a two-minute check with the ICO's online self-assessment before
-   registration opens.
-2. **Under-age users:** say nothing, or state a minimum age (13 is the UK
-   threshold for online services). **[DECIDE]**
-3. The 30-day grace period, 90-day sessions and one-day failure records match
-   what the code does (DESIGN.md §5a).
+1. **ICO data protection fee:** Matthew 2026-10-20: the service is
+   non-commercial at present. Confirm with the ICO's online self-assessment
+   before registration opens, and revisit if it ever charges or advertises.
+2. **Minimum age:** not stated (Matthew 2026-10-20).
+3. **Facts checked 2026-10-20:** the server (valerii-lon.krystal.uk, IP
+   77.72.2.45) is registered to Krystal, 124 City Road, London, GB; Krystal's
+   UK hosting runs from its London data centre (Netwise East). The account is
+   on the Emerald plan: backups every 12 hours, 60 restore points, 30 days
+   (help.krystal.io, "What backups do I get with my account?"). The Ask Claude
+   relay logs nothing. The 30-day removal grace, 90-day sessions, one-day
+   failure records and 10-minute codes match the code (DESIGN.md §5a).
