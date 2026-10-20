@@ -4,6 +4,7 @@
 #   - version.json: hash = expected commit, version = package.json, not dirty
 #   - retrograde/ (standalone page) carries the same build id
 #   - sw.js cache key carries the same 5-hex hash
+#   - privacy/ (the privacy notice) is served
 #   - api/lib, api/cli and api/sql are not served
 #
 # Usage: tools/check_live.sh [SITE] [COMMIT]
@@ -31,6 +32,9 @@ curl -fsS "${site}retrograde/?nocache=$RANDOM" | grep -qF "$id" \
   || bad "retrograde/ does not carry build id $id"
 curl -fsS "${site}sw.js?nocache=$RANDOM" | grep -qF "astrodynamics-$short" \
   || bad "sw.js cache key is not astrodynamics-$short"
+
+curl -fsS "${site}privacy/?nocache=$RANDOM" | grep -qF "Privacy notice" \
+  || bad "privacy/ does not serve the privacy notice"
 
 # the API's internal folders must never be served
 for p in api/lib/bootstrap.php api/cli/user.php api/sql/001_users.sql; do

@@ -43,7 +43,7 @@ const me = async () => (await (await fetch(`${BASE}/api/me.php`, { headers: jar 
 describe.skipIf(!hasPhp)('API email codes and password reset (php -S + SQLite)', () => {
   beforeAll(async () => {
     dir = mkdtempSync(join(tmpdir(), 'astro-mail-'));
-    writeFileSync(join(dir, 'db.ini'), `[db]\ndriver = sqlite\npath = "${join(dir, 'test.sqlite')}"\n`);
+    writeFileSync(join(dir, 'db.ini'), `[db]\ndriver = sqlite\npath = "${join(dir, 'test.sqlite')}"\n[passwords]\npwned_check = off\n`);
     env = { ...process.env, ASTRO_DB_INI: join(dir, 'db.ini') };
     expect(cli(['api/cli/migrate.php']).stdout).toContain('applied 003_email_codes.sql');
     expect(cli(['api/cli/user.php', 'add', EMAIL], `${OLD_PW}\n`).stdout).toContain('Created');

@@ -30,17 +30,28 @@ const STATES = ['pending', 'active', 'paused', 'frozen', 'deleting'];
 const SIGN_IN_STATES = ['active', 'paused'];
 const ROLES = ['user', 'admin'];
 const DELETE_GRACE = 30 * 24 * 3600;
+/** A registration whose emailed code is never entered is removed after this long. */
+const UNCONFIRMED_SECONDS = 7 * 24 * 3600;
 
-/** The [db] table of the config: ASTRO_DB_INI if set (local dev, tests), else ~/astro-config/db.ini. */
-function config(): array {
-  static $cfg = null;
-  if ($cfg !== null) return $cfg;
-  $path = getenv('ASTRO_DB_INI') ?: (PHP_SAPI === 'cli'
+/** The config file: ASTRO_DB_INI if set (local dev, tests), else ~/astro-config/db.ini, outside the web root. */
+function config_path(): string {
+  return getenv('ASTRO_DB_INI') ?: (PHP_SAPI === 'cli'
     ? getenv('HOME') . '/astro-config/db.ini'
     : dirname((string)($_SERVER['DOCUMENT_ROOT'] ?? '')) . '/astro-config/db.ini');
-  $ini = @parse_ini_file($path, true);
-  if (!is_array($ini) || !isset($ini['db'])) throw new RuntimeException('database config missing');
-  return $cfg = $ini['db'];
+}
+
+/** One [table] of the config file, or [] when it has none. */
+function config_table(string $name): array {
+  static $ini = null;
+  if ($ini === null) { $ini = @parse_ini_file(config_path(), true); if (!is_array($ini)) $ini = []; }
+  return isset($ini[$name]) && is_array($ini[$name]) ? $ini[$name] : [];
+}
+
+/** The [db] table of the config. */
+function config(): array {
+  $db = config_table('db');
+  if (!$db) throw new RuntimeException('database config missing');
+  return $db;
 }
 
 function db(): PDO {
@@ -135,17 +146,37 @@ function set_session_cookie(string $value, int $expires): void {
   ]);
 }
 
-function start_session(string $userId): void {
+/**
+ * Sign this browser in with a new session. $secondStep: the sign-in passed the
+ * email-code step (or proved the address another way, as a password reset does);
+ * admin requests need a session that did.
+ */
+function start_session(string $userId, bool $secondStep = false): void {
   $token = rtrim(strtr(base64_encode(random_bytes(32)), '+/', '-_'), '=');
   $now = time();
-  db()->prepare('INSERT INTO sessions (id_hash, user_id, created_at, expires_at, last_seen_at) VALUES (?, ?, ?, ?, ?)')
-    ->execute([hash('sha256', $token), $userId, $now, $now + SESSION_SECONDS, $now]);
+  db()->prepare('INSERT INTO sessions (id_hash, user_id, created_at, expires_at, last_seen_at, second_step_at) VALUES (?, ?, ?, ?, ?, ?)')
+    ->execute([hash('sha256', $token), $userId, $now, $now + SESSION_SECONDS, $now, $secondStep ? $now : null]);
   db()->prepare('DELETE FROM sessions WHERE expires_at < ?')->execute([$now]); // tidy expired ones
+  db()->prepare('UPDATE users SET last_seen_at = ? WHERE id = ?')->execute([$now, $userId]);
   set_session_cookie($token, $now + SESSION_SECONDS);
 }
 
+/** Whether signing in to this account takes an emailed code after the password: always for admins. */
+function needs_second_step(array $u): bool {
+  return ($u['role'] ?? '') === 'admin' || (int)($u['two_step'] ?? 0) === 1;
+}
+
+/** The account as the app sees it (login, me, reset replies). */
+function user_json(array $u): array {
+  return [
+    'email' => $u['email'], 'status' => $u['status'], 'role' => $u['role'],
+    'twoStep' => needs_second_step($u), 'verified' => (bool)($u['verified'] ?? false),
+  ];
+}
+
 /**
- * The signed-in user ['id','email','status','role'], or null. A session is ended
+ * The signed-in user ['id','email','status','role','two_step','verified'], or null
+ * ('verified': this session passed the email-code step). A session is ended
  * only by signing out, a password change, a change of state that bars sign-in
  * (frozen, deleting, pending), removing the account, or 90 days unused: never
  * by an error. If the database cannot be reached this throws, the request
@@ -154,7 +185,7 @@ function start_session(string $userId): void {
 function current_user(): ?array {
   $token = $_COOKIE[cookie_name()] ?? '';
   if (!is_string($token) || $token === '' || strlen($token) > 100) return null;
-  $q = db()->prepare('SELECT u.id, u.email, u.status, u.role, s.id_hash, s.last_seen_at
+  $q = db()->prepare('SELECT u.id, u.email, u.status, u.role, u.two_step, s.id_hash, s.last_seen_at, s.second_step_at
     FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.id_hash = ? AND s.expires_at > ?');
   $q->execute([hash('sha256', $token), time()]);
   $row = $q->fetch();
@@ -166,9 +197,13 @@ function current_user(): ?array {
     // in use: push the expiry out again, in the database and in the browser
     db()->prepare('UPDATE sessions SET last_seen_at = ?, expires_at = ? WHERE id_hash = ?')
       ->execute([$now, $now + SESSION_SECONDS, $row['id_hash']]);
+    db()->prepare('UPDATE users SET last_seen_at = ? WHERE id = ?')->execute([$now, $row['id']]);
     set_session_cookie($token, $now + SESSION_SECONDS);
   }
-  return ['id' => $row['id'], 'email' => $row['email'], 'status' => $row['status'], 'role' => $row['role']];
+  return [
+    'id' => $row['id'], 'email' => $row['email'], 'status' => $row['status'], 'role' => $row['role'],
+    'two_step' => (int)$row['two_step'], 'verified' => $row['second_step_at'] !== null,
+  ];
 }
 
 /** The signed-in user, or a 401. */
@@ -183,17 +218,23 @@ function require_writer(): array {
   return $u;
 }
 
-/** The signed-in admin, or a 403. (The email second step joins this check in astro-tbb.10.) */
+/**
+ * The signed-in admin, or a 403: the role, an active account, and a session that
+ * passed the email-code step (one made before two-step sign-in existed has not).
+ */
 function require_admin(): array {
   $u = require_user();
-  if ($u['role'] !== 'admin') reply(403, ['error' => 'admin only']);
+  if ($u['role'] !== 'admin' || $u['status'] !== 'active') reply(403, ['error' => 'admin only']);
+  if (!$u['verified']) {
+    reply(403, ['error' => 'second step', 'message' => 'Sign out and sign in again: admin pages need the emailed code.']);
+  }
   return $u;
 }
 
 /** What the reader is told when a correct password meets a state that bars sign-in. */
 function barred_message(string $status): string {
   return match ($status) {
-    'pending' => 'Your account is waiting for approval.',
+    'pending' => 'Your account is waiting for approval. You will get an email when it is approved.',
     'frozen' => 'This account is frozen. Contact the site owner.',
     'deleting' => 'This account is scheduled for deletion. Contact the site owner to cancel.',
     default => 'This account cannot sign in.',
@@ -245,6 +286,12 @@ function housekeeping(): void {
   purge_due_deletions();
   db()->prepare('DELETE FROM login_failures WHERE at < ?')->execute([time() - 86400]);
   db()->prepare('DELETE FROM email_codes WHERE expires_at < ?')->execute([time() - 86400]);
+  // registrations whose address was never confirmed
+  db()->prepare("DELETE FROM users WHERE email_confirmed = 0 AND status = 'pending' AND created_at < ?")
+    ->execute([time() - UNCONFIRMED_SECONDS]);
+  // the admin log keeps no address of an account that no longer exists
+  db()->exec('UPDATE admin_log SET target_email = NULL
+    WHERE target_email IS NOT NULL AND target_id IS NOT NULL AND target_id NOT IN (SELECT id FROM users)');
 }
 
 /** Remove accounts whose deletion grace has run out (their sessions go with them). Returns how many. */
@@ -273,6 +320,47 @@ function password_problem(string $pw): ?string {
   return null;
 }
 
+/**
+ * Why a password someone is choosing now (registration, reset, admin) is
+ * unacceptable, or null: the length rules, then the breach list.
+ */
+function new_password_problem(string $pw): ?string {
+  if ($p = password_problem($pw)) return $p;
+  if (pwned_count($pw) > 0) return 'this password has appeared in a data breach (haveibeenpwned.com), so choose another';
+  return null;
+}
+
+/**
+ * How often the password appears in Have I Been Pwned's Pwned Passwords list,
+ * by its free range API: only the first 5 hex digits of the SHA-1 leave the
+ * server, padded responses hide which range was asked for, and the match is
+ * checked here. 0 when it is not listed, or when the check is off ([passwords]
+ * pwned_check = off) or the service cannot be reached: then the length rules alone apply.
+ */
+function pwned_count(string $pw): int {
+  $cfg = config_table('passwords');
+  if (strtolower((string)($cfg['pwned_check'] ?? 'on')) === 'off' || !function_exists('curl_init')) return 0;
+  $sha = strtoupper(sha1($pw));
+  $ch = curl_init('https://api.pwnedpasswords.com/range/' . substr($sha, 0, 5));
+  curl_setopt_array($ch, [
+    CURLOPT_RETURNTRANSFER => true, CURLOPT_CONNECTTIMEOUT => 3, CURLOPT_TIMEOUT => 5,
+    CURLOPT_HTTPHEADER => ['Add-Padding: true', 'User-Agent: Astrodynamics (fairflow.co.uk/astro)'],
+  ]);
+  $body = curl_exec($ch);
+  $status = (int)curl_getinfo($ch, CURLINFO_RESPONSE_CODE);
+  if (!is_string($body) || $status !== 200) { error_log('astro api: breach-list check skipped'); return 0; }
+  return pwned_in_range($body, substr($sha, 5));
+}
+
+/** The count for this SHA-1 suffix in a range response ("SUFFIX:COUNT" lines; padding lines count 0). */
+function pwned_in_range(string $body, string $suffix): int {
+  foreach (preg_split('/\r?\n/', $body) as $line) {
+    $parts = explode(':', trim($line));
+    if (count($parts) === 2 && strtoupper($parts[0]) === $suffix) return (int)$parts[1];
+  }
+  return 0;
+}
+
 /** Seconds to wait if this email or IP has failed too often recently, else 0. */
 function login_wait(string $email, string $ip): int {
   $since = time() - LOGIN_WINDOW;
@@ -299,6 +387,19 @@ function record_login_failure(string $email, string $ip): void {
 
 function clear_login_failures(string $email): void {
   db()->prepare('DELETE FROM login_failures WHERE k = ?')->execute(['email:' . hash('sha256', $email)]);
+}
+
+/**
+ * Record an admin action in admin_log (shown in the admin panel). The id starts
+ * with the time in microseconds, so ordering by id lists actions in the order
+ * they happened, even several in one second.
+ */
+function log_admin(array $admin, string $action, ?array $target, string $detail = ''): void {
+  $id = sprintf('%016d', (int)(microtime(true) * 1e6)) . '-' . bin2hex(random_bytes(9));
+  db()->prepare('INSERT INTO admin_log (id, admin_id, admin_email, action, target_id, target_email, detail, at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
+    ->execute([$id, $admin['id'], $admin['email'], $action, $target['id'] ?? null, $target['email'] ?? null,
+      $detail === '' ? null : substr($detail, 0, 190), time()]);
 }
 
 require __DIR__ . '/mail.php';

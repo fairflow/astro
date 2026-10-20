@@ -4,6 +4,20 @@
 **Repo state:** main @ PR #10 — builds clean, `tsc` clean, 165/165 tests green. m4-draft is merged (PR #9); sessions now branch off main (Claude worktree or astro-m4, see §3).
 **Deployed:** https://fairflow.co.uk/astro/ @ PR #8 state (main is ahead: authoring tab + authored batch-00 NOT yet deployed — flag-gated, can ship whenever)
 
+> **2026-10-20 09:37 BST (Opus 5.5), accounts.** Much of this file predates
+> the server API: §1 "no server component" and §8 "NO server component,
+> accounts, or sync" are superseded by `docs/DESIGN.md` §5a. Current state of
+> the API is in DEVELOPMENT.md, "Server API". Branch `claude/accounts-2`
+> (v0.5.0, stacked on #51) adds the published privacy notice (`<app>/privacy/`),
+> two-step sign-in by email code (astro-tbb.10), the admin panel (astro-tbb.4)
+> and registration with approval (astro-tbb.3). Migration 004 must be on the
+> live database BEFORE the merge (the new code reads its columns; without them
+> sign-in fails with a 500): `.venv/bin/python tools/host_account.py migrate --local-sql`
+> uploads the new SQL file and runs it. 004 only adds, and main's current code
+> was checked to work over it. After the deploy the live admin signs in again,
+> with the emailed code, to use the panel. Merges to main deploy production;
+> every merge is Matthew's.
+
 ## 1. What this project is (3 sentences max)
 
 ASTRODYNAMICS is an offline-first astrology web app (Svelte 5 + TypeScript + Vite PWA): natal charts, transits, synastry and midpoint composites, computed entirely client-side from bundled ephemeris data (astronomy-engine + our own Chebyshev packs fitted to JPL Horizons). It renders an interactive SVG wheel with a hand-built glyph kit and produces psychological interpretations in four registers (Psychological/Mundane/Energy/Minimal) from authored texts + a template composer. All personal data stays in the browser (IndexedDB/localStorage) with file export/import; there is no server component beyond static hosting.

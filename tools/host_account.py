@@ -6,6 +6,10 @@ for new accounts are asked for here, hidden, and passed to the server on
 standard input: never stored, never on a command line.
 
   .venv/bin/python tools/host_account.py migrate
+  .venv/bin/python tools/host_account.py migrate --local-sql
+        (first uploads this checkout's api/sql/*.sql files that the host lacks, so a
+         migration can run BEFORE the code that needs it is merged and deployed;
+         safe when the migration only adds, as 004 does)
   .venv/bin/python tools/host_account.py list
   .venv/bin/python tools/host_account.py add EMAIL        (asks for the password twice)
   .venv/bin/python tools/host_account.py passwd EMAIL     (asks for the new password twice)
@@ -17,6 +21,8 @@ Run from the repo root (it imports tools/deploy_sftp.py).
 """
 import argparse
 import getpass
+import glob
+import os
 import re
 import shlex
 import sys
@@ -41,6 +47,18 @@ def run(client, cmd: str, stdin: str | None = None) -> int:
     return out.channel.recv_exit_status()
 
 
+def upload_missing_sql(client) -> None:
+    sftp = client.open_sftp()
+    remote = API.removeprefix('~/') + '/sql'   # SFTP paths are relative to the home directory
+    have = set(sftp.listdir(remote))
+    for f in sorted(glob.glob('api/sql/*.sql')):
+        name = os.path.basename(f)
+        if name not in have:
+            sftp.put(f, f'{remote}/{name}')
+            print(f'uploaded {name}')
+    sftp.close()
+
+
 def new_password() -> str:
     pw = getpass.getpass('New account password (10 to 72 characters): ')
     if getpass.getpass('Again: ') != pw:
@@ -53,6 +71,7 @@ def main() -> None:
     ap.add_argument('--secrets', default=DEFAULT_SECRETS, help=f'file with an [ssh] table (default {DEFAULT_SECRETS})')
     ap.add_argument('command', choices=['migrate', 'list', 'add', 'passwd', 'admin', 'state', 'mail-test'])
     ap.add_argument('args', nargs='*')
+    ap.add_argument('--local-sql', action='store_true', help='migrate: upload missing api/sql/*.sql first')
     a = ap.parse_args()
 
     needs_email = a.command in ('add', 'passwd', 'admin', 'state', 'mail-test')
@@ -75,6 +94,8 @@ def main() -> None:
 
     client = connect(a.secrets)
     try:
+        if a.command == 'migrate' and a.local_sql:
+            upload_missing_sql(client)
         code = run(client, cmd, stdin)
     finally:
         client.close()

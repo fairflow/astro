@@ -38,7 +38,7 @@ const post = (path: string, json?: unknown, extra: Record<string, string> = { 'x
 describe.skipIf(!hasPhp)('API logins (php -S + SQLite)', () => {
   beforeAll(async () => {
     dir = mkdtempSync(join(tmpdir(), 'astro-api-'));
-    writeFileSync(join(dir, 'db.ini'), `[db]\ndriver = sqlite\npath = "${join(dir, 'test.sqlite')}"\n`);
+    writeFileSync(join(dir, 'db.ini'), `[db]\ndriver = sqlite\npath = "${join(dir, 'test.sqlite')}"\n[passwords]\npwned_check = off\n`);
     env = { ...process.env, ASTRO_DB_INI: join(dir, 'db.ini') };
     expect(cli(['api/cli/migrate.php']).stdout).toContain('applied 001_users.sql');
     expect(cli(['api/cli/user.php', 'add', 'Matthew@Example.com'], `${PW}\n`).stdout).toContain('Created matthew@example.com');
@@ -232,10 +232,14 @@ describe.skipIf(!hasPhp)('API logins (php -S + SQLite)', () => {
     expect(r.body.message).toContain('waiting for approval');
   });
 
-  it('admin role: require_admin passes, and it can be taken away', async () => {
+  it('admin role: sign-in takes an emailed code, then require_admin passes; it can be taken away', async () => {
     user('state', S_EMAIL, 'active');
     expect(user('admin', S_EMAIL).stdout).toContain('is now admin');
-    expect((await signIn()).body.user).toMatchObject({ role: 'admin' });
+    expect((await signIn()).body).toMatchObject({ step: 'code' });
+    const mail = JSON.parse(readFileSync(join(dir, 'mail.log'), 'utf8').trim().split('\n').at(-1)!);
+    const code = /code is (\d{6})/.exec(mail.body)![1];
+    expect((await post('/api/login.php', { email: S_EMAIL, password: S_PW, code })).body.user)
+      .toMatchObject({ role: 'admin', verified: true });
     expect(guard('require_admin')).toBe('allowed');
     expect(user('role', S_EMAIL, 'user').stdout).toContain('is now user');
     expect(guard('require_admin')).toContain('admin only');

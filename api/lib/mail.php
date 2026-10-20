@@ -28,11 +28,8 @@ const MAX_WRONG_CODES_PER_DAY = 20;
 function mail_config(): array {
   static $m = null;
   if ($m !== null) return $m;
-  $path = getenv('ASTRO_DB_INI') ?: (PHP_SAPI === 'cli'
-    ? getenv('HOME') . '/astro-config/db.ini'
-    : dirname((string)($_SERVER['DOCUMENT_ROOT'] ?? '')) . '/astro-config/db.ini');
-  $ini = @parse_ini_file($path, true);
-  $cfg = is_array($ini) && isset($ini['mail']) && is_array($ini['mail']) ? $ini['mail'] : [];
+  $path = config_path();
+  $cfg = config_table('mail');
   // PHP's built-in server (npm run api, the tests) never sends real mail unless
   // its config says so: messages go to mail.log beside the config file
   $dev = PHP_SAPI === 'cli-server';
@@ -136,7 +133,22 @@ function code_message(string $code, string $purpose): array {
   ][$purpose];
   $body = "Your Astrodynamics code is $code\n\n"
     . "Enter it $why. It is valid for 10 minutes and works once.\n\n"
-    . "If you did not ask for this, ignore this message: nothing changes unless the code is used.\n\n"
-    . "-- \nAstrodynamics, https://fairflow.co.uk/astro/\nThis address does not receive replies.\n";
-  return ["$code is your Astrodynamics code", $body];
+    . "If you did not ask for this, ignore this message: nothing changes unless the code is used.";
+  return ["$code is your Astrodynamics code", signed($body)];
+}
+
+/** A message body with the standard signature. */
+function signed(string $text): string {
+  return $text . "\n\n-- \nAstrodynamics, https://fairflow.co.uk/astro/\nThis address does not receive replies.\n";
+}
+
+/**
+ * Send a notice (no code), at most MAX_SENDS_PER_EMAIL of one kind to one
+ * address per 15 minutes, so no form can be used to flood a mailbox.
+ */
+function send_notice(string $to, string $kind, string $subject, string $text): void {
+  $k = "send:$kind:" . hash('sha256', $to);
+  if (count_events($k, time() - SEND_WINDOW) >= MAX_SENDS_PER_EMAIL) return;
+  record_event($k);
+  if (!send_mail($to, $subject, signed($text))) error_log("astro api: $kind mail not accepted for sending");
 }

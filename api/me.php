@@ -1,5 +1,5 @@
 <?php
-/** GET → 200 {user: {email, status, role}} when signed in, else 200 {user: null}. The app also uses it to see whether the API exists. */
+/** GET → 200 {user: {email, status, role, twoStep, verified}} when signed in, else 200 {user: null}. The app also uses it to see whether the API exists. */
 define('ASTRO_API', 1);
 require __DIR__ . '/lib/bootstrap.php';
 
@@ -9,5 +9,5 @@ handle(function (): void {
   // e.g. for a visitor who is not signed in, or before the tables exist
   try { housekeeping(); } catch (Throwable $e) { error_log('astro api housekeeping: ' . $e->getMessage()); }
   $u = current_user();
-  reply(200, ['user' => $u ? ['email' => $u['email'], 'status' => $u['status'], 'role' => $u['role']] : null]);
+  reply(200, ['user' => $u ? user_json($u) : null]);
 });
