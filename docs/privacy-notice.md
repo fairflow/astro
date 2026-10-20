@@ -1,11 +1,4 @@
-# Astrodynamics: privacy notice (DRAFT for Matthew's decision)
-
-Status: decisions made by Matthew 2026-10-20 (astro-tbb.1); for his final read
-before it is published as a page in the app, linked from the registration form
-and Settings → Account. Not legal advice. Nothing that stores personal data
-on the server for other users is deployed before it is published.
-
----
+# Privacy notice
 
 ## Who we are
 
@@ -22,9 +15,8 @@ clear them.
 When you choose **Ask Claude**, the chart factors shown in the panel's preview
 (names and places hidden unless you untick that) are sent through our relay to
 Anthropic, whose model writes the reading. Anthropic's handling is covered by
-its own terms; we do not keep a copy on our server. (Checked 2026-10-19: the relay's
-code logs nothing and no Cloudflare log capture is configured; Cloudflare keeps
-only request counts.)
+its own terms. Our relay does not record what you send, and we keep no copy;
+Cloudflare, which runs the relay, keeps only counts of requests.
 
 ## If you have an account
 
@@ -37,9 +29,10 @@ We store, on our web host's server in London, UK (Krystal Hosting):
   of failed sign-in attempts to stop password guessing.
 - **Your account's state** (waiting for approval, active, paused, frozen or
   scheduled for deletion) and role.
-- **When we add these features:** your saved charts and Ask Claude readings,
-  so they are available on all your devices, and the email codes we send you to
-  confirm your address and to sign in.
+- **Email codes** we send you to confirm your address, to finish signing in,
+  or to set a new password (stored only as a hash, and deleted within a day).
+- **When we add this feature:** your saved charts and Ask Claude readings, so
+  they are available on all your devices.
 
 **About other people's data.** Saved charts can include birth details of other
 people (a partner, a friend), and readings can mention them by name. Please add
@@ -57,7 +50,7 @@ do not sell it, and do not share it except with the services that run the site
 
 | What | Kept for |
 |---|---|
-| Account, charts, readings | Until you delete them or close your account |
+| Your account (and, once added, charts and readings) | Until you close your account or delete them |
 | After you ask to close your account | 30 days (so you can change your mind), then deleted permanently |
 | Sessions | Ended when you sign out, or after 90 days unused |
 | Failed sign-in records | 1 day |
@@ -66,11 +59,12 @@ do not sell it, and do not share it except with the services that run the site
 
 ## Your rights
 
-You can **download** everything stored for your account, **correct** it,
-**delete** individual charts and readings, and **close your account**
-(deleted after 30 days, and you can cancel within that time). You can also ask
-us what we hold, object to how we use it, or complain to the Information
-Commissioner's Office (ico.org.uk).
+You can ask us, at admin@fairflow.co.uk, for a **copy** of everything stored
+for your account, to **correct** it, or to **close your account** (deleted
+after 30 days, and you can cancel within that time). You can also ask what we
+hold, object to how we use it, or complain to the Information Commissioner's
+Office (ico.org.uk). When the app lets you download your data or close your
+account yourself, this notice will say so.
 
 ## Cookies
 
@@ -81,20 +75,4 @@ page. No analytics, advertising or tracking cookies.
 ## Changes
 
 If this notice changes in a way that matters, we will say so in the app.
-Last updated: **[date of publication]**.
-
----
-
-### Notes for Matthew (not part of the notice)
-
-1. **ICO data protection fee:** Matthew 2026-10-20: the service is
-   non-commercial at present. Confirm with the ICO's online self-assessment
-   before registration opens, and revisit if it ever charges or advertises.
-2. **Minimum age:** not stated (Matthew 2026-10-20).
-3. **Facts checked 2026-10-20:** the server (valerii-lon.krystal.uk, IP
-   77.72.2.45) is registered to Krystal, 124 City Road, London, GB; Krystal's
-   UK hosting runs from its London data centre (Netwise East). The account is
-   on the Emerald plan: backups every 12 hours, 60 restore points, 30 days
-   (help.krystal.io, "What backups do I get with my account?"). The Ask Claude
-   relay logs nothing. The 30-day removal grace, 90-day sessions, one-day
-   failure records and 10-minute codes match the code (DESIGN.md §5a).
+Last updated: 20 October 2026.

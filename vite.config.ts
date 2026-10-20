@@ -1,8 +1,9 @@
-import { cpSync, existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { defineConfig, type Plugin } from 'vitest/config';
 import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { buildStamp, stampDefines } from './buildstamp';
+import { renderMarkdown } from './src/ai/markdown';
 
 // Personal-data guard: reaction exports (a named reader's comments) must never
 // sit under data/ — it is the publicDir, so anything here is bundled into dist/
@@ -82,10 +83,67 @@ function copyApi(): Plugin {
   };
 }
 
+// The privacy notice (docs/privacy-notice.md) as its own page at <app>/privacy/:
+// written to dist/ by the build, served on the fly by the dev server. The
+// Markdown goes through the same escape-first renderer as Ask Claude readings.
+function privacyHtml(): string {
+  const md = readFileSync(resolve(__dirname, 'docs/privacy-notice.md'), 'utf8');
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy notice · Astrodynamics</title>
+<style>
+  :root { --bg: #f4f0e6; --panel: #fff; --line: #c9c0aa; --ink: #2c2820; --dim: #6d6656; --gold: #8f6f2f; color-scheme: light; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #0e1220; --panel: #171e33; --line: #28304d; --ink: #e8e4d8; --dim: #9aa0b5; --gold: #d4af6a; color-scheme: dark; }
+  }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.6 -apple-system, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 42rem; margin: 0 auto; padding: 1.5rem 16px 4rem; }
+  a { color: var(--gold); }
+  .back { font-size: .9rem; }
+  h2 { font-family: "Iowan Old Style", Palatino, Georgia, serif; font-weight: 400; color: var(--gold); font-size: 2rem; margin: 1rem 0 .5rem; }
+  h3 { font-family: "Iowan Old Style", Palatino, Georgia, serif; color: var(--gold); font-size: 1.25rem; margin: 1.8rem 0 .4rem; }
+  p, li { max-width: 65ch; }
+  .tablewrap { overflow-x: auto; margin: .5rem 0 1rem; }
+  table { border-collapse: collapse; font-size: .95rem; }
+  th, td { border: 1px solid var(--line); padding: .4rem .7rem; text-align: left; vertical-align: top; }
+  th { background: var(--panel); color: var(--gold); }
+</style>
+</head>
+<body>
+<main>
+<p class="back"><a href="../">← Astrodynamics</a></p>
+${renderMarkdown(md)}
+</main>
+</body>
+</html>
+`;
+}
+
+function privacyPage(): Plugin {
+  return {
+    name: 'privacy-page',
+    configureServer(server) {
+      server.middlewares.use('/privacy', (req, res, next) => {
+        if (req.url !== '/' && req.url !== '') return next();
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.end(privacyHtml());
+      });
+    },
+    closeBundle() {
+      if (!existsSync(resolve(__dirname, 'dist'))) return;
+      mkdirSync(resolve(__dirname, 'dist/privacy'), { recursive: true });
+      writeFileSync(resolve(__dirname, 'dist/privacy/index.html'), privacyHtml());
+    },
+  };
+}
+
 export default defineConfig({
   // relative base so dist/ works from any subdirectory (e.g. /astro/)
   base: './',
-  plugins: [svelte(), swVersionStamp(), versionJson(), copyApi(), guardNoServedPersonalData()],
+  plugins: [svelte(), swVersionStamp(), versionJson(), copyApi(), privacyPage(), guardNoServedPersonalData()],
   define: stampDefines(stamp),
   // data/ holds the committed ephemeris packs, gazetteer, text packs and
   // web-app files (manifest, service worker, icons); serving it as

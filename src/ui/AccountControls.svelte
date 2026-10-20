@@ -37,7 +37,8 @@
       <p class="note">This account is paused: you can read and download your data, but not add to it.</p>
     {/if}
     <button type="button" onclick={signOut} disabled={account.busy}>Sign out</button>
-    <p class="hint">Saving readings to your account comes next; for now they stay in this browser.</p>
+    <p class="hint">Saving readings to your account comes next; for now they stay in this browser.
+      <a href="privacy/" target="_blank" rel="noopener">Privacy notice</a></p>
   </div>
 {:else if account.status === 'signedOut' && reset === 'ask'}
   <form class="acct" onsubmit={askCode}>
@@ -80,7 +81,7 @@
       <button type="submit" disabled={account.busy}>{account.busy ? 'Signing in…' : 'Sign in'}</button>
       <button type="button" class="link" onclick={startReset}>Forgot password?</button>
     </div>
-    <p class="hint">Accounts are by invitation.</p>
+    <p class="hint">Accounts are by invitation. <a href="privacy/" target="_blank" rel="noopener">Privacy notice</a></p>
   </form>
 {:else if account.status === 'unreachable'}
   <p class="hint">Could not check your sign-in just now (offline or a server problem). You stay signed
@@ -107,6 +108,7 @@
     font-size: 12.5px; }
   button.link:hover { color: var(--gold); }
   .hint { color: var(--dim); font-size: 12px; }
+  .hint a { color: var(--gold); }
   .note { color: var(--ink); font-size: 12.5px; border-left: 2px solid var(--gold-dim); padding-left: 8px; }
   .badge { font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em; color: var(--gold);
     border: 1px solid var(--gold-dim); border-radius: 8px; padding: 0 6px; }
