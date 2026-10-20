@@ -8,10 +8,11 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'no
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { freePort } from './freeport.js';
 
 const root = resolve(__dirname, '..');
 const hasPhp = spawnSync('php', ['-r', 'exit(extension_loaded("pdo_sqlite") ? 0 : 1);']).status === 0;
-const PORT = 8590 + Math.floor(Math.random() * 100);
+const PORT = freePort();
 const BASE = `http://127.0.0.1:${PORT}`;
 const ADMIN = 'boss@example.com';
 const USER = 'two@example.com';
@@ -66,7 +67,7 @@ describe.skipIf(!hasPhp)('API two-step sign-in, registration and admin (php -S +
       try { await fetch(`${BASE}/api/me.php`); return; } catch { await new Promise(r => setTimeout(r, 100)); }
     }
     throw new Error('php -S did not start');
-  });
+  }, 30_000); // setup runs migrations, bcrypt and php -S: more room than the 10 s default
   afterAll(() => { server?.kill(); rmSync(dir, { recursive: true, force: true }); });
 
   // ---- two-step sign-in (astro-tbb.10) ----

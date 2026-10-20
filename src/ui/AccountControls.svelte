@@ -5,6 +5,7 @@
   import AdminPanel from './AdminPanel.svelte';
   import AccountSelf from './AccountSelf.svelte';
   import { sync, syncNow } from '../ai/readingsync.svelte';
+  import { chartSync, syncCharts } from '../store/chartsync.svelte';
 
   const time = (t: number) => new Date(t).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 
@@ -85,11 +86,13 @@
     <AccountSelf />
     <button type="button" onclick={signOut} disabled={account.busy}>Sign out</button>
     <p class="hint" aria-live="polite">
-      {#if sync.state === 'syncing'}Saving your Ask Claude readings to your account…
-      {:else if sync.state === 'error'}Readings not synced just now ({sync.error}); they are kept here and tried again.
-        <button type="button" class="link" onclick={() => syncNow()}>Try now</button>
-      {:else if sync.state === 'paused'}Paused: readings on your account can be read and deleted; new ones stay in this browser.
-      {:else}Your Ask Claude readings are saved to your account ({sync.count}){#if sync.waiting}, {sync.waiting} waiting{/if}{#if sync.last}, checked {time(sync.last)}{/if}.
+      {#if sync.state === 'syncing' || chartSync.state === 'syncing'}Saving your charts and readings to your account…
+      {:else if sync.state === 'error' || chartSync.state === 'error'}Not synced just now ({sync.error || chartSync.error});
+        everything is kept here and tried again.
+        <button type="button" class="link" onclick={() => { void syncNow(); void syncCharts(); }}>Try now</button>
+      {:else if sync.state === 'paused'}Paused: your charts and readings on your account can be read and deleted; new ones stay in this browser.
+      {:else}Your saved charts ({chartSync.count}) and Ask Claude readings ({sync.count}) are saved to your
+        account{#if sync.waiting + chartSync.waiting}, {sync.waiting + chartSync.waiting} waiting{/if}{#if sync.last}, checked {time(sync.last)}{/if}.
       {/if}
       {@render privacy()}</p>
   </div>
@@ -179,8 +182,8 @@
     {#if account.canCancel}
       <button type="button" disabled={account.busy} onclick={() => reopenAccount(email, password)}>Cancel the removal</button>
     {/if}
-    <p class="hint">Signing in saves the Ask Claude readings in this browser to your account, so they are
-      on all your devices. New accounts are approved by the site owner. {@render privacy()}</p>
+    <p class="hint">Signing in saves the charts and Ask Claude readings in this browser to your account, so
+      they are on all your devices. New accounts are approved by the site owner. {@render privacy()}</p>
   </form>
 {:else if account.status === 'unreachable'}
   <p class="hint">Could not check your sign-in just now (offline or a server problem). You stay signed

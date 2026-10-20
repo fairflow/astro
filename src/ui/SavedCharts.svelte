@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import {
-    DEFAULT_SET, deleteChart, listCharts, moveChart, saveChart, setsOf,
+    DEFAULT_SET, deleteChart, listCharts, moveChart, onChartsChange, saveChart, setsOf,
     updateChart, type SavedChart,
   } from '../store/db';
 
@@ -31,7 +31,8 @@
   async function refresh() {
     charts = await listCharts();
   }
-  onMount(refresh);
+  // also when sync brings changes from another device
+  onMount(() => { void refresh(); return onChartsChange(() => void refresh()); });
 
   const sets = $derived(setsOf(charts));
   // Search wins over the family filter: a query matches any fragment of the

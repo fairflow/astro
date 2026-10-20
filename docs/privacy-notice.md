@@ -42,7 +42,11 @@ We store, on our web host's server in London, UK (Krystal Hosting):
   your account when you sign in there. Deleting a reading deletes its content
   from our server too; only a note that it was deleted (with no content) is
   kept, so your other devices remove it as well.
-- **When we add this feature:** your saved charts.
+- **Your saved charts**: the birth details you save (name, date, time and place
+  of birth, notes, and the family you file them under), so they are on all
+  your devices. Charts already in your browser are saved to your account when
+  you sign in there. Deleting a chart deletes its details from our server too.
+  Display settings stay in each browser.
 
 **Choosing a password.** When you register or set a new password, we check it
 against the Have I Been Pwned list of passwords exposed in data breaches. Only
@@ -65,8 +69,8 @@ do not sell it, and do not share it except with the services that run the site
 
 | What | Kept for |
 |---|---|
-| Your account and your readings (and, once added, charts) | Until you close your account or delete them |
-| A deleted reading | Its content at once; the note that it was deleted, with your account |
+| Your account, saved charts and readings | Until you close your account or delete them |
+| A deleted chart or reading | Its content at once; the note that it was deleted, with your account |
 | A registration whose address was never confirmed | 7 days |
 | After you ask to close your account | 30 days (so you can change your mind), then deleted permanently |
 | Sessions | Ended when you sign out, or after 90 days unused |
@@ -78,7 +82,7 @@ do not sell it, and do not share it except with the services that run the site
 
 In the app (Settings, Account, "Your account and data") you can **download**
 everything stored for your account (as JSON, and your readings as Markdown),
-**change your password**, delete any reading, and **close your account**: it
+**change your password**, delete any chart or reading, and **close your account**: it
 is signed out at once and deleted, with everything stored for it, after 30
 days; until then you can cancel by signing in again. You can also ask us, at
 admin@fairflow.co.uk, for any of these, to **correct** your data, what we

@@ -6,10 +6,11 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { freePort } from './freeport.js';
 
 const root = resolve(__dirname, '..');
 const hasPhp = spawnSync('php', ['-r', 'exit(extension_loaded("pdo_sqlite") ? 0 : 1);']).status === 0;
-const PORT = 8690 + Math.floor(Math.random() * 100);
+const PORT = freePort();
 const BASE = `http://127.0.0.1:${PORT}`;
 const PW = 'a long password 1';
 const A = 'reader-a@example.com';
@@ -53,7 +54,7 @@ describe.skipIf(!hasPhp)('API readings sync (php -S + SQLite)', () => {
       try { await fetch(`${BASE}/api/me.php`); break; } catch { await new Promise(r => setTimeout(r, 100)); }
     }
     for (const e of [A, B]) expect((await call(e, '/api/login.php', { email: e, password: PW })).status).toBe(200);
-  });
+  }, 30_000); // setup runs migrations, bcrypt and php -S: more room than the 10 s default
   afterAll(() => { server?.kill(); rmSync(dir, { recursive: true, force: true }); });
 
   it('needs a signed-in account, and the X-Astro header to write', async () => {
