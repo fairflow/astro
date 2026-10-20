@@ -9,11 +9,12 @@ const DEV_KEY: string = import.meta.env.DEV ? (import.meta.env.VITE_AI_DEV_KEY ?
  * when not signed in (the relay will then refuse with "sign in"). Throws with
  * the server's message when the account may not ask now (daily limit, paused).
  */
-async function getPass(): Promise<string | null> {
+async function getPass(preset: AiPresetId): Promise<string | null> {
   if (account.status !== 'signedIn') return null;
+  // the preset is only counted, for the admin's usage view; the relay picks the model itself
   const res = await fetch('api/ask_pass.php', {
     method: 'POST', credentials: 'same-origin', cache: 'no-store',
-    headers: { 'content-type': 'application/json', 'x-astro': '1' }, body: '{}',
+    headers: { 'content-type': 'application/json', 'x-astro': '1' }, body: JSON.stringify({ preset }),
   });
   let j: { pass?: unknown; message?: unknown } = {};
   try { j = await res.json() as typeof j; } catch { /* not JSON */ }
@@ -47,7 +48,7 @@ export async function askClaude(opts: AskOpts): Promise<void> {
   const headers: Record<string, string> = { 'content-type': 'application/json' };
   if (DEV_KEY) headers['x-astro-dev-key'] = DEV_KEY;
   else {
-    const pass = await getPass();
+    const pass = await getPass(opts.preset);
     if (pass) headers['x-astro-pass'] = pass;
   }
   const res = await fetch(AI_WORKER_URL, {

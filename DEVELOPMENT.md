@@ -348,6 +348,14 @@ service worker never caches `api/`.
   `worker/src/index.ts` (`test/worker-gate.spec.ts`). Deploy order: the site
   first (Ask Claude keeps working with the current Worker), then the Worker
   (`cd worker && npx wrangler deploy`), which makes sign-in required.
+- **Admin: invitations and usage** (astro-6yh): `admin_invite.php` makes an
+  active account with an unusable random password and emails the person to
+  choose one through "Forgot password?" (no password is ever sent);
+  `admin_usage.php` reports Ask Claude readings per account (24 hours from
+  `ask_passes`, 7 and 30 days from `ask_daily`) and per day by model, saved
+  readings and charts, and accounts by state. `ask_daily` (migration 008)
+  holds counts per account, UTC day and preset, kept 13 months; the app sends
+  the preset with each pass request, and counting never blocks a reading.
 - **Self-service** (astro-tbb.5; Settings → Account → "Your account and data",
   `AccountSelf.svelte`): `account_export.php` (everything stored for the
   account: account, live readings, admin actions on it; never hashes or
@@ -379,8 +387,8 @@ service worker never caches `api/`.
   per host name).
 - **Tests:** `test/api-logins.spec.ts`, `test/api-email-codes.spec.ts`,
   `test/api-accounts.spec.ts`, `test/api-readings.spec.ts`,
-  `test/api-self-service.spec.ts`, `test/api-charts.spec.ts` and
-  `test/api-ask.spec.ts` run the real endpoints under `php -S` over a
+  `test/api-self-service.spec.ts`, `test/api-charts.spec.ts`,
+  `test/api-ask.spec.ts` and `test/api-admin-usage.spec.ts` run the real endpoints under `php -S` over a
   throwaway SQLite database, reading codes from its `mail.log` (skipped when
   PHP is not installed).
 

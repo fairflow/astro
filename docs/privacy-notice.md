@@ -19,7 +19,8 @@ its own terms. Our relay does not record what you send, and we keep no copy;
 Cloudflare, which runs the relay, keeps only counts of requests. To apply the
 daily limit of readings per account, our server records when each reading
 was started (the time only, nothing of its content) and deletes that record
-after two days.
+after two days. To keep an eye on costs, it also counts how many readings
+each account starts per day and with which model (numbers only), for 13 months.
 
 ## If you have an account
 
@@ -80,6 +81,7 @@ do not sell it, and do not share it except with the services that run the site
 | Failed sign-in records | 1 day |
 | Email codes | 10 minutes; used and expired codes are deleted within a day |
 | When you started each Ask Claude reading (time only) | 2 days |
+| How many Ask Claude readings you started each day, by model (counts only) | 13 months |
 | The host's backups | 30 days, then overwritten (so deleted data can remain in a backup for up to 30 days) |
 
 ## Your rights
