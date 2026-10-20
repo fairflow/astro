@@ -1,6 +1,8 @@
 <?php
 /**
- * Manage accounts. Command line only; there is no public sign-up.
+ * Manage accounts from the command line. People also register in the app
+ * (register.php) and an admin approves them in the admin panel; this is for the
+ * first admin and for emergencies.
  *
  *   php api/cli/user.php add <email>       create an account (asks for the password twice)
  *   php api/cli/user.php passwd <email>    set a new password (signs out every session)
