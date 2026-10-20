@@ -14,10 +14,15 @@ export type AccountStatus = 'checking' | 'unavailable' | 'unreachable' | 'signed
 /** The account's state on the server (docs/DESIGN.md §5a); only active and paused accounts can be signed in. */
 export type AccountState = 'active' | 'paused';
 
+/**
+ * twoStep: signing in takes an emailed code after the password (always for
+ * admins). verified: this session passed that step; admin pages need it.
+ */
 export const account = $state<{
-  status: AccountStatus; email: string; state: AccountState; admin: boolean; busy: boolean; error: string;
+  status: AccountStatus; email: string; state: AccountState; admin: boolean;
+  twoStep: boolean; verified: boolean; busy: boolean; error: string;
 }>({
-  status: 'checking', email: '', state: 'active', admin: false, busy: false, error: '',
+  status: 'checking', email: '', state: 'active', admin: false, twoStep: false, verified: false, busy: false, error: '',
 });
 
 /** What to tell the reader for a failed sign-in response. */
@@ -27,10 +32,12 @@ export function signInMessage(status: number, body: unknown): string {
   // a correct password on an account that cannot sign in (pending, frozen, deleting): the server says why
   const message = (body as { message?: unknown } | null)?.message;
   if (status === 403 && typeof message === 'string') return message;
+  if (status === 429 && typeof message === 'string') return message;
   if (status === 429) {
     const mins = typeof retry === 'number' ? Math.max(1, Math.ceil(retry / 60)) : 15;
     return `Too many attempts. Try again in ${mins} minute${mins === 1 ? '' : 's'}.`;
   }
+  if (status === 400 && typeof message === 'string') return message;
   if (status === 400) return 'Enter your email and password.';
   return `Sign-in failed (HTTP ${status}). Try again later.`;
 }
@@ -42,13 +49,15 @@ async function jsonOf(r: Response): Promise<Record<string, unknown> | null> {
 }
 
 function signedInAs(user: unknown): void {
-  const u = user as { email?: unknown; status?: unknown; role?: unknown } | null;
+  const u = user as { email?: unknown; status?: unknown; role?: unknown; twoStep?: unknown; verified?: unknown } | null;
   if (typeof u?.email === 'string') {
     account.status = 'signedIn'; account.email = u.email;
     account.state = u.status === 'paused' ? 'paused' : 'active';
     account.admin = u.role === 'admin';
+    account.twoStep = u.twoStep === true; account.verified = u.verified === true;
   } else {
     account.status = 'signedOut'; account.email = ''; account.state = 'active'; account.admin = false;
+    account.twoStep = false; account.verified = false;
   }
 }
 
@@ -80,17 +89,62 @@ const post = (path: string, body: unknown) => fetch(API + path, {
   body: JSON.stringify(body),
 });
 
-export async function signIn(email: string, password: string): Promise<boolean> {
+/**
+ * Sign in. 'code': the password was right and a code has been emailed; call
+ * again with the same email and password and the code (`code` holds the
+ * server's note). 'done': signed in. false: refused (see account.error).
+ */
+export async function signIn(email: string, password: string, code?: string): Promise<{ result: 'done' | 'code'; note: string } | false> {
   account.busy = true; account.error = '';
   try {
-    const r = await post('login.php', { email, password });
+    const r = await post('login.php', code === undefined ? { email, password } : { email, password, code });
     const j = await jsonOf(r);
-    if (r.ok && j) { signedInAs(j.user); return true; }
+    if (r.ok && j?.step === 'code') return { result: 'code', note: typeof j.message === 'string' ? j.message : '' };
+    if (r.ok && j) { signedInAs(j.user); return { result: 'done', note: '' }; }
     account.error = signInMessage(r.status, j);
     return false;
   } catch {
     account.error = 'Could not reach the server. Check your connection.';
     return false;
+  } finally {
+    account.busy = false;
+  }
+}
+
+/** A POST whose success carries {message}; returns it, or null with account.error set. */
+async function messageCall(path: string, body: unknown): Promise<string | null> {
+  account.busy = true; account.error = '';
+  try {
+    const r = await post(path, body);
+    const j = await jsonOf(r);
+    if (r.ok && j && typeof j.message === 'string') return j.message;
+    account.error = typeof j?.message === 'string' ? j.message : `Failed (HTTP ${r.status}). Try again later.`;
+    return null;
+  } catch {
+    account.error = 'Could not reach the server. Check your connection.';
+    return null;
+  } finally {
+    account.busy = false;
+  }
+}
+
+/** Register: a code is emailed to the address (or, if it has an account, a notice). Returns the server's note. */
+export const register = (email: string, password: string) => messageCall('register.php', { email, password });
+
+/** Confirm a registration with the emailed code (and the password just chosen); the account then waits for approval. */
+export const confirmRegistration = (email: string, password: string, code: string) =>
+  messageCall('register_confirm.php', { email, password, code });
+
+/** Turn two-step sign-in on or off for this account. */
+export async function setTwoStep(on: boolean): Promise<void> {
+  account.busy = true; account.error = '';
+  try {
+    const r = await post('two_step.php', { on });
+    const j = await jsonOf(r);
+    if (r.ok && j) signedInAs(j.user);
+    else account.error = typeof j?.message === 'string' ? j.message : `Failed (HTTP ${r.status}).`;
+  } catch {
+    account.error = 'Could not reach the server. Check your connection.';
   } finally {
     account.busy = false;
   }
