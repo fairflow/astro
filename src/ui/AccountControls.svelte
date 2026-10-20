@@ -1,8 +1,9 @@
 <script lang="ts">
   import {
-    account, confirmRegistration, confirmReset, register, requestReset, setTwoStep, signIn, signOut,
+    account, confirmRegistration, confirmReset, register, reopenAccount, requestReset, setTwoStep, signIn, signOut,
   } from '../api/account.svelte';
   import AdminPanel from './AdminPanel.svelte';
+  import AccountSelf from './AccountSelf.svelte';
   import { sync, syncNow } from '../ai/readingsync.svelte';
 
   const time = (t: number) => new Date(t).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
@@ -81,6 +82,7 @@
         <p class="note">To use the admin panel, sign out and sign in again with the emailed code.</p>
       {/if}
     {/if}
+    <AccountSelf />
     <button type="button" onclick={signOut} disabled={account.busy}>Sign out</button>
     <p class="hint" aria-live="polite">
       {#if sync.state === 'syncing'}Saving your Ask Claude readings to your account…
@@ -174,6 +176,9 @@
       <button type="button" class="link" onclick={() => go('reset-ask')}>Forgot password?</button>
       <button type="button" class="link" onclick={() => { go('register'); password = ''; }}>Create an account</button>
     </div>
+    {#if account.canCancel}
+      <button type="button" disabled={account.busy} onclick={() => reopenAccount(email, password)}>Cancel the removal</button>
+    {/if}
     <p class="hint">Signing in saves the Ask Claude readings in this browser to your account, so they are
       on all your devices. New accounts are approved by the site owner. {@render privacy()}</p>
   </form>
@@ -181,6 +186,7 @@
   <p class="hint">Could not check your sign-in just now (offline or a server problem). You stay signed
     in; it is checked again when you come back to the page.</p>
 {/if}
+{#if account.notice && account.status !== 'signedIn'}<p class="note" role="status">{account.notice}</p>{/if}
 {#if account.error}<p class="err" role="alert">{account.error}</p>{/if}
 
 <style>
