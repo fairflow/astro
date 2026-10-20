@@ -453,7 +453,8 @@ host 8.1: code to 8.1, or move the site to a newer PHP in cPanel first.
 sign-in, astro-tbb.2 account states and roles, astro-tbb.8 outgoing email with
 codes; in v0.5.0, astro-tbb.1 the privacy notice (published at `<app>/privacy/`),
 astro-tbb.10 two-step sign-in by email code, astro-tbb.4 the admin panel and
-astro-tbb.3 registration with approval (details in DEVELOPMENT.md, "Server API"). astro-tbb.5 self-service, astro-tbb.9 the
+astro-tbb.3 registration with approval (details in DEVELOPMENT.md, "Server API");
+in v0.6.0, astro-cbi readings synced to the account. astro-tbb.5 self-service, astro-tbb.9 the
 first live admin and astro-tbb.7 the Ask Claude cap follow .2; astro-bk6 needs
 .7; astro-cbi and astro-ag1 need .2 and .1. astro-tbb.6 TOTP is later.
 astro-sx7 (save readings while they stream) shipped in v0.3.3.
