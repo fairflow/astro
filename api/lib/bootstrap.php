@@ -235,6 +235,18 @@ function set_role(string $userId, string $role): void {
   db()->prepare('UPDATE users SET role = ? WHERE id = ?')->execute([$role, $userId]);
 }
 
+/**
+ * Routine tidying, run on every page load by me.php (and so needing no cron
+ * job): accounts past their deletion grace, failed-sign-in and send records
+ * older than a day, and email codes a day past expiry. This keeps the
+ * retention promised in the privacy notice.
+ */
+function housekeeping(): void {
+  purge_due_deletions();
+  db()->prepare('DELETE FROM login_failures WHERE at < ?')->execute([time() - 86400]);
+  db()->prepare('DELETE FROM email_codes WHERE expires_at < ?')->execute([time() - 86400]);
+}
+
 /** Remove accounts whose deletion grace has run out (their sessions go with them). Returns how many. */
 function purge_due_deletions(): int {
   $q = db()->prepare("DELETE FROM users WHERE status = 'deleting' AND delete_after IS NOT NULL AND delete_after <= ?");

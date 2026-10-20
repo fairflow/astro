@@ -1,0 +1,78 @@
+# Privacy notice
+
+## Who we are
+
+Astrodynamics (fairflow.co.uk/astro) is run by Matthew Fairtlough, who decides
+how your data is used (the "controller" under UK data protection law).
+Contact: admin@fairflow.co.uk.
+
+## Using the app without an account
+
+Charts, settings and Ask Claude readings are kept **in your own browser**
+(its local storage) and are not sent to us. They stay on that device until you
+clear them.
+
+When you choose **Ask Claude**, the chart factors shown in the panel's preview
+(names and places hidden unless you untick that) are sent through our relay to
+Anthropic, whose model writes the reading. Anthropic's handling is covered by
+its own terms. Our relay does not record what you send, and we keep no copy;
+Cloudflare, which runs the relay, keeps only counts of requests.
+
+## If you have an account
+
+We store, on our web host's server in London, UK (Krystal Hosting):
+
+- **Your email address** and a **hash** of your password (never the password
+  itself).
+- **Sign-in records:** session records so you stay signed in (a random token,
+  stored only as a hash, with when it was last used), and short-lived records
+  of failed sign-in attempts to stop password guessing.
+- **Your account's state** (waiting for approval, active, paused, frozen or
+  scheduled for deletion) and role.
+- **Email codes** we send you to confirm your address, to finish signing in,
+  or to set a new password (stored only as a hash, and deleted within a day).
+- **When we add this feature:** your saved charts and Ask Claude readings, so
+  they are available on all your devices.
+
+**About other people's data.** Saved charts can include birth details of other
+people (a partner, a friend), and readings can mention them by name. Please add
+someone else's details only if they would be happy for you to; you can delete
+any chart or reading at any time.
+
+## Why we use it (lawful basis)
+
+To provide the account you asked for (contract), and to keep the service secure
+and working (legitimate interests). We do not use your data for advertising,
+do not sell it, and do not share it except with the services that run the site
+(the web host, and Anthropic for Ask Claude readings you request).
+
+## How long we keep it
+
+| What | Kept for |
+|---|---|
+| Your account (and, once added, charts and readings) | Until you close your account or delete them |
+| After you ask to close your account | 30 days (so you can change your mind), then deleted permanently |
+| Sessions | Ended when you sign out, or after 90 days unused |
+| Failed sign-in records | 1 day |
+| Email codes | 10 minutes; used and expired codes are deleted within a day |
+| The host's backups | 30 days, then overwritten (so deleted data can remain in a backup for up to 30 days) |
+
+## Your rights
+
+You can ask us, at admin@fairflow.co.uk, for a **copy** of everything stored
+for your account, to **correct** it, or to **close your account** (deleted
+after 30 days, and you can cancel within that time). You can also ask what we
+hold, object to how we use it, or complain to the Information Commissioner's
+Office (ico.org.uk). When the app lets you download your data or close your
+account yourself, this notice will say so.
+
+## Cookies
+
+One cookie, needed to keep you signed in. It is set only when you sign in,
+is sent only to the app's own server, and cannot be read by scripts on the
+page. No analytics, advertising or tracking cookies.
+
+## Changes
+
+If this notice changes in a way that matters, we will say so in the app.
+Last updated: 20 October 2026.

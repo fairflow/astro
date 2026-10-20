@@ -287,8 +287,10 @@ service worker never caches `api/`.
   only active and paused accounts can sign in or keep a session; endpoints that
   create or change data must call `require_writer()` (refuses paused), admin
   endpoints `require_admin()`. Frozen, pending and deleting end the account's
-  sessions at once. Deletions past their 30 days are purged on any `me.php` or
-  sign-in request, and by `user.php purge`.
+  sessions at once. Every `me.php` request (each page load) runs
+  `housekeeping()`: accounts past their 30 days are purged, and failure/send
+  records and email codes older than a day deleted, which is the retention the
+  privacy notice promises; sign-in and `user.php purge` also purge accounts.
 - **Local development:** `npm run api` (or the `api` entry in
   `.claude/launch.json`) runs PHP's built-in server on :8323 over
   `.local/dev.sqlite` (git-ignored), migrating it first; the Vite dev server
