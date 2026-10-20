@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { listCharts, type SavedChart } from '../store/db';
+  import { listCharts, onChartsChange, type SavedChart } from '../store/db';
 
   let { excludeName, onpick, selectedId = null }: {
     excludeName?: string;
@@ -12,8 +12,10 @@
   let charts = $state<SavedChart[]>([]);
   let chosen = $state(selectedId !== null ? String(selectedId) : '');
 
-  onMount(async () => {
-    charts = await listCharts();
+  onMount(() => {
+    const load = async () => { charts = await listCharts(); };
+    void load();
+    return onChartsChange(() => void load());
   });
 
   function pick() {

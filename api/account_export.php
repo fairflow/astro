@@ -1,6 +1,6 @@
 <?php
 /**
- * GET → 200 {exportedAt, account, readings, adminActions}: everything stored for
+ * GET → 200 {exportedAt, account, charts, readings, adminActions}: everything stored for
  * the signed-in account (astro-tbb.5), for "Download my data". Active and paused
  * accounts. Password hashes, session tokens and codes are not data about the
  * person in any useful form and are left out; the privacy notice lists them.
@@ -16,6 +16,8 @@ handle(function (): void {
   $a = $q->fetch();
   $r = db()->prepare('SELECT * FROM readings WHERE user_id = ? AND deleted = 0 ORDER BY created_at');
   $r->execute([$u['id']]);
+  $c = db()->prepare('SELECT data, created_at, updated_at FROM charts WHERE user_id = ? AND deleted = 0 ORDER BY created_at');
+  $c->execute([$u['id']]);
   $l = db()->prepare('SELECT action, detail, at FROM admin_log WHERE target_id = ? ORDER BY id');
   $l->execute([$u['id']]);
   $s = db()->prepare('SELECT COUNT(*) FROM sessions WHERE user_id = ? AND expires_at > ?');
@@ -28,6 +30,9 @@ handle(function (): void {
       'lastSeen' => $a['last_seen_at'] === null ? null : gmdate('c', (int)$a['last_seen_at']),
       'activeSessions' => (int)$s->fetchColumn(),
     ],
+    'charts' => array_map(fn(array $x): array => json_decode((string)$x['data'], true) + [
+      'created' => gmdate('c', intdiv((int)$x['created_at'], 1000)), 'edited' => gmdate('c', intdiv((int)$x['updated_at'], 1000)),
+    ], $c->fetchAll()),
     'readings' => array_map('reading_json', $r->fetchAll()),
     'adminActions' => array_map(fn(array $x): array => [
       'action' => $x['action'], 'detail' => $x['detail'], 'at' => gmdate('c', (int)$x['at']),

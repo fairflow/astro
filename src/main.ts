@@ -3,6 +3,7 @@ import App from './ui/App.svelte';
 import GlyphSheet from './ui/GlyphSheet.svelte';
 import './ui/app.css';
 import './ai/readingsync.svelte';
+import './store/chartsync.svelte';
 
 const root = location.search.includes('glyphs') ? GlyphSheet : App;
 mount(root, { target: document.getElementById('app')! });

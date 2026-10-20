@@ -325,6 +325,16 @@ service worker never caches `api/`.
   comes back into view; readings made signed out go to the next account signed
   in on that browser, and a reading uploaded to one account is never sent to
   another (`toUpload`, `mergePulled` in `readingstore.ts`, unit-tested).
+- **Charts sync** (astro-ag1): `api/charts.php`, the same shape as readings
+  (migration 006, key (user, UUID), tombstones, cursor with overlap), but
+  charts can be edited, so the later `updatedAt` wins: an older edit is
+  refused as `older` and the browser takes the server's copy on the next pull
+  (`planPull` keeps a newer local edit). Birth data only, validated and
+  reduced to the known fields; 2000 charts per account. In the browser,
+  `src/store/chartsync.svelte.ts` over IndexedDB; `db.ts` stamps `uid` and
+  `updatedAt` and signals changes (`onChartsChange`), which also refreshes
+  the chart lists when sync brings changes. Display settings are not synced
+  (they suit each screen).
 - **Self-service** (astro-tbb.5; Settings → Account → "Your account and data",
   `AccountSelf.svelte`): `account_export.php` (everything stored for the
   account: account, live readings, admin actions on it; never hashes or
@@ -355,8 +365,8 @@ service worker never caches `api/`.
   the `localhost` tab is signed in, open `http://[::1]:8322/` (cookies are kept
   per host name).
 - **Tests:** `test/api-logins.spec.ts`, `test/api-email-codes.spec.ts`,
-  `test/api-accounts.spec.ts`, `test/api-readings.spec.ts` and
-  `test/api-self-service.spec.ts` run the real endpoints under `php -S` over a
+  `test/api-accounts.spec.ts`, `test/api-readings.spec.ts`,
+  `test/api-self-service.spec.ts` and `test/api-charts.spec.ts` run the real endpoints under `php -S` over a
   throwaway SQLite database, reading codes from its `mail.log` (skipped when
   PHP is not installed).
 
