@@ -76,12 +76,14 @@ do not sell it, and do not share it except with the services that run the site
 
 ## Your rights
 
-You can ask us, at admin@fairflow.co.uk, for a **copy** of everything stored
-for your account, to **correct** it, or to **close your account** (deleted
-after 30 days, and you can cancel within that time). You can also ask what we
-hold, object to how we use it, or complain to the Information Commissioner's
-Office (ico.org.uk). When the app lets you download your data or close your
-account yourself, this notice will say so.
+In the app (Settings, Account, "Your account and data") you can **download**
+everything stored for your account (as JSON, and your readings as Markdown),
+**change your password**, delete any reading, and **close your account**: it
+is signed out at once and deleted, with everything stored for it, after 30
+days; until then you can cancel by signing in again. You can also ask us, at
+admin@fairflow.co.uk, for any of these, to **correct** your data, what we
+hold, or object to how we use it, and you can complain to the Information
+Commissioner's Office (ico.org.uk).
 
 ## Cookies
 

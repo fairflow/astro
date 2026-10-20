@@ -30,6 +30,9 @@ const STATES = ['pending', 'active', 'paused', 'frozen', 'deleting'];
 const SIGN_IN_STATES = ['active', 'paused'];
 const ROLES = ['user', 'admin'];
 const DELETE_GRACE = 30 * 24 * 3600;
+/** A hash of a random password nobody knows: an unknown email costs the same
+ *  password_verify as a known one, so timing does not reveal which emails exist. */
+const DUMMY_HASH = '$2y$12$4Ug3Zf9FhsNDvocMhWne3OL1GR2t/Iok9v8Dmid33f/DLlRRozHEm';
 /** A registration whose emailed code is never entered is removed after this long. */
 const UNCONFIRMED_SECONDS = 7 * 24 * 3600;
 
@@ -400,6 +403,41 @@ function log_admin(array $admin, string $action, ?array $target, string $detail 
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)')
     ->execute([$id, $admin['id'], $admin['email'], $action, $target['id'] ?? null, $target['email'] ?? null,
       $detail === '' ? null : substr($detail, 0, 190), time()]);
+}
+
+/** A row of `readings` as the app sees it (readings.php, account_export.php). */
+function reading_json(array $row): array {
+  if ((int)$row['deleted'] === 1) return ['id' => $row['id'], 'deleted' => true];
+  return [
+    'id' => $row['id'], 'key' => $row['rkey'], 'group' => $row['grp'], 'tab' => $row['tab'],
+    'title' => $row['title'], 'question' => $row['question'], 'preset' => $row['preset'],
+    'anonymised' => (int)$row['anonymised'] === 1, 'text' => $row['body'],
+    'stopped' => (int)$row['stopped'] === 1, 'interrupted' => (int)$row['interrupted'] === 1,
+    'createdAt' => (int)$row['created_at'],
+  ];
+}
+
+/** The hash of this request's session token ('' when none): to keep this session when ending the others. */
+function current_session_hash(): string {
+  $token = $_COOKIE[cookie_name()] ?? '';
+  return is_string($token) && $token !== '' ? hash('sha256', $token) : '';
+}
+
+/**
+ * Check the signed-in user's own password again (closing the account, changing
+ * the password), with the same lockout as signing in. Replies 429 or 400 itself.
+ */
+function require_own_password(array $u, string $pw): void {
+  $ip = (string)($_SERVER['REMOTE_ADDR'] ?? '');
+  $wait = login_wait($u['email'], $ip);
+  if ($wait > 0) reply(429, ['error' => 'too many attempts', 'retryAfter' => $wait], ['Retry-After' => (string)$wait]);
+  $q = db()->prepare('SELECT pass_hash FROM users WHERE id = ?');
+  $q->execute([$u['id']]);
+  if (!password_verify($pw, (string)$q->fetchColumn())) {
+    record_login_failure($u['email'], $ip);
+    reply(400, ['error' => 'current password', 'message' => 'That is not your current password.']);
+  }
+  clear_login_failures($u['email']);
 }
 
 require __DIR__ . '/mail.php';

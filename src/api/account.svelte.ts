@@ -21,8 +21,13 @@ export type AccountState = 'active' | 'paused';
 export const account = $state<{
   status: AccountStatus; email: string; state: AccountState; admin: boolean;
   twoStep: boolean; verified: boolean; busy: boolean; error: string;
+  /** The last sign-in met an account closed by its owner, still in its 30 days: offer to cancel. */
+  canCancel: boolean;
+  /** A message that is not an error (account closed, removal cancelled), shown until the next action. */
+  notice: string;
 }>({
   status: 'checking', email: '', state: 'active', admin: false, twoStep: false, verified: false, busy: false, error: '',
+  canCancel: false, notice: '',
 });
 
 /** What to tell the reader for a failed sign-in response. */
@@ -95,13 +100,14 @@ const post = (path: string, body: unknown) => fetch(API + path, {
  * server's note). 'done': signed in. false: refused (see account.error).
  */
 export async function signIn(email: string, password: string, code?: string): Promise<{ result: 'done' | 'code'; note: string } | false> {
-  account.busy = true; account.error = '';
+  account.busy = true; account.error = ''; account.canCancel = false; account.notice = '';
   try {
     const r = await post('login.php', code === undefined ? { email, password } : { email, password, code });
     const j = await jsonOf(r);
     if (r.ok && j?.step === 'code') return { result: 'code', note: typeof j.message === 'string' ? j.message : '' };
     if (r.ok && j) { signedInAs(j.user); return { result: 'done', note: '' }; }
     account.error = signInMessage(r.status, j);
+    account.canCancel = r.status === 403 && j?.canCancel === true;
     return false;
   } catch {
     account.error = 'Could not reach the server. Check your connection.';
@@ -134,6 +140,41 @@ export const register = (email: string, password: string) => messageCall('regist
 /** Confirm a registration with the emailed code (and the password just chosen); the account then waits for approval. */
 export const confirmRegistration = (email: string, password: string, code: string) =>
   messageCall('register_confirm.php', { email, password, code });
+
+/** Change this account's password (needs the current one); other sessions end. Returns the server's note. */
+export const changePassword = (current: string, password: string) =>
+  messageCall('account_password.php', { current, password });
+
+/** Close this account: removed in 30 days, signed out now. Returns the server's note. */
+export async function closeAccount(password: string): Promise<string | null> {
+  const note = await messageCall('account_close.php', { password });
+  if (note) { signedInAs(null); account.notice = note; }
+  return note;
+}
+
+/** Cancel the removal of a closed account during its 30 days. Returns the server's note. */
+export async function reopenAccount(email: string, password: string): Promise<string | null> {
+  const note = await messageCall('account_reopen.php', { email, password });
+  if (note) { account.canCancel = false; account.notice = note; }
+  return note;
+}
+
+/** Everything stored for the account (account_export.php), or null with account.error set. */
+export async function exportData(): Promise<Record<string, unknown> | null> {
+  account.busy = true; account.error = '';
+  try {
+    const r = await fetch(`${API}account_export.php`, { credentials: 'same-origin', cache: 'no-store' });
+    const j = await jsonOf(r);
+    if (r.ok && j) return j;
+    account.error = `Download failed (HTTP ${r.status}).`;
+    return null;
+  } catch {
+    account.error = 'Could not reach the server. Check your connection.';
+    return null;
+  } finally {
+    account.busy = false;
+  }
+}
 
 /** Turn two-step sign-in on or off for this account. */
 export async function setTwoStep(on: boolean): Promise<void> {

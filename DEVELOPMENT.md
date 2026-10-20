@@ -325,6 +325,16 @@ service worker never caches `api/`.
   comes back into view; readings made signed out go to the next account signed
   in on that browser, and a reading uploaded to one account is never sent to
   another (`toUpload`, `mergePulled` in `readingstore.ts`, unit-tested).
+- **Self-service** (astro-tbb.5; Settings → Account → "Your account and data",
+  `AccountSelf.svelte`): `account_export.php` (everything stored for the
+  account: account, live readings, admin actions on it; never hashes or
+  tokens), `account_password.php` (needs the current password, with the
+  sign-in lockout; other sessions end, this one stays; a notice is emailed),
+  `account_close.php` (password again; status deleting, signed out
+  everywhere, emailed; not for admins) and `account_reopen.php` (email and
+  password; cancels within the 30 days, back to the earlier state). A closed
+  account's sign-in answers 403 with `canCancel`, and the form offers "Cancel
+  the removal".
 - **Account states** (DESIGN.md §5a) are enforced in `api/lib/bootstrap.php`:
   only active and paused accounts can sign in or keep a session; endpoints that
   create or change data must call `require_writer()` (refuses paused), admin
@@ -345,7 +355,8 @@ service worker never caches `api/`.
   the `localhost` tab is signed in, open `http://[::1]:8322/` (cookies are kept
   per host name).
 - **Tests:** `test/api-logins.spec.ts`, `test/api-email-codes.spec.ts`,
-  `test/api-accounts.spec.ts` and `test/api-readings.spec.ts` run the real endpoints under `php -S` over a
+  `test/api-accounts.spec.ts`, `test/api-readings.spec.ts` and
+  `test/api-self-service.spec.ts` run the real endpoints under `php -S` over a
   throwaway SQLite database, reading codes from its `mail.log` (skipped when
   PHP is not installed).
 

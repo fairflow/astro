@@ -52,17 +52,6 @@ function clean_reading(mixed $r): array|string {
   return $out;
 }
 
-function reading_json(array $row): array {
-  if ((int)$row['deleted'] === 1) return ['id' => $row['id'], 'deleted' => true];
-  return [
-    'id' => $row['id'], 'key' => $row['rkey'], 'group' => $row['grp'], 'tab' => $row['tab'],
-    'title' => $row['title'], 'question' => $row['question'], 'preset' => $row['preset'],
-    'anonymised' => (int)$row['anonymised'] === 1, 'text' => $row['body'],
-    'stopped' => (int)$row['stopped'] === 1, 'interrupted' => (int)$row['interrupted'] === 1,
-    'createdAt' => (int)$row['created_at'],
-  ];
-}
-
 handle(function (): void {
   $method = $_SERVER['REQUEST_METHOD'] ?? '';
   if ($method === 'GET') {

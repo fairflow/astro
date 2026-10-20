@@ -10,10 +10,6 @@
 define('ASTRO_API', 1);
 require __DIR__ . '/lib/bootstrap.php';
 
-// A hash of a random password nobody knows: an unknown email costs the same
-// password_verify as a known one, so timing does not reveal which emails exist.
-const DUMMY_HASH = '$2y$12$4Ug3Zf9FhsNDvocMhWne3OL1GR2t/Iok9v8Dmid33f/DLlRRozHEm';
-
 handle(function (): void {
   require_same_origin_post();
   $b = json_body();
@@ -29,7 +25,7 @@ handle(function (): void {
   }
 
   purge_due_deletions(); // an indexed query; me.php runs it too, so the 30 days hold without a cron job
-  $q = db()->prepare('SELECT id, email, pass_hash, status, role, two_step, email_confirmed FROM users WHERE email = ?');
+  $q = db()->prepare('SELECT id, email, pass_hash, status, role, two_step, email_confirmed, delete_after FROM users WHERE email = ?');
   $q->execute([$email]);
   $u = $q->fetch() ?: null;
   $ok = password_verify($pw, $u['pass_hash'] ?? DUMMY_HASH);
@@ -40,6 +36,11 @@ handle(function (): void {
   // only someone who knows the password learns the account's state
   if (!in_array($u['status'], SIGN_IN_STATES, true)) {
     clear_login_failures($email);
+    if ($u['status'] === 'deleting') {
+      // the owner may cancel the removal (account_reopen.php) during the 30 days
+      reply(403, ['error' => 'deleting', 'canCancel' => true, 'message' => 'This account is closed and will be removed on '
+        . gmdate('j F Y', (int)$u['delete_after']) . '. You can cancel the removal.']);
+    }
     $message = (int)$u['email_confirmed'] === 0
       ? 'This address has not been confirmed yet. Register again to get a new code.'
       : barred_message($u['status']);
