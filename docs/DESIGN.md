@@ -327,7 +327,7 @@ from Ask Claude are the most valuable data the app produces (2026-10-17).
 
 **Logins first.** Nothing personal goes to the server before sign-in exists
 (readings hold real names and birth data). Shipped in v0.4.0/v0.4.1: password
-hashes (`password_hash`), a random session token in an HttpOnly + SameSite=Strict
+hashes (`password_hash`), a random session token in an HttpOnly + SameSite=Lax (Strict until v0.10.2: iOS home-screen apps do not send it)
 cookie scoped to the API (Secure over HTTPS) and stored only as a hash, lock-out
 after repeated failures, and **sliding 90-day sessions**: a session is renewed
 while in use and ends only by signing out, a password change, removal of the

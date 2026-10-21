@@ -142,10 +142,16 @@ function cookie_path(): string {
   return rtrim(str_replace('\\', '/', dirname((string)($_SERVER['SCRIPT_NAME'] ?? '/api/x'))), '/') . '/';
 }
 
+/**
+ * SameSite=Lax, not Strict: Safari does not send Strict cookies from a web app
+ * opened from the iPad or iPhone home screen, so its user looked signed in while
+ * every request was refused (2026-10-21). Lax still keeps the cookie off
+ * cross-site POSTs, and changes also need the X-Astro header and a same-site Origin.
+ */
 function set_session_cookie(string $value, int $expires): void {
   setcookie(cookie_name(), $value, [
     'expires' => $expires, 'path' => cookie_path(), 'secure' => is_https(),
-    'httponly' => true, 'samesite' => 'Strict',
+    'httponly' => true, 'samesite' => 'Lax',
   ]);
 }
 

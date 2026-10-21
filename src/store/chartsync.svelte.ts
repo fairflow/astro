@@ -1,4 +1,4 @@
-import { account } from '../api/account.svelte';
+import { account, refreshAccount } from '../api/account.svelte';
 import { newUid } from '../ai/readingstore.js';
 import { chartPayload, chartsToUpload, planPull, type ServerChartRow } from './chartmerge.js';
 import {
@@ -30,6 +30,20 @@ function setCursor(email: string, c: number): void {
   } catch { /* next pull starts earlier */ }
 }
 
+
+/**
+ * A sync request was refused. 401 means the server no longer has this browser
+ * signed in (or never received its cookie): check again, so the page shows the
+ * truth (signed out, with the sign-in form) instead of looking signed in.
+ */
+function failed(res: Response, what: string): never {
+  if (res.status === 401) {
+    void refreshAccount();
+    throw new Error('the server does not have you signed in; sign in again');
+  }
+  throw new Error(`${what} failed (HTTP ${res.status})`);
+}
+
 const post = (body: unknown) => fetch(API, {
   method: 'POST', credentials: 'same-origin', cache: 'no-store',
   headers: { 'content-type': 'application/json', 'x-astro': '1' }, body: JSON.stringify(body),
@@ -54,7 +68,7 @@ async function push(email: string): Promise<void> {
     return;
   }
   if (res.status === 403) { chartSync.state = 'paused'; return; }
-  if (!res.ok) throw new Error(`upload failed (HTTP ${res.status})`);
+  if (!res.ok) failed(res, 'upload');
   const j = await res.json() as { saved: string[]; refused: { id: string; reason: string }[] };
   if (del.length) dropDeletions(email, del);
   const sent = new Map(up.map(c => [c.uid!, chartPayload(c).updatedAt]));
@@ -89,7 +103,7 @@ async function pull(email: string): Promise<boolean> {
   let changed = false;
   for (;;) {
     const res = await fetch(`${API}?since=${since}`, { credentials: 'same-origin', cache: 'no-store' });
-    if (!res.ok) throw new Error(`download failed (HTTP ${res.status})`);
+    if (!res.ok) failed(res, 'download');
     const j = await res.json() as { charts: ServerChartRow[]; cursor: number; more: boolean };
     const plan = planPull(await db.charts.toArray(), j.charts, email, new Set(chartDeletionsPending()[email] ?? []));
     if (plan.put.length || plan.remove.length) {
