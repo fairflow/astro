@@ -66,6 +66,34 @@ export async function adminLog(): Promise<AdminLogEntry[]> {
   return j.log as AdminLogEntry[];
 }
 
+/** Usage for the admin panel (admin_usage.php): counts only. */
+export interface AdminUsage {
+  today: string;
+  days: { day: string; preset: string; n: number }[];
+  users: { id: string; email: string; ask24: number; ask7: number; ask30: number; models: Record<string, number>; readings: number; charts: number }[];
+  states: Record<string, number>;
+  presets: string[];
+  limit: number;
+}
+
+export async function adminUsage(): Promise<AdminUsage> {
+  const r = await fetch(`${API}admin_usage.php`, { credentials: 'same-origin', cache: 'no-store' });
+  const j = await json(r);
+  if (!r.ok || !Array.isArray(j.users)) throw failure(r, j);
+  return j as unknown as AdminUsage;
+}
+
+/** Add an account by invitation; resolves to the server's message, or throws with its reason. */
+export async function inviteUser(email: string): Promise<string> {
+  const r = await fetch(`${API}admin_invite.php`, {
+    method: 'POST', credentials: 'same-origin', cache: 'no-store',
+    headers: { 'content-type': 'application/json', 'x-astro': '1' }, body: JSON.stringify({ email }),
+  });
+  const j = await json(r);
+  if (!r.ok) throw failure(r, j);
+  return typeof j.message === 'string' ? j.message : 'Invitation sent.';
+}
+
 /** Run one action; resolves to the server's message, or throws with its reason. */
 export async function adminAction(userId: string, action: AdminAction, password?: string): Promise<string> {
   const r = await fetch(`${API}admin_action.php`, {

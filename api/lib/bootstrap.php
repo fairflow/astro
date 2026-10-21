@@ -295,8 +295,9 @@ function housekeeping(): void {
   // the admin log keeps no address of an account that no longer exists
   db()->exec('UPDATE admin_log SET target_email = NULL
     WHERE target_email IS NOT NULL AND target_id IS NOT NULL AND target_id NOT IN (SELECT id FROM users)');
-  // Ask Claude passes: the limit needs only the last 24 hours (last, as the newest table)
+  // Ask Claude passes: the limit needs only the last 24 hours (last, as the newest tables)
   db()->prepare('DELETE FROM ask_passes WHERE created_at < ?')->execute([time() - 2 * 86400]);
+  db()->prepare('DELETE FROM ask_daily WHERE day < ?')->execute([gmdate('Y-m-d', time() - ASK_DAILY_KEEP_DAYS * 86400)]);
 }
 
 /** Remove accounts whose deletion grace has run out (their sessions go with them). Returns how many. */
@@ -462,6 +463,25 @@ function ask_usage(string $userId): array {
   $o = db()->prepare('SELECT COUNT(*) FROM ask_passes WHERE user_id = ? AND used_at IS NULL AND expires_at > ?');
   $o->execute([$userId, $now]);
   return [(int)$r['n'], (int)$o->fetchColumn(), $r['first'] === null ? null : (int)$r['first'] + ASK_WINDOW];
+}
+
+/** The model presets the relay knows (worker/src/index.ts PRESETS); anything else is counted as 'other'. */
+const ASK_PRESETS = ['sonnet-medium', 'sonnet-high', 'opus-medium'];
+/** Daily usage counts are kept this many days (13 months). */
+const ASK_DAILY_KEEP_DAYS = 395;
+
+/** Count one reading for the account, day and preset (ask_daily). */
+function count_ask(string $userId, ?string $preset): void {
+  $preset = in_array($preset, ASK_PRESETS, true) ? $preset : 'other';
+  $day = gmdate('Y-m-d');
+  $u = db()->prepare('UPDATE ask_daily SET n = n + 1 WHERE user_id = ? AND day = ? AND preset = ?');
+  $u->execute([$userId, $day, $preset]);
+  if ($u->rowCount() > 0) return;
+  try {
+    db()->prepare('INSERT INTO ask_daily (user_id, day, preset, n) VALUES (?, ?, ?, 1)')->execute([$userId, $day, $preset]);
+  } catch (PDOException $e) {
+    $u->execute([$userId, $day, $preset]); // made by a request at the same moment
+  }
 }
 
 function ask_limit_message(?int $nextAt): string {

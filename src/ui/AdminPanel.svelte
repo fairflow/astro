@@ -1,8 +1,8 @@
 <script lang="ts">
   import { account } from '../api/account.svelte';
   import {
-    ACTION_LABEL, CONFIRM, actionsFor, adminAction, adminLog, listUsers,
-    type AdminAction, type AdminLogEntry, type AdminUser,
+    ACTION_LABEL, CONFIRM, actionsFor, adminAction, adminLog, adminUsage, inviteUser, listUsers,
+    type AdminAction, type AdminLogEntry, type AdminUsage, type AdminUser,
   } from '../api/admin';
 
   // The admin panel (astro-tbb.4): accounts with their state, and the actions
@@ -20,6 +20,43 @@
   let pending = $state('');
   let newPw = $state('');
   let working = $state(false);
+  let usage = $state<AdminUsage | null>(null);
+  let inviteEmail = $state('');
+
+  /** The model presets, shortest name first, in a fixed colour order for the chart. */
+  const PRESET_NAME: Record<string, string> = {
+    'sonnet-medium': 'Sonnet · medium', 'sonnet-high': 'Sonnet · high', 'opus-medium': 'Opus · medium', other: 'other',
+  };
+  const PRESET_ORDER = ['sonnet-medium', 'sonnet-high', 'opus-medium', 'other'];
+
+  /** The last 30 days, oldest first, each with its counts by preset. */
+  const chart = $derived.by(() => {
+    if (!usage) return [];
+    const out: { day: string; by: Record<string, number>; total: number }[] = [];
+    const end = Date.parse(usage.today + 'T00:00:00Z');
+    for (let i = 29; i >= 0; i--) {
+      const day = new Date(end - i * 86400000).toISOString().slice(0, 10);
+      const by: Record<string, number> = {};
+      for (const d of usage.days) if (d.day === day) by[d.preset] = (by[d.preset] ?? 0) + d.n;
+      out.push({ day, by, total: Object.values(by).reduce((a, b) => a + b, 0) });
+    }
+    return out;
+  });
+  /** One day's bar: each preset's segment from y0 to y1, in readings, stacked in PRESET_ORDER. */
+  function stack(by: Record<string, number>): { p: string; y0: number; y1: number }[] {
+    let y = 0;
+    return PRESET_ORDER.map(p => { const y0 = y; y += by[p] ?? 0; return { p, y0, y1: y }; });
+  }
+  const chartMax = $derived(Math.max(1, ...chart.map(d => d.total)));
+  const busiest = $derived(usage ? [...usage.users].sort((a, b) => b.ask30 - a.ask30 || a.email.localeCompare(b.email)) : []);
+
+  async function invite(e: SubmitEvent) {
+    e.preventDefault();
+    working = true; error = ''; note = '';
+    try { note = await inviteUser(inviteEmail.trim()); inviteEmail = ''; await load(); }
+    catch (err) { error = (err as Error).message; }
+    finally { working = false; }
+  }
 
   const pendingCount = $derived(users.filter(u => u.status === 'pending' && u.confirmed).length);
 
@@ -31,7 +68,7 @@
 
   async function load() {
     loading = true; error = '';
-    try { [users, log] = await Promise.all([listUsers(), adminLog()]); }
+    try { [users, log, usage] = await Promise.all([listUsers(), adminLog(), adminUsage()]); }
     catch (e) { error = (e as Error).message; }
     finally { loading = false; }
   }
@@ -72,6 +109,14 @@
 
   {#if note}<p class="ok" role="status">{note}</p>{/if}
   {#if error}<p class="err" role="alert">{error}</p>{/if}
+
+  <form class="invite" onsubmit={invite}>
+    <label>Add an account
+      <input type="email" required placeholder="their email address" bind:value={inviteEmail} autocomplete="off">
+    </label>
+    <button type="submit" disabled={working}>Invite</button>
+    <span class="facts">Active at once; they choose their own password with "Forgot password?", as the email explains.</span>
+  </form>
 
   <ul class="users">
     {#each users as u (u.id)}
@@ -120,6 +165,48 @@
       {#if !loading}<li class="facts">No accounts.</li>{/if}
     {/each}
   </ul>
+
+  {#if usage}
+    <details class="usage" open>
+      <summary>Usage</summary>
+      <p class="facts">
+        Accounts: {Object.entries(usage.states).map(([k, v]) => `${v} ${k}`).join(' · ')}.
+        Ask Claude readings in the last 30 days: {chart.reduce((a, d) => a + d.total, 0)}
+        (limit {usage.limit} per account per 24 hours; admins unlimited).
+      </p>
+      <svg class="chart" viewBox="0 0 600 130" role="img"
+        aria-label="Ask Claude readings per day over the last 30 days, by model">
+        {#each chart as d, i}
+          {@const w = 600 / 30}
+          {#each stack(d.by) as seg}
+            {#if seg.y1 > seg.y0}
+              <rect x={i * w + 2} width={w - 4} y={110 - seg.y1 / chartMax * 100} height={(seg.y1 - seg.y0) / chartMax * 100}
+                class="p-{seg.p}"><title>{d.day}: {d.by[seg.p]} {PRESET_NAME[seg.p] ?? seg.p}</title></rect>
+            {/if}
+          {/each}
+          {#if (29 - i) % 7 === 0}<text x={i * w + w / 2} y="125" text-anchor={i === 29 ? 'end' : 'middle'}>{d.day.slice(5)}</text>{/if}
+        {/each}
+        <text x="0" y="9" class="max">{chartMax}</text>
+      </svg>
+      <p class="legend">
+        {#each PRESET_ORDER as p}<span><i class="p-{p}"></i>{PRESET_NAME[p]}</span>{/each}
+      </p>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Account</th><th>24 h</th><th>7 days</th><th>30 days</th><th>Models (30 days)</th><th>Saved readings</th><th>Charts</th></tr></thead>
+          <tbody>
+            {#each busiest as u (u.id)}
+              <tr>
+                <td>{u.email}</td><td class:hot={u.ask24 >= usage.limit}>{u.ask24}</td><td>{u.ask7}</td><td>{u.ask30}</td>
+                <td>{PRESET_ORDER.filter(k => u.models[k]).map(k => `${PRESET_NAME[k]} ${u.models[k]}`).join(', ') || '—'}</td>
+                <td>{u.readings}</td><td>{u.charts}</td>
+              </tr>
+            {/each}
+          </tbody>
+        </table>
+      </div>
+    </details>
+  {/if}
 
   <details class="log">
     <summary>Admin log ({log.length})</summary>
@@ -178,7 +265,23 @@
   }
   .ok { color: var(--ink); border-left: 2px solid var(--gold); padding-left: 8px; margin: 10px 0 0; }
   .err { color: var(--square); margin: 10px 0 0; }
-  details.log { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 10px; }
+  details.log, details.usage { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 10px; }
+  form.invite { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: flex-end; margin-top: 12px; }
+  form.invite label { flex: 1 1 220px; }
+  form.invite input { max-width: none; width: 100%; }
+  svg.chart { width: 100%; height: auto; margin-top: 8px; display: block; }
+  svg.chart text { font-size: 9px; fill: var(--dim); }
+  .p-sonnet-medium { fill: var(--gold); background: var(--gold); }
+  .p-sonnet-high { fill: var(--gold-dim); background: var(--gold-dim); }
+  .p-opus-medium { fill: var(--square); background: var(--square); }
+  .p-other { fill: var(--dim); background: var(--dim); }
+  .legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 11.5px; color: var(--dim); margin: 4px 0 8px; }
+  .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 5px; vertical-align: -1px; }
+  .tablewrap { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; font-size: 12px; font-variant-numeric: tabular-nums; }
+  th, td { text-align: left; padding: 4px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+  th { color: var(--dim); font-weight: normal; }
+  td.hot { color: var(--square); font-weight: 600; }
   summary { cursor: pointer; color: var(--dim); font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
   ol { list-style: none; padding: 0; margin: 8px 0 0; display: grid; gap: 4px; font-size: 12px; }
   .t { color: var(--dim); font-variant-numeric: tabular-nums; margin-right: 4px; }

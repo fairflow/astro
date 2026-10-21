@@ -14,7 +14,7 @@ handle(function (): void {
   require_method('POST');
   $pass = json_body()['pass'] ?? '';
   if (!is_string($pass) || strlen($pass) < 20 || strlen($pass) > 100) reply(403, ['error' => 'pass']);
-  $q = db()->prepare('SELECT p.id_hash, p.user_id, u.status, u.role FROM ask_passes p JOIN users u ON u.id = p.user_id
+  $q = db()->prepare('SELECT p.id_hash, p.user_id, p.preset, u.status, u.role FROM ask_passes p JOIN users u ON u.id = p.user_id
     WHERE p.id_hash = ? AND p.used_at IS NULL AND p.expires_at > ?');
   $q->execute([hash('sha256', $pass), time()]);
   $p = $q->fetch();
@@ -27,5 +27,7 @@ handle(function (): void {
   $u = db()->prepare('UPDATE ask_passes SET used_at = ? WHERE id_hash = ? AND used_at IS NULL');
   $u->execute([time(), $p['id_hash']]);
   if ($u->rowCount() !== 1) reply(403, ['error' => 'pass']);
+  // the usage count must never stop a reading the limit allows
+  try { count_ask($p['user_id'], $p['preset']); } catch (Throwable $e) { error_log('astro api: usage count: ' . $e->getMessage()); }
   reply(200, ['ok' => true]);
 });
