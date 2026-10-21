@@ -272,8 +272,12 @@ share all of those, and `sw.js` deletes every cache but its own.)
   `staging.ini` (it assumes the staging folder `~/staging.fairflow.co.uk/astro`;
   edit `STAGING_API` in the script if the document root differs).
 - **One-time setup (Matthew), in order:**
-  1. In cPanel create the subdomain `staging.fairflow.co.uk` and note its
-     document root (probably `/home/fairtlou/staging.fairflow.co.uk`). Set the
+  1. In cPanel create the subdomain `staging.fairflow.co.uk` with its document
+     root set to `/home/fairtlou/staging.fairflow.co.uk`, beside the live
+     site's folder, never inside `/home/fairtlou/fairflow.co.uk`: nested there,
+     the API would look for `astro-config/` inside the live web root, and the
+     copy would also be served at a fairflow.co.uk path, sharing the live
+     site's storage. Set the
      repository variable `SSH_REMOTE_STAGING` to `<document root>/astro`
      (Settings, Secrets and variables, Actions, Variables).
   2. Make sure AutoSSL has issued a certificate for the subdomain (https must
