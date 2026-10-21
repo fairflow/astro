@@ -5,6 +5,7 @@
 #   - retrograde/ (standalone page) carries the same build id
 #   - sw.js cache key carries the same 5-hex hash
 #   - privacy/ (the privacy notice) is served
+#   - http:// and www. redirect to https://fairflow.co.uk/astro/, which sends HSTS
 #   - api/lib, api/cli and api/sql are not served
 #
 # Usage: tools/check_live.sh [SITE] [COMMIT]
@@ -35,6 +36,13 @@ curl -fsS "${site}sw.js?nocache=$RANDOM" | grep -qF "astrodynamics-$short" \
 
 curl -fsS "${site}privacy/?nocache=$RANDOM" | grep -qF "Privacy notice" \
   || bad "privacy/ does not serve the privacy notice"
+
+# one address: http and www redirect (301) to https://fairflow.co.uk/astro/, and https sends HSTS
+for u in "http://fairflow.co.uk/astro/" "https://www.fairflow.co.uk/astro/" "http://www.fairflow.co.uk/astro/"; do
+  loc=$(curl -s -o /dev/null -w '%{http_code} %{redirect_url}' "$u")
+  [ "$loc" = "301 https://fairflow.co.uk/astro/" ] || bad "$u answered '$loc' (want 301 to https://fairflow.co.uk/astro/)"
+done
+curl -sI "${site}" | grep -qi '^strict-transport-security:' || bad "${site} sends no Strict-Transport-Security header"
 
 # the API's internal folders must never be served
 for p in api/lib/bootstrap.php api/cli/user.php api/sql/001_users.sql; do
