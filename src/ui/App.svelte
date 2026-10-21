@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { refreshAccount } from '../api/account.svelte';
+  import { account, refreshAccount } from '../api/account.svelte';
   import AuthoringView from './AuthoringView.svelte';
   import ChartForm from './ChartForm.svelte';
   import ExpandableWheel from './ExpandableWheel.svelte';
@@ -17,6 +17,10 @@
   import { chartSnapshot } from '../interpret/snapshot';
   import { copyToClipboard } from './clipboard';
   import AskClaude from './AskClaude.svelte';
+  import { readingToShow } from '../ai/readings.svelte';
+  import { readingMode, readingTransitDate } from '../ai/readinglinks';
+  import { setOpen } from '../ai/prefs.svelte';
+  import type { SavedReading } from '../ai/readingstore';
   import { copyCtx } from './copyctx.svelte';
   import { redact } from '../ai/anonymise';
   import { who } from '../ai/readingstore';
@@ -102,9 +106,12 @@
     ['synastry', 'Synastry'], ['composite', 'Composite'],
     ['retrograde', 'Retrograde'],
   ] as const;
-  // The Authoring form is a plain tab — no ?author flag, no login. Home-screen
-  // shortcuts on iOS/Android drop query strings, which made a flag-gated tab
-  // unreachable from an installed icon. It only collects language feedback.
+  // The Authoring form is a tab for admins only (Matthew, 2026-10-21: work in
+  // progress, which other users don't need). Not a query flag: home-screen
+  // shortcuts on iOS/Android drop query strings. It only collects language
+  // feedback, so hiding it is the whole of the restriction.
+  const authoring = $derived(account.admin);
+  $effect(() => { if (!authoring && mode === 'authoring') mode = 'natal'; });
 
   function loadStyle(): StyleId {
     const s = localStorage.getItem('astro-style');
@@ -220,6 +227,20 @@
     cast();
   }
 
+  /** Saved charts, Readings, Open: the reading's people, tab and date, then the reading itself. */
+  function openReading(r: SavedReading, people: SavedChart[]) {
+    if (people[0]) loadSaved(people[0]);
+    if (people[1]) session.partner = people[1];
+    const date = readingTransitDate(r);
+    if (date) {
+      session.transitDate = date;
+      session.transitTarget = r.tab === 'couple-transits' ? 'couple' : 'you';
+    }
+    mode = readingMode(r.tab);
+    setOpen(true);
+    readingToShow.id = r.id;
+  }
+
   /** Expanded-wheel caption: who, birth data, place. */
   const caption = $derived(current
     ? [
@@ -261,7 +282,7 @@
       </button>
     {/if}
     <SettingsMenu bind:display />
-    <SavedCharts {saveable} {loadedId} onload={loadSaved} onsaved={id => loadedId = id} />
+    <SavedCharts {saveable} {loadedId} onload={loadSaved} onsaved={id => loadedId = id} onopenreading={openReading} />
   </div>
   {#if banner}<div class="banner">{banner}</div>{/if}
   <ChartForm bind:form {gaz} onsubmit={cast} />
@@ -271,7 +292,9 @@
   {#each MODES as [id, label] (id)}
     <button class:on={mode === id} onclick={() => mode = id}>{label}</button>
   {/each}
-  <button class:on={mode === 'authoring'} onclick={() => mode = 'authoring'}>Authoring</button>
+  {#if authoring}
+    <button class:on={mode === 'authoring'} onclick={() => mode = 'authoring'}>Authoring</button>
+  {/if}
   <span class="stylepick" role="radiogroup" aria-label="Interpretation style">
     <span>Style</span>
     {#each STYLES as s (s.id)}

@@ -285,11 +285,11 @@ aside.app { flex: 0 0 372px; padding: 16px 20px 30px 6px; }
   border: 1px solid var(--line); border-radius: 8px; padding: 1px 7px; cursor: pointer;
 }
 .saved .item .who .settag:hover { border-color: var(--gold-dim); color: var(--gold); }
-.saved .item button {
+.saved .item button, .saved .ritem > button:not(.rpick) {
   background: none; border: 1px solid var(--line); color: var(--dim);
   border-radius: 6px; padding: 2px 8px; font-size: 12px;
 }
-.saved .item button:hover { color: var(--ink); border-color: var(--gold-dim); }
+.saved .item button:hover, .saved .ritem > button:not(.rpick):hover { color: var(--ink); border-color: var(--gold-dim); }
 .saved .none { color: var(--dim); font-size: 13px; padding: 8px; }
 
 /* ---- svg ---- */

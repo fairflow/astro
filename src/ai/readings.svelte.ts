@@ -52,6 +52,9 @@ export const readings = $state<{ saved: SavedReading[]; live: Record<string, Liv
 });
 if (needUid) queueMicrotask(() => persist());
 
+/** A saved reading to show once its tab's Ask Claude panel has it (Saved charts, Readings, Open). */
+export const readingToShow = $state<{ id: number | null }>({ id: null });
+
 const listeners = new Set<() => void>();
 /** Call `f` whenever a reading is finished or deleted (the sync module listens). */
 export function onReadingsChange(f: () => void): void { listeners.add(f); }

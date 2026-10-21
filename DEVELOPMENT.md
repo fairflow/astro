@@ -223,7 +223,12 @@ standalone Retrograde page is part of it: `npm run build` also runs
 `vite.retro.config.ts`, writing the page as a full document to
 `dist/retrograde/index.html`, served at `<app>/retrograde/`. The local test
 server (`npm run dev`, port 8322) is restarted on `main` after each merge,
-so its header build id matches the live one.
+so its header build id matches the live one. Each copy has its own icon, so a
+tab or home-screen icon says which one it opens: the live gold on navy
+(`data/icons/`), local navy on light blue (`branding/local/`, served by the dev
+server in their place, with "Local ·" in the title) and staging navy on orange
+(`branding/staging/`, copied in by `npm run build:staging`). All three come from
+`tools/make_icons.py`.
 
 Retired on 2026-10-17, to stop maintaining copies by hand (Matthew's
 decision): the claude.ai artifact of the Retrograde page (its two artifact
@@ -282,13 +287,15 @@ share all of those, and `sw.js` deletes every cache but its own.)
      (Settings, Secrets and variables, Actions, Variables).
   2. Make sure AutoSSL has issued a certificate for the subdomain (https must
      work before the first deploy; the redirect and HSTS assume it).
-  3. In cPanel make a second MariaDB database and user for staging (not the
-     live ones) with all privileges on it.
-  4. On the host write `~/astro-config/staging.ini` (same layout as `db.ini`,
-     the new database's `[db]` host/name/user/pass) and `chmod 600` it. It lives
-     outside every web root, like `db.ini`.
-  5. Deploy the Worker: `cd worker && npx wrangler deploy`.
-  6. Push to `staging` (first deploy), then
+  3. Database and config: `.venv/bin/python tools/host_staging.py setup` makes
+     a second MariaDB database and user for staging (not the live ones), with a
+     password made on the host, and writes `~/astro-config/staging.ini` (600,
+     outside every web root): that database in `[db]`, and the live `db.ini`'s
+     other tables copied on the host. Nothing secret is printed; it writes the
+     file only after a test login works, and is safe to run again.
+     `… host_staging.py check` shows what exists.
+  4. Deploy the Worker: `npx wrangler deploy --config worker/wrangler.toml`.
+  5. Push to `staging` (first deploy), then
      `.venv/bin/python tools/host_account.py --staging migrate`, then make a
      staging admin: `… --staging add you@example.com` and `… --staging admin you@example.com`.
 
