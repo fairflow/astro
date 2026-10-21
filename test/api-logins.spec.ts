@@ -81,12 +81,12 @@ describe.skipIf(!hasPhp)('API logins (php -S + SQLite)', () => {
     expect(b).toMatchObject({ status: 401, body: { error: 'wrong email or password' } });
   });
 
-  it('signing in sets an HttpOnly, SameSite=Strict cookie scoped to the API, and me knows you', async () => {
+  it('signing in sets an HttpOnly, SameSite=Lax cookie scoped to the API, and me knows you', async () => {
     const r = await post('/api/login.php', { email: '  MATTHEW@example.com ', password: PW });
     expect(r).toMatchObject({ status: 200, body: { user: { email: 'matthew@example.com' } } });
     expect(r.setCookie).toMatch(/^astro_sid=[A-Za-z0-9_-]{43};/);
     expect(r.setCookie).toMatch(/HttpOnly/i);
-    expect(r.setCookie).toMatch(/SameSite=Strict/i);
+    expect(r.setCookie).toMatch(/SameSite=Lax/i); // Strict is not sent from iOS home-screen apps
     expect(r.setCookie).toMatch(/path=\/api\//i);
     expect(await call('/api/me.php')).toMatchObject({ body: { user: { email: 'matthew@example.com' } } });
   });

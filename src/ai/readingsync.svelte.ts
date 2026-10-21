@@ -1,4 +1,4 @@
-import { account } from '../api/account.svelte';
+import { account, refreshAccount } from '../api/account.svelte';
 import {
   deletionsPending, onReadingsChange, readings, replaceSaved, setDeletionsPending, streamingIds,
 } from './readings.svelte.js';
@@ -35,6 +35,20 @@ function cursors(): Record<string, number> {
 }
 function setCursor(email: string, c: number): void {
   try { localStorage.setItem(CURSOR_KEY, JSON.stringify({ ...cursors(), [email]: c })); } catch { /* next pull starts earlier */ }
+}
+
+
+/**
+ * A sync request was refused. 401 means the server no longer has this browser
+ * signed in (or never received its cookie): check again, so the page shows the
+ * truth (signed out, with the sign-in form) instead of looking signed in.
+ */
+function failed(res: Response, what: string): never {
+  if (res.status === 401) {
+    void refreshAccount();
+    throw new Error('the server does not have you signed in; sign in again');
+  }
+  throw new Error(`${what} failed (HTTP ${res.status})`);
 }
 
 const post = (body: unknown) => fetch(API, {
@@ -80,7 +94,7 @@ async function push(email: string): Promise<boolean> {
         return true;
       }
     }
-    if (!res.ok) throw new Error(`upload failed (HTTP ${res.status})`);
+    if (!res.ok) failed(res, 'upload');
     const j = await res.json() as { saved: string[]; refused: { id: string; reason: string }[] };
     if (deleted.length) dropDeletions(email, deleted);
     const sent = new Map(batch.map(r => [r.uid!, r.text]));
@@ -122,7 +136,7 @@ async function pull(email: string): Promise<void> {
   let since = cursors()[email] ?? 0;
   for (;;) {
     const res = await fetch(`${API}?since=${since}`, { credentials: 'same-origin', cache: 'no-store' });
-    if (!res.ok) throw new Error(`download failed (HTTP ${res.status})`);
+    if (!res.ok) failed(res, 'download');
     const j = await res.json() as { readings: ServerRow[]; cursor: number; more: boolean };
     const deleting = new Set(deletionsPending()[email] ?? []);
     replaceSaved(mergePulled($state.snapshot(readings.saved) as SavedReading[], j.readings, email, deleting, MAX));
