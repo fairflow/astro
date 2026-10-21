@@ -16,8 +16,8 @@ AddType application/manifest+json .webmanifest
 
 <IfModule mod_headers.c>
   # Browsers that have seen this go straight to https:// on fairflow.co.uk, even
-  # when the address is typed without a scheme. One week to start; a year once proven.
-  Header always set Strict-Transport-Security "max-age=604800"
+  # when the address is typed without a scheme. One year (Matthew, 2026-10-21).
+  Header always set Strict-Transport-Security "max-age=31536000"
   # The service worker and entry page must revalidate so new builds land.
   <FilesMatch "^(sw\.js|index\.html)$">
     Header set Cache-Control "no-cache"
