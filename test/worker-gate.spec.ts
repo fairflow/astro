@@ -23,6 +23,20 @@ describe('relay gate', () => {
     expect(JSON.parse(String(calls[0]![1].body))).toEqual({ pass: 'abc' });
   });
 
+  it('checks a staging page\'s pass with the staging API, never the live one', async () => {
+    const staging = 'https://staging.fairflow.co.uk';
+    const withStaging: Env = { ...env, STAGING_ORIGIN: staging, STAGING_API_BASE: 'https://staging.fairflow.co.uk/astro/api/' };
+    const urls: string[] = [];
+    const check = async (url: string) => { urls.push(url); return new Response('{"ok":true}'); };
+    expect(await gate(h({ 'x-astro-pass': 'p' }), staging, withStaging, check)).toBeNull();
+    expect(await gate(h({ 'x-astro-pass': 'p' }), SITE, withStaging, check)).toBeNull();
+    expect(urls).toEqual(['https://staging.fairflow.co.uk/astro/api/ask_consume.php', 'https://fairflow.co.uk/astro/api/ask_consume.php']);
+    // staging origin but no staging API configured: an error, not a fall back to the live API
+    const never = async () => { throw new Error('should not be called'); };
+    expect(await gate(h({ 'x-astro-pass': 'p' }), staging, { ...env, STAGING_ORIGIN: staging }, never))
+      .toMatchObject({ status: 500 });
+  });
+
   it('passes on the API\'s refusals: used or unknown pass, daily limit', async () => {
     expect(await gate(h({ 'x-astro-pass': 'used' }), SITE, env, answer(403, { error: 'pass' })))
       .toMatchObject({ status: 401, body: { error: 'pass' } });

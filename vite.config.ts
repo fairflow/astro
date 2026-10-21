@@ -73,12 +73,33 @@ function swVersionStamp(): Plugin {
 
 // The server API (api/, PHP) ships beside the app: dist/api/ is deployed with
 // everything else, so it is served at <app>/api/ (docs/DESIGN.md §5a).
-function copyApi(): Plugin {
+function copyApi(staging: boolean): Plugin {
   return {
     name: 'copy-api',
     apply: 'build',
     closeBundle() {
       cpSync(resolve(__dirname, 'api'), resolve(__dirname, 'dist/api'), { recursive: true });
+      // The staging build's API reads staging.ini and never db.ini (api/lib/bootstrap.php,
+      // is_staging). lib/ is not served, so the marker is not reachable over HTTP.
+      if (staging) writeFileSync(resolve(__dirname, 'dist/api/lib/STAGING'), 'staging build: uses astro-config/staging.ini, never db.ini\n');
+    },
+  };
+}
+
+// Staging build (`npm run build:staging`, mode "staging"): the page title and the
+// web manifest's names say so, so a home-screen icon is told apart from the live app's.
+// The in-app indicator is __STAGING__ (App.svelte).
+function stagingNames(): Plugin {
+  return {
+    name: 'staging-names',
+    apply: 'build',
+    transformIndexHtml: html => html.replace('<title>Astrodynamics</title>', '<title>Staging · Astrodynamics</title>'),
+    closeBundle() {
+      const path = resolve(__dirname, 'dist/manifest.webmanifest');
+      const m = JSON.parse(readFileSync(path, 'utf8'));
+      m.name = 'Astrodynamics staging';
+      m.short_name = 'Astro staging';
+      writeFileSync(path, JSON.stringify(m, null, 2) + '\n');
     },
   };
 }
@@ -140,11 +161,12 @@ function privacyPage(): Plugin {
   };
 }
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   // relative base so dist/ works from any subdirectory (e.g. /astro/)
   base: './',
-  plugins: [svelte(), swVersionStamp(), versionJson(), copyApi(), privacyPage(), guardNoServedPersonalData()],
-  define: stampDefines(stamp),
+  plugins: [svelte(), swVersionStamp(), versionJson(), copyApi(mode === 'staging'), privacyPage(), guardNoServedPersonalData(),
+    ...(mode === 'staging' ? [stagingNames()] : [])],
+  define: { ...stampDefines(stamp), __STAGING__: JSON.stringify(mode === 'staging') },
   // data/ holds the committed ephemeris packs, gazetteer, text packs and
   // web-app files (manifest, service worker, icons); serving it as
   // publicDir exposes them at the site root and copies them into dist/.
@@ -156,4 +178,4 @@ export default defineConfig({
   test: {
     setupFiles: ['./test/setup.ts'],
   },
-});
+}));

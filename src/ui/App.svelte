@@ -243,10 +243,15 @@
 
 <GlyphDefs style={{ weight: display.weight, slant: display.slant }} />
 
-<header class="app">
+<header class="app" style:box-shadow={__STAGING__ ? 'inset 0 5px 0 #d9822b' : null}>
   <div class="brand">
     <h1>ASTRODYNAMICS</h1>
     <span class="build" title="Build {buildId}{buildDate ? ` · commit ${buildDate}` : ''}{buildDirty ? ' · built with uncommitted changes' : ''}">v{appVersion}{#if buildDate} · {buildDate} · {buildHash}{/if}{#if buildDirty} · dirty{/if}</span>
+    {#if __STAGING__}
+      <!-- inline style: the live build carries no staging CSS at all -->
+      <span style="background:#d9822b;color:#1a1208;font-size:11.5px;font-weight:600;padding:1px 8px;border-radius:9px;white-space:nowrap"
+        title="The staging copy of the app: its own accounts and data, apart from the live site.">Staging: test data</span>
+    {/if}
     <span class="tag">charts · offline ephemeris · interpretations</span>
     <span class="spacer"></span>
     {#if headerCopy}

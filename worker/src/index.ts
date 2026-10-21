@@ -42,6 +42,9 @@ export interface Env {
   MAX_TOKENS?: string;
   /** The site's API, which issues and checks passes, e.g. https://fairflow.co.uk/astro/api/ */
   API_BASE?: string;
+  /** The staging site's origin and its API: requests from that origin are checked there, never with API_BASE. */
+  STAGING_ORIGIN?: string;
+  STAGING_API_BASE?: string;
   /** Secret (optional): lets a localhost page use the Worker without a pass, for development. */
   DEV_KEY?: string;
 }
@@ -60,10 +63,12 @@ export async function gate(
   if (!pass) {
     return { status: 401, body: { error: 'sign in', message: 'Ask Claude needs an account: sign in, or create one, in Settings, Account.' } };
   }
-  if (!env.API_BASE) return { status: 500, body: { error: 'server is missing API_BASE' } };
+  // each site's passes are checked with its own API; staging with no STAGING_API_BASE is an error, not the live API
+  const base = env.STAGING_ORIGIN && origin === env.STAGING_ORIGIN ? env.STAGING_API_BASE : env.API_BASE;
+  if (!base) return { status: 500, body: { error: 'server is missing API_BASE' } };
   let res: Response;
   try {
-    res = await check(new URL('ask_consume.php', env.API_BASE).href, {
+    res = await check(new URL('ask_consume.php', base).href, {
       method: 'POST',
       headers: { 'content-type': 'application/json', 'user-agent': 'astro-ai-worker' },
       body: JSON.stringify({ pass }),
