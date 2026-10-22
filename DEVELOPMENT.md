@@ -278,7 +278,8 @@ share all of those, and `sw.js` deletes every cache but its own.)
   edit `STAGING_API` in the script if the document root differs).
 - **One-time setup (Matthew), in order:**
   1. In cPanel create the subdomain `staging.fairflow.co.uk` with its document
-     root set to `/home/fairtlou/staging.fairflow.co.uk`, beside the live
+     root set to `/home/fairtlou/staging.fairflow.co.uk` (cPanel's box is
+     relative to the home folder: type `staging.fairflow.co.uk` only), beside the live
      site's folder, never inside `/home/fairtlou/fairflow.co.uk`: nested there,
      the API would look for `astro-config/` inside the live web root, and the
      copy would also be served at a fairflow.co.uk path, sharing the live

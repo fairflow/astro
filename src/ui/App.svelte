@@ -314,7 +314,7 @@
 {:else if chart && current && mode === 'synastry'}
   <SynastryView natal={chart} meta={current.meta} {chartFromSaved} style={styleId} {display} />
 {:else if chart && current && mode === 'composite'}
-  <CompositeView natal={chart} meta={current.meta} {chartFromSaved} {display} style={styleId} />
+  <CompositeView natal={chart} meta={current.meta} {chartFromSaved} {display} style={styleId} {provider} />
 {:else}
 <main class="app">
   {#if chart}

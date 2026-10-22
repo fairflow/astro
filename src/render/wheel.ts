@@ -34,6 +34,14 @@ export interface WheelOptions {
   outer?: OuterBody[];
   /** Cross-aspects: outer body (a) to inner natal body (b). */
   crossAspects?: CrossLike[];
+  /**
+   * Tri-wheel (couple transits, astro-ghw): a third ring outside `outer`, e.g.
+   * the transiting sky around a synastry bi-wheel. Radii shrink further.
+   */
+  outer2?: OuterBody[];
+  /** Lines from a third-ring body (a) to the inner chart's body (b), or with
+   *  `toOuter` to the `outer` ring's body (b). */
+  crossAspects2?: (CrossLike & { toOuter?: boolean })[];
 }
 
 /**
@@ -84,6 +92,10 @@ export interface WheelGeometry {
     index: number; from: XY; to: XY;
     colorVar: string; opacity: number; width: number;
   }[];
+  /** Tri-wheel: the circle between the second and third rings (0 when none). */
+  rSplit: number;
+  outer2: WheelGeometry['outer'];
+  crossLines2: WheelGeometry['crossLines'];
 }
 
 export function aspectKey(a: Aspect): string {
@@ -133,16 +145,19 @@ export function wheelGeometry(chart: Chart, opts: WheelOptions = {}): WheelGeome
   const widthScale = 0.72 + 0.56 * emph;  // 0.72..1.28, 1.0 at emph 0.5
   const cx = size / 2, cy = size / 2;
   const s = size / 720; // radii tuned at 720
-  // Bi-wheel: shrink the natal wheel to make room for the outer ring.
-  const k = opts.outer ? 0.855 : 1;
+  // Bi-wheel: shrink the natal wheel to make room for the outer ring;
+  // tri-wheel: further, for a second ring outside it.
+  const tri = !!opts.outer2?.length;
+  const k = tri ? 0.72 : opts.outer ? 0.855 : 1;
   const R = {
     zodOut: 348 * s * k, zodIn: 302 * s * k, planet: 262 * s * k,
     deg: 234 * s * k, houseNum: 150 * s * k, hub: 176 * s * k,
-    outerRing: 332 * s,
+    outerRing: (tri ? 279 : 332) * s,
+    split: 306 * s, outer2Ring: 334 * s,
   };
-  const glyphPx = 26 * s * glyphScale * (opts.outer ? 0.92 : 1);
+  const glyphPx = 26 * s * glyphScale * (tri ? 0.82 : opts.outer ? 0.92 : 1);
   const signGlyphPx = 27 * s * Math.min(glyphScale, 1.4) * k;
-  const outerGlyphPx = 22 * s * glyphScale;
+  const outerGlyphPx = (tri ? 18.5 : 22) * s * glyphScale;
   const asc = chart.houses.asc;
   const pt = (lon: number, r: number): XY => {
     const d = (normDeg(lon) - asc) * Math.PI / 180;
@@ -256,9 +271,36 @@ export function wheelGeometry(chart: Chart, opts: WheelOptions = {}): WheelGeome
     };
   }).filter((x): x is NonNullable<typeof x> => x !== null);
 
+  // Tri-wheel third ring + its lines (to the inner chart or to the second ring)
+  const outer2Bodies = tri ? opts.outer2! : [];
+  const outer2Lons = nudge(outer2Bodies.map(o => o.lon), 5.5 + 1.5 * glyphScale);
+  const outer2 = outer2Bodies.map((o, i) => ({
+    body: o.body,
+    retro: o.retro ?? false,
+    pos: pt(outer2Lons[i]!, R.outer2Ring),
+    tickFrom: pt(o.lon, R.split),
+    tickTo: pt(o.lon, R.split + 7 * s),
+    degText: `${Math.floor(normDeg(o.lon) % 30)}°`,
+  }));
+  const crossLines2 = (tri ? opts.crossAspects2 ?? [] : []).map((x, index) => {
+    const from = outer2Bodies.find(o => o.body === x.a);
+    const toLon = x.toOuter ? outerBodies.find(o => o.body === x.b)?.lon : shown.find(p => p.body === x.b)?.lon;
+    if (!from || toLon === undefined) return null;
+    const tight = 1 - x.orb / x.maxOrb;
+    return {
+      index,
+      from: pt(from.lon, R.split + 2 * s),
+      to: pt(toLon, x.toOuter ? R.zodOut + 2 * s : R.hub),
+      colorVar: ASPECT_COLOR[x.def.name],
+      opacity: floor + (1 - floor) * tight,
+      width: (1.6 + 1.1 * tight) * widthScale,
+    };
+  }).filter((x): x is NonNullable<typeof x> => x !== null);
+
   return {
     size, cx, cy, rHub: R.hub, rZodiacOuter: R.zodOut,
     glyphPx, signGlyphPx, outerGlyphPx,
     signs, ticks, cusps, houseBands, planets, aspects, outer, crossLines,
+    rSplit: tri ? R.split : 0, outer2, crossLines2,
   };
 }

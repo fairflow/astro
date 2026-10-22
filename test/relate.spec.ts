@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  circularMidpoint, compositeChart, crossAspects, houseOverlay,
+  activatedContacts, circularMidpoint, compositeChart, crossAspects, houseOverlay,
   midpointContacts, sunMoonMidpointHits, transitAspects,
 } from '../src/chart/relate.js';
 import { contextReading } from '../src/interpret/contexts.js';
@@ -172,5 +172,59 @@ describe('life dossiers (7d/7e)', () => {
     });
     expect(d.sections.some(s => s.heading.includes('Synastry with Partner'))).toBe(true);
     expect(d.factors).toContain('Partner');
+  });
+});
+
+describe('activatedContacts (couple transits, astro-ghw)', () => {
+  // A's Venus 10° Aries trine B's Mars 10° Leo is a synastry contact. In the
+  // sky, Saturn at 10° Cancer squares A's Venus (A's end of it) and Jupiter at
+  // 10°30' Leo conjoins B's Mars (B's end).
+  const A = [pt('venus', 10), pt('mars', 200)];
+  const B = [pt('mars', 130), pt('moon', 300)];
+  const sky = [pt('saturn', 100), pt('jupiter', 130.5)];
+  const syn = crossAspects(A, B);
+  const toA = transitAspects(sky, A);
+  const toB = transitAspects(sky, B);
+
+  it('finds transits to either end of a synastry contact, with whose point it is', () => {
+    expect(syn.some(c => c.a === 'venus' && c.b === 'mars' && c.def.name === 'trine')).toBe(true);
+    const act = activatedContacts(toA, toB, syn);
+    const keys = act.flatMap(x => x.contacts.map(c => `${x.whose}:${x.transit.a}-${x.transit.def.name}-${x.transit.b}|${c.a}-${c.b}`));
+    expect(keys).toContain('A:saturn-square-venus|venus-mars');   // Saturn on A's end
+    expect(keys).toContain('B:jupiter-conjunction-mars|venus-mars'); // Jupiter on B's end
+  });
+
+  it('ignores transits to points in no strong contact', () => {
+    const act = activatedContacts(toA, toB, syn);
+    expect(act.every(x => x.contacts.every(c => (x.whose === 'A' ? c.a : c.b) === x.transit.b))).toBe(true);
+    // one entry per transit, however many contacts its point is in
+    expect(new Set(act.map(x => x.transit)).size).toBe(act.length);
+    expect(activatedContacts(toA, toB, [])).toEqual([]);
+  });
+});
+
+describe('couple transit snapshot (astro-ghw)', () => {
+  it('carries the synastry contacts and the activated contacts, and no composite', async () => {
+    const { transitSnapshot } = await import('../src/interpret/snapshot.js');
+    const A = [pt('sun', 40), pt('moon', 160), pt('venus', 10), pt('mars', 200)];
+    const B = [pt('sun', 250), pt('moon', 70), pt('mars', 130), pt('venus', 300)];
+    const sky = [pt('saturn', 100), pt('jupiter', 130.5)];
+    const natal = miniChart(A), partner = miniChart(B), skyChart = miniChart(sky);
+    const syn = crossAspects(A, B);
+    const toA = transitAspects(sky, A), toB = transitAspects(sky, B);
+    const meta = { name: 'Ann', date: '1990-01-01', time: '12:00', place: { name: 'York', country: 'GB', lat: 54, lon: -1, zone: 'Europe/London' } };
+    const text = transitSnapshot({
+      natal, meta: meta as never, sky: skyChart, when: '2026-10-22 12:00', toNatal: toA,
+      couple: {
+        partner, partnerName: 'Bob', synastry: syn, toPartner: toB,
+        activated: activatedContacts(toA, toB, syn), midpointHits: [],
+      },
+    });
+    expect(text).toContain('## Synastry contacts');
+    expect(text).toContain("Ann's Venus trine Bob's Mars");
+    expect(text).toContain('## Transits touching a synastry contact');
+    expect(text).toContain("transiting Saturn square Ann's Venus");
+    expect(text).toContain("transiting Jupiter conjunction Bob's Mars");
+    expect(text).not.toMatch(/composite/i);
   });
 });

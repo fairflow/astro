@@ -49,7 +49,8 @@ has_db && echo "database $DB: yes" || echo "database $DB: no"
 SETUP = COMMON + r'''
 [ -d "$DIR" ] || { echo "1. no folder $DIR: make the subdomain staging.fairflow.co.uk in cPanel first, with that folder"; exit 1; }
 echo "1. folder $DIR: there"
-mkdir -p "$DIR/astro"
+# served, so readable by the web server (the umask above is for staging.ini)
+(umask 022; mkdir -p "$DIR/astro")
 
 if [ -f "$INI" ]; then echo "2-3. staging.ini already there: database steps skipped"; exit 0; fi
 [ -f "$LIVE_INI" ] || { echo "no $LIVE_INI to copy the [mail] and other tables from"; exit 1; }

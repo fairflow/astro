@@ -204,3 +204,34 @@ export function midpointContacts(
   }
   return out.sort((x, y) => y.weight - x.weight).slice(0, max);
 }
+
+/** A transit that touches a point in one or more of a couple's synastry contacts. */
+export interface ActivatedContact {
+  /** The transit (a: transiting body, b: the touched body of `whose` chart). */
+  transit: CrossAspect;
+  whose: 'A' | 'B';
+  /** The synastry contacts it is part of, strongest first (a: A's body, b: B's body). */
+  contacts: CrossAspect[];
+}
+
+/**
+ * Transits that set a couple's standing synastry contacts going (the
+ * couple-transits view, astro-ghw): a transit to a body of either chart that
+ * is one end of one of the strongest synastry contacts (synastry a = A's
+ * body, b = B's body). One entry per transit, strongest transit first.
+ */
+export function activatedContacts(
+  toA: CrossAspect[], toB: CrossAspect[], synastry: CrossAspect[], maxContacts = 10,
+): ActivatedContact[] {
+  const strong = synastry.slice(0, maxContacts);
+  const out: ActivatedContact[] = [];
+  for (const transit of toA) {
+    const contacts = strong.filter(c => c.a === transit.b);
+    if (contacts.length) out.push({ transit, whose: 'A', contacts });
+  }
+  for (const transit of toB) {
+    const contacts = strong.filter(c => c.b === transit.b);
+    if (contacts.length) out.push({ transit, whose: 'B', contacts });
+  }
+  return out.sort((x, y) => y.transit.weight - x.transit.weight);
+}
