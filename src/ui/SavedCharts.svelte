@@ -4,12 +4,18 @@
     DEFAULT_SET, deleteChart, listCharts, moveChart, onChartsChange, saveChart, setsOf,
     updateChart, type SavedChart,
   } from '../store/db';
+  import { readings } from '../ai/readings.svelte';
+  import { linkReadings } from '../ai/readinglinks';
+  import type { SavedReading } from '../ai/readingstore';
+  import { renderMarkdown } from '../ai/markdown';
 
-  let { saveable, onload, loadedId = null, onsaved }: {
+  let { saveable, onload, loadedId = null, onsaved, onopenreading }: {
     saveable: Omit<SavedChart, 'id' | 'createdAt'> | null;
     onload: (c: SavedChart) => void;
     loadedId?: number | null;
     onsaved?: (id: number) => void;
+    /** Show a saved reading in its tab, with its people's charts loaded. */
+    onopenreading?: (r: SavedReading, people: SavedChart[]) => void;
   } = $props();
 
   let charts = $state<SavedChart[]>([]);
@@ -27,6 +33,11 @@
   let moveId = $state<number | null>(null);
   let moveSet = $state(DEFAULT_SET);
   let moveNew = $state('');
+  // Charts | Readings (astro-32t): readings filed under the people they are
+  // about (name + birth date), with the same search and family filter
+  let view = $state<'charts' | 'readings'>('charts');
+  /** The reading shown in full, as "<chart id or 'none'>:<reading id>": a pair reading is listed twice. */
+  let expanded = $state<string | null>(null);
 
   async function refresh() {
     charts = await listCharts();
@@ -50,6 +61,18 @@
     }
     return charts;
   });
+
+  const links = $derived(linkReadings(readings.saved, charts));
+  const showing = $derived(readings.saved.length ? view : 'charts');
+  const withReadings = $derived(filtered.filter(c => links.byChart.has(c)));
+  // readings with no saved chart have no family, so they show under "All families"
+  const unlinked = $derived.by(() => {
+    const q = search.trim().toLowerCase();
+    if (q) return links.unlinked.filter(r => `${r.title} ${r.question}`.toLowerCase().includes(q));
+    return family === '__all__' ? links.unlinked : [];
+  });
+  const day = (t: number) => new Date(t).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+  const excerpt = (q: string) => (q.length > 90 ? `${q.slice(0, 90)}…` : q);
 
   function samePerson(a: Omit<SavedChart, 'id' | 'createdAt'>, b: SavedChart): boolean {
     return a.name === b.name && a.date === b.date && a.time === b.time
@@ -225,8 +248,15 @@
         </div>
       {/if}
 
+      {#if readings.saved.length}
+        <div class="viewsw" role="group" aria-label="Show saved charts or saved readings">
+          <button class:on={showing === 'charts'} onclick={() => view = 'charts'}>Charts ({charts.length})</button>
+          <button class:on={showing === 'readings'} onclick={() => view = 'readings'}>Readings ({readings.saved.length})</button>
+        </div>
+      {/if}
+
       {#if charts.length === 0}
-        <div class="none">Nothing saved yet. Cast a chart, then “Save chart”.</div>
+        {#if showing === 'charts'}<div class="none">Nothing saved yet. Cast a chart, then “Save chart”.</div>{/if}
       {:else}
         <div class="find">
           <input type="search" class="search" placeholder="🔍 search name, date or place"
@@ -240,12 +270,45 @@
             </select>
           {/if}
         </div>
-        {#if filtered.length === 0}
+        {#if filtered.length === 0 && showing === 'charts'}
           <div class="none">No matches.</div>
         {/if}
       {/if}
 
-      {#each filtered as c (c.id)}
+      {#if showing === 'readings'}
+        {#each withReadings as c (c.id)}
+          <div class="rhead"><b>{c.name}</b> <span>{c.date} · {c.set || DEFAULT_SET}</span></div>
+          {#each links.byChart.get(c) ?? [] as r (r.id)}{@render reading(r, links.charts.get(r.id), `${c.id}:${r.id}`)}{/each}
+        {/each}
+        {#if unlinked.length}
+          <div class="rhead"><b>Not linked</b> <span>no saved chart for its people</span></div>
+          {#each unlinked as r (r.id)}{@render reading(r, undefined, `none:${r.id}`)}{/each}
+        {/if}
+        {#if !withReadings.length && !unlinked.length}
+          <div class="none">{search.trim() ? 'No matches.' : 'No readings for this family yet.'}</div>
+        {/if}
+      {/if}
+
+      {#snippet reading(r: SavedReading, people: SavedChart[] | undefined, at: string)}
+        <div class="ritem">
+          <button class="rpick" aria-expanded={expanded === at} title="Show or hide the reading"
+            onclick={() => expanded = expanded === at ? null : at}>
+            <span class="when">{day(r.createdAt)}</span>
+            <span class="ttl">{r.title}</span>
+            <span class="q">{excerpt(r.question)}</span>
+          </button>
+          {#if people && onopenreading}
+            <button title="Load the chart in its tab and show this reading in Ask Claude"
+              onclick={() => { onopenreading(r, people); open = false; }}>Open</button>
+          {/if}
+        </div>
+        {#if expanded === at}
+          <!-- renderMarkdown escapes everything and emits only a fixed tag set (src/ai/markdown.ts) -->
+          <div class="rtext">{@html renderMarkdown(r.text)}</div>
+        {/if}
+      {/snippet}
+
+      {#each showing === 'charts' ? filtered : [] as c (c.id)}
         <div class="item">
           <div class="who">
             <b>{c.name}</b>
@@ -273,8 +336,9 @@
           onchange={importFile} style="display:none">
       </div>
       <div class="fine">Saving stores birth data only; the wheel is recomputed on
-        load, so saved charts benefit from ephemeris improvements. Charts live in
-        this browser's local database — Export makes a backup file you control.</div>
+        load, so saved charts benefit from ephemeris improvements. Charts are kept
+        in this browser, and in your account while you are signed in (Settings,
+        Account); Export makes a backup file you control.</div>
     </div>
   {/if}
 </div>
@@ -308,5 +372,27 @@
     border-radius: 10px; padding: 3px 12px; font-size: 12px;
   }
   .tools button:disabled { opacity: 0.4; cursor: not-allowed; }
+  .viewsw { display: flex; gap: 0; margin-bottom: 8px; }
+  .viewsw button {
+    flex: 1; background: var(--bg2); color: var(--dim); border: 1px solid var(--line);
+    padding: 4px 8px; font-size: 12.5px;
+  }
+  .viewsw button:first-child { border-radius: 8px 0 0 8px; }
+  .viewsw button:last-child { border-radius: 0 8px 8px 0; border-left: none; }
+  .viewsw button.on { color: var(--gold); border-color: var(--gold-dim); }
+  .rhead { display: flex; gap: 8px; align-items: baseline; padding: 8px 4px 2px; font-size: 13px; }
+  .rhead span { color: var(--dim); font-size: 11.5px; }
+  .ritem { display: flex; gap: 6px; align-items: flex-start; padding: 2px 0 2px 10px; }
+  .rpick {
+    flex: 1; min-width: 0; text-align: left; background: none; border: none; color: var(--ink);
+    padding: 3px 4px; display: flex; flex-direction: column; gap: 1px; cursor: pointer;
+  }
+  .rpick .when { color: var(--dim); font-size: 11px; }
+  .rpick .ttl { font-size: 12.5px; }
+  .rpick .q { color: var(--dim); font-size: 11.5px; overflow-wrap: anywhere; }
+  .rtext {
+    margin: 2px 0 8px 14px; padding: 6px 10px; border-left: 2px solid var(--gold-dim);
+    font-size: 12.5px; line-height: 1.45; max-height: 320px; overflow: auto;
+  }
   .fine { color: var(--dim); font-size: 11px; line-height: 1.4; padding: 6px 6px 2px; }
 </style>

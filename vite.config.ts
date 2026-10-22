@@ -73,12 +73,68 @@ function swVersionStamp(): Plugin {
 
 // The server API (api/, PHP) ships beside the app: dist/api/ is deployed with
 // everything else, so it is served at <app>/api/ (docs/DESIGN.md §5a).
-function copyApi(): Plugin {
+function copyApi(staging: boolean): Plugin {
   return {
     name: 'copy-api',
     apply: 'build',
     closeBundle() {
       cpSync(resolve(__dirname, 'api'), resolve(__dirname, 'dist/api'), { recursive: true });
+      // The staging build's API reads staging.ini and never db.ini (api/lib/bootstrap.php,
+      // is_staging). lib/ is not served, so the marker is not reachable over HTTP.
+      if (staging) writeFileSync(resolve(__dirname, 'dist/api/lib/STAGING'), 'staging build: uses astro-config/staging.ini, never db.ini\n');
+    },
+  };
+}
+
+// Staging build (`npm run build:staging`, mode "staging"): the page title, the
+// web manifest's names and the icons (orange, branding/staging/) say so, so a
+// home-screen icon is told apart from the live app's. The in-app indicator is
+// __STAGING__ (App.svelte).
+function stagingNames(): Plugin {
+  return {
+    name: 'staging-names',
+    apply: 'build',
+    transformIndexHtml: html => html.replace('<title>Astrodynamics</title>', '<title>Staging · Astrodynamics</title>'),
+    closeBundle() {
+      const path = resolve(__dirname, 'dist/manifest.webmanifest');
+      writeFileSync(path, renamed(readFileSync(path, 'utf8'), 'staging'));
+      cpSync(resolve(__dirname, 'branding/staging'), resolve(__dirname, 'dist/icons'), { recursive: true });
+    },
+  };
+}
+
+/** The web manifest with its names marked, e.g. "Astrodynamics staging" / "Astro staging". */
+function renamed(manifest: string, copy: string): string {
+  const m = JSON.parse(manifest);
+  m.name = `Astrodynamics ${copy}`;
+  m.short_name = `Astro ${copy}`;
+  return JSON.stringify(m, null, 2) + '\n';
+}
+
+// The dev server (`npm run dev`, localhost:8322) marks itself the same way: a
+// light blue icon (branding/local/) in place of data/icons/, "Local ·" in the
+// page title and "Astro local" in the manifest, so its tab and any installed
+// icon are told apart from the live app's. Nothing here reaches a build.
+function localNames(): Plugin {
+  return {
+    name: 'local-names',
+    apply: 'serve',
+    transformIndexHtml: html => html.replace('<title>Astrodynamics</title>', '<title>Local · Astrodynamics</title>'),
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const url = (req.url ?? '').split('?')[0]!;
+        const icon = /^\/icons\/([\w-]+\.png)$/.exec(url)?.[1];
+        if (icon && existsSync(resolve(__dirname, 'branding/local', icon))) {
+          res.setHeader('Content-Type', 'image/png');
+          res.setHeader('Cache-Control', 'no-cache');
+          return res.end(readFileSync(resolve(__dirname, 'branding/local', icon)));
+        }
+        if (url === '/manifest.webmanifest') {
+          res.setHeader('Content-Type', 'application/manifest+json');
+          return res.end(renamed(readFileSync(resolve(__dirname, 'data/manifest.webmanifest'), 'utf8'), 'local'));
+        }
+        next();
+      });
     },
   };
 }
@@ -140,11 +196,12 @@ function privacyPage(): Plugin {
   };
 }
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   // relative base so dist/ works from any subdirectory (e.g. /astro/)
   base: './',
-  plugins: [svelte(), swVersionStamp(), versionJson(), copyApi(), privacyPage(), guardNoServedPersonalData()],
-  define: stampDefines(stamp),
+  plugins: [svelte(), swVersionStamp(), versionJson(), copyApi(mode === 'staging'), privacyPage(), guardNoServedPersonalData(), localNames(),
+    ...(mode === 'staging' ? [stagingNames()] : [])],
+  define: { ...stampDefines(stamp), __STAGING__: JSON.stringify(mode === 'staging') },
   // data/ holds the committed ephemeris packs, gazetteer, text packs and
   // web-app files (manifest, service worker, icons); serving it as
   // publicDir exposes them at the site root and copies them into dist/.
@@ -156,4 +213,4 @@ export default defineConfig({
   test: {
     setupFiles: ['./test/setup.ts'],
   },
-});
+}));

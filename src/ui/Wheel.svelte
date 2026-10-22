@@ -9,7 +9,8 @@
   import type { Selection } from './selection';
   import type { DisplaySettings } from './state';
 
-  let { chart, selection, display, onselect, outer, outerColor = 'var(--transit)', crossAspects, crossSelected = null, oncross, outerSelected = null, onouter }: {
+  let { chart, selection, display, onselect, outer, outerColor = 'var(--transit)', crossAspects, crossSelected = null, oncross, outerSelected = null, onouter,
+    outer2, outer2Color = 'var(--transit)', crossAspects2, cross2Selected = null, oncross2 }: {
     chart: Chart;
     selection: Selection;
     display: DisplaySettings;
@@ -23,6 +24,13 @@
     /** Selected outer-ring body: its cross aspects stay lit. */
     outerSelected?: BodyKey | null;
     onouter?: (b: BodyKey) => void;
+    /** Tri-wheel: a third ring (e.g. the transiting sky around a synastry bi-wheel). */
+    outer2?: import('../render/wheel').OuterBody[];
+    outer2Color?: string;
+    /** Third-ring lines: to the inner chart, or with toOuter to the second ring. */
+    crossAspects2?: import('../render/wheel').WheelOptions['crossAspects2'];
+    cross2Selected?: number | null;
+    oncross2?: (i: number) => void;
   } = $props();
 
   // Raised floors keep wide-orb aspects readable (tighter orb→opacity range).
@@ -35,6 +43,8 @@
     aspectEmphasis: display.aspectEmphasis,
     outer,
     crossAspects,
+    outer2,
+    crossAspects2,
   }));
 
   function inSelectedSign(body: BodyKey): boolean {
@@ -299,6 +309,36 @@
     {/each}
   {/if}
 
+  <!-- tri-wheel: third ring (glyphs) and its lines to the inner chart or the second ring -->
+  {#if geom.outer2.length}
+    <circle cx={geom.cx} cy={geom.cy} r={geom.rSplit} fill="none" stroke={outer2Color} opacity="0.35" />
+    {#each geom.crossLines2 as c (c.index)}
+      <g class="aspect-line" class:dimmed={cross2Selected !== null && cross2Selected !== c.index}
+        role="button" tabindex="0" aria-label={`transit line ${c.index}`}
+        onclick={e => { e.stopPropagation(); oncross2?.(c.index); }}
+        onkeydown={e => e.key === 'Enter' && oncross2?.(c.index)}>
+        <line x1={c.from.x} y1={c.from.y} x2={c.to.x} y2={c.to.y}
+          stroke={`var(${c.colorVar})`} stroke-width={c.width} opacity={c.opacity}
+          stroke-dasharray="2 4" />
+        <line class="aspect-hit" x1={c.from.x} y1={c.from.y} x2={c.to.x} y2={c.to.y} />
+      </g>
+    {/each}
+    {#each geom.outer2 as o (o.body)}
+      <line x1={o.tickFrom.x} y1={o.tickFrom.y} x2={o.tickTo.x} y2={o.tickTo.y}
+        stroke={outer2Color} stroke-width="1.5" />
+      <use
+        href={`#${bodyGlyphId(o.body)}`}
+        x={o.pos.x - geom.outerGlyphPx / 2} y={o.pos.y - geom.outerGlyphPx / 2}
+        width={geom.outerGlyphPx} height={geom.outerGlyphPx}
+        color={outer2Color}
+      />
+      {#if o.retro}
+        <text x={o.pos.x + geom.outerGlyphPx / 2 + 2} y={o.pos.y - geom.outerGlyphPx / 2 + 2}
+          text-anchor="middle" font-size={8 + 2 * display.glyphScale} fill={outer2Color}>℞</text>
+      {/if}
+    {/each}
+  {/if}
+
   <!-- house numerals paint LAST so their discs are clickable above the
        aspect lines radiating through an inhabited house -->
   {#each geom.cusps as c}
@@ -314,7 +354,7 @@
   {/each}
 
   <text x="14" y="16" class="serif" font-size={12 * display.textScale} fill="var(--dim)">
-    {chart.houses.polarFallback ? 'Porphyry (polar fallback)' : 'Placidus'} · Tropical{geom.outer.length ? ' · outer ring: second chart' : ''}
+    {chart.houses.polarFallback ? 'Porphyry (polar fallback)' : 'Placidus'} · Tropical{geom.outer2.length ? ' · middle ring: second chart · outer ring: transits' : geom.outer.length ? ' · outer ring: second chart' : ''}
   </text>
 </svg>
 

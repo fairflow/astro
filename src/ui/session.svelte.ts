@@ -12,10 +12,12 @@ interface Session {
   transitDate: string;
   transitTime: string;
   transitTarget: 'you' | 'couple';
+  /** The Composite tab's "Transits on" option (astro-ghw), for the transit date above. */
+  compositeTransits: boolean;
 }
 
 const DEFAULTS: Session = {
-  partner: null, transitDate: '', transitTime: '', transitTarget: 'you',
+  partner: null, transitDate: '', transitTime: '', transitTarget: 'you', compositeTransits: false,
 };
 
 const KEY = 'astro-session';

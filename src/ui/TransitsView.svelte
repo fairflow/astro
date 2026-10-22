@@ -5,7 +5,7 @@
   import { computeChart, type Chart } from '../chart/chart';
   import { localToUt } from '../chart/civil';
   import {
-    compositeChart, sunMoonMidpointHits, transitAspects, type CrossAspect,
+    activatedContacts, crossAspects, sunMoonMidpointHits, transitAspects, type CrossAspect,
   } from '../chart/relate';
   import { contextReading, LANDMARKS } from '../interpret/contexts';
   import { transitSnapshot } from '../interpret/snapshot';
@@ -13,7 +13,10 @@
   import AskClaude from './AskClaude.svelte';
   import { redact } from '../ai/anonymise';
   import { who } from '../ai/readingstore';
-  import { TRANSITS_SYSTEM, TRANSITS_STARTERS, DEFAULT_TRANSITS_REQUEST } from '../interpret/prompts';
+  import {
+    COUPLE_TRANSITS_STARTERS, COUPLE_TRANSITS_SYSTEM, DEFAULT_COUPLE_TRANSITS_REQUEST,
+    DEFAULT_TRANSITS_REQUEST, TRANSITS_STARTERS, TRANSITS_SYSTEM,
+  } from '../interpret/prompts';
   import { BODY_NAME, fmtDegInSign, fmtOrb } from '../render/glyphs';
   import { degDiff, type BodyKey, type EphemerisProvider } from '../ephemeris/types';
   import type { StyleId } from '../interpret/types';
@@ -61,10 +64,15 @@
 
   const crosses = $derived(sky ? transitAspects(skyPts, pts(natal), enabledNames) : []);
 
+  // Couple transits ("Us, now", astro-ghw): synastry plus transits. The two
+  // natal charts and their synastry contacts, with the sky of the date on each
+  // and on those contacts. Transits to the composite are the Composite tab's.
   const partnerChart = $derived(session.partner ? chartFromSaved(session.partner) : null);
-  const comp = $derived(partnerChart ? compositeChart(natal, partnerChart, enabledAspectDefs()) : null);
   const crossesB = $derived(sky && partnerChart ? transitAspects(skyPts, pts(partnerChart), enabledNames) : []);
-  const crossesC = $derived(sky && comp ? transitAspects(skyPts, pts(comp), enabledNames) : []);
+  /** Synastry contacts, strongest first (a: your body, b: the partner's), as on the Synastry tab. */
+  const synastry = $derived(partnerChart
+    ? crossAspects(pts(natal), pts(partnerChart), { defs: enabledAspectDefs() }) : []);
+  const activated = $derived(activatedContacts(crosses, crossesB, synastry));
   const smHitsA = $derived(sky ? sunMoonMidpointHits(skyPts, natal) : []);
   const smHitsB = $derived(sky && partnerChart ? sunMoonMidpointHits(skyPts, partnerChart) : []);
 
@@ -83,7 +91,8 @@
 
   let wheelSel = $state<Selection>({ kind: 'none' });
   let crossSel = $state<number | null>(null);
-  let coupleSel = $state<{ list: 'A' | 'B' | 'C'; i: number } | null>(null);
+  /** Couple selection: a transit to you (A), to the partner (B), or an activated contact (X). */
+  let coupleSel = $state<{ list: 'A' | 'B' | 'X'; i: number } | null>(null);
   /** Selected transiting (outer-ring) body — its transits stay lit. */
   let outerSel = $state<BodyKey | null>(null);
 
@@ -99,16 +108,48 @@
     ? sky.positions.map(p => ({ body: p.body, lon: p.lon, retro: p.speed < 0 }))
     : []);
 
-  const coupleAspect = $derived.by<{ x: CrossAspect; chart: Chart; label: string } | null>(() => {
-    if (!coupleSel) return null;
-    const src = coupleSel.list === 'A' ? crosses : coupleSel.list === 'B' ? crossesB : crossesC;
-    const x = src[coupleSel.i];
+  const partnerName = $derived(session.partner?.name ?? 'partner');
+  const youName = $derived(meta.name || 'you');
+  const coupleAspect = $derived.by<{ x: CrossAspect; chart: Chart; label: string; contacts: CrossAspect[] } | null>(() => {
+    if (!coupleSel || !partnerChart) return null;
+    const act = coupleSel.list === 'X' ? activated[coupleSel.i] : undefined;
+    const whose = act ? act.whose : coupleSel.list;
+    const x = act ? act.transit : (whose === 'A' ? crosses : crossesB)[coupleSel.i];
     if (!x) return null;
-    const chart = coupleSel.list === 'A' ? natal
-      : coupleSel.list === 'B' ? partnerChart! : comp!;
-    const label = coupleSel.list === 'A' ? (meta.name || 'your chart')
-      : coupleSel.list === 'B' ? (session.partner?.name ?? 'partner') : 'the composite (the relationship itself)';
-    return { x, chart, label };
+    return {
+      x, chart: whose === 'A' ? natal : partnerChart,
+      label: whose === 'A' ? youName : partnerName,
+      contacts: act?.contacts
+        ?? activated.find(a => a.transit === x)?.contacts ?? [],
+    };
+  });
+
+  // Tri-wheel: you inside, the partner in the middle ring with the strongest
+  // synastry lines, the sky outside with the strongest transits to each of you.
+  const LINES = 15;
+  const partnerBodies = $derived(partnerChart
+    ? partnerChart.positions.map(p => ({ body: p.body, lon: p.lon, retro: p.speed < 0 })) : []);
+  const synWheel = $derived(synastry.slice(0, 12).map(x => ({ ...x, a: x.b, b: x.a })));
+  const offA = $derived(Math.min(LINES, crosses.length));
+  const transitLines = $derived([
+    ...crosses.slice(0, LINES),
+    ...crossesB.slice(0, LINES).map(x => ({ ...x, toOuter: true })),
+  ]);
+  /** The selected transit's line on the wheel, if it is drawn. */
+  const lineSel = $derived.by<number | null>(() => {
+    if (!coupleSel) return null;
+    const act = coupleSel.list === 'X' ? activated[coupleSel.i] : undefined;
+    const whose = act ? act.whose : coupleSel.list;
+    const i = act ? (whose === 'A' ? crosses : crossesB).indexOf(act.transit) : coupleSel.i;
+    if (i < 0 || i >= LINES) return null;
+    return whose === 'A' ? (i < offA ? i : null) : offA + i;
+  });
+  /** The strongest synastry contact the selected transit touches, if drawn. */
+  const contactSel = $derived.by<number | null>(() => {
+    const c = coupleAspect?.contacts[0];
+    if (!c) return null;
+    const i = synastry.indexOf(c);
+    return i >= 0 && i < 12 ? i : null;
   });
 
   const captionYou = $derived([
@@ -118,9 +159,9 @@
   ]);
   const captionCouple = $derived(session.partner
     ? [
-        `Composite: ${meta.name || 'you'} + ${session.partner.name}`,
-        'midpoint chart of the relationship itself',
-        `sky of ${session.transitDate} ${session.transitTime}`,
+        `Synastry + transits: ${youName} + ${session.partner.name}`,
+        `${youName} (inner) · ${session.partner.name} (middle ring)`,
+        `sky of ${session.transitDate} ${session.transitTime} (outer ring)`,
       ]
     : []);
 
@@ -134,9 +175,15 @@
   function trBuild(anon: boolean): string {
     if (!sky) return '';
     const when = `${session.transitDate} ${session.transitTime}`;
-    const couple = session.transitTarget === 'couple' && partnerChart && comp && session.partner
-      ? { partner: partnerChart, partnerName: session.partner.name, composite: comp,
-          toPartner: crossesB, toComposite: crossesC }
+    const couple = session.transitTarget === 'couple' && partnerChart && session.partner
+      ? {
+          partner: partnerChart, partnerName: session.partner.name,
+          synastry: synastry.slice(0, 20), toPartner: crossesB, activated,
+          midpointHits: [
+            ...smHitsA.map(h => ({ whose: 'A' as const, ...h })),
+            ...smHitsB.map(h => ({ whose: 'B' as const, ...h })),
+          ],
+        }
       : null;
     const text = transitSnapshot({ natal, meta, sky, when, toNatal: crosses, couple });
     if (!anon) return text;
@@ -175,14 +222,19 @@
     <button class="chip" onclick={resetToNow}>Now</button>
     <span class="target" role="radiogroup" aria-label="Transit target">
       <button class:on={session.transitTarget === 'you'} onclick={() => { session.transitTarget = 'you'; coupleSel = null; }}>Your chart</button>
-      <button class:on={session.transitTarget === 'couple'} onclick={() => { session.transitTarget = 'couple'; crossSel = null; }}>The couple</button>
+      <button class:on={session.transitTarget === 'couple'} onclick={() => { session.transitTarget = 'couple'; crossSel = null; }}>Us, now</button>
     </span>
     <span class="hint">Sky computed for {meta.place.name} ({meta.place.zone}). Tight transit orbs (≤3–4°).</span>
   </div>
+  {#if session.transitTarget === 'couple'}
+    <div class="hint usnote">This date's sky on both your charts and on the contacts between them. For the relationship's own chart, see Composite.</div>
+  {/if}
 
   {#if sky}
-    <AskClaude system={TRANSITS_SYSTEM} starters={TRANSITS_STARTERS}
-      defaultRequest={DEFAULT_TRANSITS_REQUEST} buildSnapshot={trBuild} accent="var(--transit)"
+    <AskClaude system={trCouple ? COUPLE_TRANSITS_SYSTEM : TRANSITS_SYSTEM}
+      starters={trCouple ? COUPLE_TRANSITS_STARTERS : TRANSITS_STARTERS}
+      defaultRequest={trCouple ? DEFAULT_COUPLE_TRANSITS_REQUEST : DEFAULT_TRANSITS_REQUEST}
+      buildSnapshot={trBuild} accent="var(--transit)"
       tab={trCouple ? 'couple-transits' : 'transits'} readingGroup={trGroup}
       readingKey={`${trGroup}|${session.transitDate}`} readingTitle={trTitle} />
   {/if}
@@ -246,18 +298,17 @@
   {:else}
     <PartnerPick excludeName={meta.name} selectedId={session.partner?.id ?? null}
       onpick={c => { session.partner = c; coupleSel = null; }} />
-    {#if sky && partnerChart && comp && session.partner}
+    {#if sky && partnerChart && session.partner}
       <div class="split">
         <div class="wheelcol">
-          <ExpandableWheel chart={comp} selection={{ kind: 'none' }} {display} caption={captionCouple}
-            outer={outerBodies} outerColor="var(--transit)"
-            crossAspects={crossesC.slice(0, 30)}
-            crossSelected={coupleSel?.list === 'C' ? coupleSel.i : null}
-            oncross={i => { coupleSel = { list: 'C', i }; outerSel = null; }}
-            onselect={() => {}}
-            outerSelected={outerSel}
-            onouter={b => { outerSel = outerSel === b ? null : b; coupleSel = null; }} />
-          <div class="hint" style="padding:2px 6px">Bi-wheel: the couple's midpoint composite inside, the sky of {session.transitDate} outside (teal). Dashed lines are transits to the relationship itself.</div>
+          <ExpandableWheel chart={natal} selection={{ kind: 'none' }} {display} caption={captionCouple}
+            outer={partnerBodies} outerColor="var(--syn)"
+            crossAspects={synWheel} crossSelected={contactSel}
+            oncross={() => {}} onselect={() => {}}
+            outer2={outerBodies} outer2Color="var(--transit)"
+            crossAspects2={transitLines} cross2Selected={lineSel}
+            oncross2={j => { coupleSel = j < offA ? { list: 'A', i: j } : { list: 'B', i: j - offA }; }} />
+          <div class="hint" style="padding:2px 6px">Three rings: {youName} inside, {session.partner.name} in the middle ring (dashed lines are your synastry contacts), the sky of {session.transitDate} outside (teal; dotted lines are its transits to each of you).</div>
         </div>
         <div class="listcol">
           {#if coupleAspect}
@@ -267,11 +318,16 @@
             <div class="readingcard">
               <h2 class="serif">transiting {BODY_NAME[coupleAspect.x.a]} {coupleAspect.x.def.name} {BODY_NAME[coupleAspect.x.b]}</h2>
               <div class="sub">to {coupleAspect.label} · {fmtDegInSign(t.lon)} → {fmtDegInSign(n.lon)} · orb {fmtOrb(coupleAspect.x.orb)} · {coupleAspect.x.applying ? 'applying' : 'separating'}</div>
-              <p>{r.text} <span class="src">{r.source}</span>
-                {#if coupleSel?.list === 'C'}<br><span class="hint">Composite transits are felt as "how we are together", not as either person's mood.</span>{/if}</p>
+              <p>{r.text} <span class="src">{r.source}</span></p>
+              {#if coupleAspect.contacts.length}
+                <p class="hint">This touches {coupleAspect.label}'s {BODY_NAME[coupleAspect.x.b]}, part of
+                  {coupleAspect.contacts.length === 1 ? 'the synastry contact' : 'the synastry contacts'}
+                  {coupleAspect.contacts.map(c => `${youName}'s ${BODY_NAME[c.a]} ${c.def.name} ${session.partner!.name}'s ${BODY_NAME[c.b]} (orb ${fmtOrb(c.orb)})`).join('; ')}:
+                  the period sets {coupleAspect.contacts.length === 1 ? 'that contact' : 'those contacts'} going between you.</p>
+              {/if}
             </div>
           {:else}
-            <div class="readingcard hint">Transits to each of you and to the relationship's composite chart, strongest first. Tap any row or dashed line.</div>
+            <div class="readingcard hint">Transits to each of you, and those that set your synastry contacts going, strongest first. Tap a row or a dotted line.</div>
           {/if}
 
           {#if smHitsA.length || smHitsB.length}
@@ -287,10 +343,17 @@
           {/if}
 
           <details open>
-            <summary>To the composite — the relationship itself ({crossesC.length})</summary>
-            <CrossAspectList items={crossesC} aLabel="t" bLabel="comp" bHouse={houseIn(comp)}
-              selectedIndex={coupleSel?.list === 'C' ? coupleSel.i : null}
-              onselect={i => coupleSel = { list: 'C', i }} />
+            <summary>Activating your contacts ({activated.length})</summary>
+            {#if !activated.length}<div class="hint" style="padding:4px 8px">No transit touches a point of your strongest synastry contacts on this date.</div>{/if}
+            {#each activated as a, i}
+              <button type="button" class="actrow" class:on={coupleSel?.list === 'X' && coupleSel.i === i}
+                onclick={() => coupleSel = { list: 'X', i }}>
+                <span>transiting {BODY_NAME[a.transit.a]} {a.transit.def.name} {a.whose === 'A' ? youName : session.partner.name}'s {BODY_NAME[a.transit.b]} · {fmtOrb(a.transit.orb)}</span>
+                {#each a.contacts as c}
+                  <span class="via">in {youName}'s {BODY_NAME[c.a]} {c.def.name} {session.partner.name}'s {BODY_NAME[c.b]}</span>
+                {/each}
+              </button>
+            {/each}
           </details>
           <details>
             <summary>To {meta.name || 'you'} ({crosses.length})</summary>
@@ -325,6 +388,15 @@
   }
   .target button.on { color: var(--on-gold); background: var(--gold); border-color: var(--gold); font-weight: 600; }
   .hint { color: var(--dim); font-size: 12.5px; }
+  .usnote { margin: -4px 0 8px; }
+  .actrow {
+    display: flex; flex-direction: column; align-items: flex-start; gap: 1px; width: 100%;
+    background: none; border: none; border-radius: 6px; color: var(--ink); text-align: left;
+    padding: 4px 8px; font-size: 12.5px; cursor: pointer;
+  }
+  .actrow:hover, .actrow.on { background: var(--bg2); }
+  .actrow.on { outline: 1px solid var(--gold-dim); }
+  .actrow .via { color: var(--dim); font-size: 11.5px; }
   .landmarks { display: flex; gap: 8px; flex-wrap: wrap; margin: 4px 0 8px; }
   .badge {
     background: var(--badgebg); color: var(--quincunx); border: 1px solid var(--quincunx);

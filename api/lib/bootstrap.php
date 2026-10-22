@@ -36,11 +36,31 @@ const DUMMY_HASH = '$2y$12$4Ug3Zf9FhsNDvocMhWne3OL1GR2t/Iok9v8Dmid33f/DLlRRozHEm
 /** A registration whose emailed code is never entered is removed after this long. */
 const UNCONFIRMED_SECONDS = 7 * 24 * 3600;
 
-/** The config file: ASTRO_DB_INI if set (local dev, tests), else ~/astro-config/db.ini, outside the web root. */
+/**
+ * Whether this is the staging site's API. The build writes the marker file
+ * api/lib/STAGING in staging mode only (vite.config.ts), so the choice is made
+ * by what was deployed, never by the request's host or any setting a request can reach.
+ */
+function is_staging(): bool { return is_file(__DIR__ . '/STAGING'); }
+
+/**
+ * The config file: ASTRO_DB_INI if set (local dev, tests), else under
+ * ~/astro-config/, outside the web root. The live site uses db.ini; the staging
+ * site uses staging.ini and, if that is missing, stops: it never falls back to
+ * db.ini, so staging cannot open the live database.
+ */
 function config_path(): string {
-  return getenv('ASTRO_DB_INI') ?: (PHP_SAPI === 'cli'
-    ? getenv('HOME') . '/astro-config/db.ini'
-    : dirname((string)($_SERVER['DOCUMENT_ROOT'] ?? '')) . '/astro-config/db.ini');
+  $env = getenv('ASTRO_DB_INI');
+  if ($env) return $env;
+  $dir = (PHP_SAPI === 'cli' ? (string)getenv('HOME') : dirname((string)($_SERVER['DOCUMENT_ROOT'] ?? ''))) . '/astro-config';
+  if (!is_staging()) return "$dir/db.ini";
+  if (!is_file("$dir/staging.ini")) {
+    $why = "This is a staging build and $dir/staging.ini is missing. Staging never uses the live db.ini.";
+    error_log('astro api: ' . $why);
+    if (PHP_SAPI === 'cli') { fwrite(STDERR, $why . "\n"); exit(1); }
+    reply(500, ['error' => 'staging config missing', 'message' => 'This staging site has no database config of its own, so it is not running.']);
+  }
+  return "$dir/staging.ini";
 }
 
 /** One [table] of the config file, or [] when it has none. */

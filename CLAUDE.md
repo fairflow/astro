@@ -47,7 +47,9 @@ components. `docs/DESIGN.md` is the design of record;
   `main`, standalone orrery at `retrograde/`), plus the local test server
   on :8322, restarted on `main` after each merge. The claude.ai artifact
   and the GitHub Pages copy were retired on 2026-10-17 (DEVELOPMENT.md,
-  "Where the app is deployed"); do not republish them.
+  "Where the app is deployed"); do not republish them. A staging copy
+  (staging.fairflow.co.uk/astro, own database; DEVELOPMENT.md, "Staging")
+  deploys from a push to the `staging` branch, never from `main`.
 - Positions are validated against golden references (Swiss Ephemeris,
   held-out JPL Horizons samples) — never weaken tolerances to pass.
 - Birth data is the source of truth; computed positions are recomputed,

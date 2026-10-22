@@ -2,7 +2,8 @@ import { isPreset, type AiPresetId } from './config.js';
 
 /**
  * Pure helpers for saved "Ask Claude" readings (kept in this browser's
- * localStorage; see readings.svelte.ts for the reactive store). No DOM or
+ * localStorage, and in the account when signed in: readingsync.svelte.ts;
+ * see readings.svelte.ts for the reactive store). No DOM or
  * Svelte here, so the parsing and quota handling are unit-testable.
  */
 

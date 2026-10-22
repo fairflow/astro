@@ -2,7 +2,7 @@
   import { AI_ENABLED, AI_PRESETS, isPreset, type AiPresetId } from '../ai/config';
   import { account } from '../api/account.svelte';
   import { aiPrefs, setOpen, setPreset } from '../ai/prefs.svelte';
-  import { deleteReading, readings, startReading, stopReading } from '../ai/readings.svelte';
+  import { deleteReading, readings, readingToShow, startReading, stopReading } from '../ai/readings.svelte';
   import type { ReadingTab } from '../ai/readingstore';
   import { renderMarkdown } from '../ai/markdown';
   import { copyToClipboard } from './clipboard';
@@ -51,6 +51,16 @@
 
   // a different chart pair / date on screen: back to its own latest reading
   $effect(() => { void readingKey; pickedId = null; });
+  // a reading opened from Saved charts: show it once this panel's context has it
+  // (after the effect above, so a context change does not clear the choice)
+  let panel = $state<HTMLDetailsElement | null>(null);
+  $effect(() => {
+    const id = readingToShow.id;
+    if (id === null || !savedHere.some(r => r.id === id)) return;
+    pickedId = id;
+    readingToShow.id = null;
+    setTimeout(() => panel?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
+  });
 
   interface Shown {
     id: number | null; text: string; busy: boolean; err: string;
@@ -116,7 +126,7 @@
 
 <!-- not shown where the Worker would refuse the page's requests (see AI_ENABLED) -->
 {#if AI_ENABLED}
-<details class="askai" style="--ac: {accent}" bind:open={aiPrefs.open}
+<details class="askai" style="--ac: {accent}" bind:open={aiPrefs.open} bind:this={panel}
   ontoggle={e => setOpen((e.currentTarget as HTMLDetailsElement).open)}>
   <summary>
     Ask Claude <span class="beta">experimental</span>
@@ -178,7 +188,10 @@
 
   {#if savedHere.length}
     <details class="past">
-      <summary>Saved readings ({savedHere.length}) <span class="dim">· kept in this browser only</span></summary>
+      <!-- signed in, readings sync to the account (astro-cbi, readingsync.svelte.ts) -->
+      <summary>Saved readings ({savedHere.length}) <span class="dim">· {account.status === 'signedIn'
+        ? `saved to your account (${account.email})`
+        : 'kept in this browser only; sign in (Settings, Account) to keep them in your account'}</span></summary>
       <ul>
         {#each savedHere as r (r.id)}
           <li class:on={shown?.id === r.id}>

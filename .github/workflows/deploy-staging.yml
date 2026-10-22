@@ -1,0 +1,115 @@
+# Deploy the staging copy to staging.fairflow.co.uk/astro/ whenever the
+# `staging` branch is pushed (git push origin HEAD:staging), or on demand.
+#
+# Same steps as deploy-sftp.yml (the live deploy, which only main triggers),
+# but builds in staging mode (npm run build:staging: staging marker, indicator
+# in the app) and uploads to the repository variable SSH_REMOTE_STAGING, the
+# staging site's astro folder. If that variable is not set the deploy is
+# skipped with a notice: it never falls back to the live folder. Same
+# SSH_HOST / SSH_USER / SSH_PASSWORD secrets as the live deploy.
+name: Deploy staging
+
+on:
+  push:
+    branches: [staging]
+  workflow_dispatch:
+
+# its own group: a staging deploy neither waits for nor cancels a live one
+concurrency:
+  group: deploy-staging
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      REMOTE: ${{ vars.SSH_REMOTE_STAGING }}
+      LIVE_REMOTE: ${{ vars.SSH_REMOTE || '/home/fairtlou/fairflow.co.uk/astro' }}
+      SITE: https://staging.fairflow.co.uk/astro/
+    steps:
+      - name: Check deploy credentials and target are configured
+        id: creds
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+        run: |
+          if [ -z "$REMOTE" ]; then
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::The repository variable SSH_REMOTE_STAGING is not set; skipping the staging deploy (it never uses the live folder)."
+          elif [ "${REMOTE%/}" = "${LIVE_REMOTE%/}" ]; then
+            echo "::error::SSH_REMOTE_STAGING is the live folder ($LIVE_REMOTE); refusing to deploy."; exit 1
+          elif [ -n "$SSH_HOST" ] && [ -n "$SSH_USER" ] && [ -n "$SSH_PASSWORD" ]; then
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::SSH_HOST, SSH_USER and SSH_PASSWORD repository secrets are not all set; skipping the deploy."
+          fi
+
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Test
+        run: npm test
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build (staging)
+        run: npm run build:staging
+
+      - uses: actions/setup-python@v5
+        if: steps.creds.outputs.ok == 'true'
+        with:
+          python-version: '3.12'
+
+      - name: Deploy over SFTP
+        if: steps.creds.outputs.ok == 'true'
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PASSWORD: ${{ secrets.SSH_PASSWORD }}
+        run: |
+          pip install --quiet paramiko
+          # as in deploy-sftp.yml: the secrets go to a TOML file in the runner's temp dir, never into the repo
+          SECRETS="$RUNNER_TEMP/deploy-secrets.toml"
+          umask 077
+          python - "$SECRETS" <<'PY'
+          import json, os, sys
+          port = os.environ.get("SSH_PORT") or "722"
+          with open(sys.argv[1], "w") as f:
+              f.write("[ssh]\n")
+              f.write(f"host = {json.dumps(os.environ['SSH_HOST'])}\n")
+              f.write(f"port = {int(port)}\n")
+              f.write(f"username = {json.dumps(os.environ['SSH_USER'])}\n")
+              f.write(f"password = {json.dumps(os.environ['SSH_PASSWORD'])}\n")
+          PY
+          python tools/deploy_sftp.py --secrets "$SECRETS" --remote "$REMOTE" --delete
+          rm -f "$SECRETS"
+
+      - name: Check the staging site serves this build
+        if: steps.creds.outputs.ok == 'true'
+        run: |
+          want=$(ls dist/assets/ | grep -E '^index-.*\.js$')
+          for i in 1 2 3 4 5 6; do
+            live=$(curl -fsS "$SITE" | grep -o 'index-[A-Za-z0-9_-]*\.js' | head -1 || true)
+            if [ "$live" = "$want" ]; then echo "Staging at $SITE: $live"; exit 0; fi
+            echo "staging: '$live', want: '$want'; retrying"; sleep 10
+          done
+          echo "::error::$SITE is not serving this build ($want)"; exit 1
+
+      - name: Check version alignment on the staging site
+        if: steps.creds.outputs.ok == 'true'
+        run: tools/check_live.sh "$SITE" "$GITHUB_SHA"

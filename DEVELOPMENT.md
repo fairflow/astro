@@ -223,7 +223,12 @@ standalone Retrograde page is part of it: `npm run build` also runs
 `vite.retro.config.ts`, writing the page as a full document to
 `dist/retrograde/index.html`, served at `<app>/retrograde/`. The local test
 server (`npm run dev`, port 8322) is restarted on `main` after each merge,
-so its header build id matches the live one.
+so its header build id matches the live one. Each copy has its own icon, so a
+tab or home-screen icon says which one it opens: the live gold on navy
+(`data/icons/`), local navy on light blue (`branding/local/`, served by the dev
+server in their place, with "Local ·" in the title) and staging navy on orange
+(`branding/staging/`, copied in by `npm run build:staging`). All three come from
+`tools/make_icons.py`.
 
 Retired on 2026-10-17, to stop maintaining copies by hand (Matthew's
 decision): the claude.ai artifact of the Retrograde page (its two artifact
@@ -232,6 +237,68 @@ copy in the `writing` repo (`/writing/astro/` now redirects to
 fairflow.co.uk/astro and unregisters its old service worker). Do not
 republish either. `npm run build:retro` still writes the single-file
 fragment `dist-retro/retrograde.html`, which is no longer published.
+
+### Staging (staging.fairflow.co.uk/astro/)
+
+A second copy of the app for trying changes, with its own accounts, apart from
+the live site. It is a subdomain with the app at `/astro/` (the same layout as
+live), so it is its own origin: separate IndexedDB, localStorage, sign-in cookie
+and service-worker caches. (A path on the live origin was rejected: it would
+share all of those, and `sw.js` deletes every cache but its own.)
+
+- **Deploy:** push to the `staging` branch (`git push origin HEAD:staging`,
+  after Matthew's say-so) or run "Deploy staging" from the Actions tab.
+  `.github/workflows/deploy-staging.yml` tests, runs `npm run build:staging`
+  and uploads with `tools/deploy_sftp.py` to the repository variable
+  `SSH_REMOTE_STAGING`; if that is unset it skips with a notice and never
+  uses the live folder. It has its own concurrency group and uses the same
+  SSH secrets. Merging to `main` is what deploys live; `staging` does not.
+  Check it with `tools/check_live.sh https://staging.fairflow.co.uk/astro/ [COMMIT]`.
+- **What differs in the build** (`vite build --mode staging`): the header shows
+  an orange "Staging: test data" tag and bar, the page title starts "Staging ·",
+  the web manifest names are "Astrodynamics staging" / "Astro staging" (so a
+  home-screen icon is told apart), and the build writes `api/lib/STAGING`. The
+  normal build has none of these.
+- **Kept off the live database:** the choice is made by what was deployed, not
+  by the request. With `api/lib/STAGING` present the API reads
+  `~/astro-config/staging.ini` and never `db.ini`; if `staging.ini` is missing it
+  fails closed (500, and the command line exits 1). Only `ASTRO_DB_INI` (dev,
+  tests) overrides, as everywhere. The marker is under `api/lib/`, which the
+  host refuses to serve (`check_live.sh` checks it). `test/api-staging.spec.ts`
+  proves it. Mail is sent the same way, so the staging `staging.ini` may carry
+  `[mail]` and `[askclaude]` tables like `db.ini` (emails still say
+  fairflow.co.uk/astro in their text).
+- **Ask Claude on staging:** `https://staging.fairflow.co.uk` is in
+  `VITE_AI_ORIGINS` and the Worker's `ALLOWED_ORIGINS`. The Worker checks a pass
+  with the API of the page's origin: `STAGING_API_BASE` for the staging origin,
+  `API_BASE` for the others (`gate` in `worker/src/index.ts`).
+- **Accounts:** `.venv/bin/python tools/host_account.py --staging migrate|list|add|admin|…`
+  runs the same commands on the staging folder with `ASTRO_DB_INI` set to
+  `staging.ini` (it assumes the staging folder `~/staging.fairflow.co.uk/astro`;
+  edit `STAGING_API` in the script if the document root differs).
+- **One-time setup (Matthew), in order:**
+  1. In cPanel create the subdomain `staging.fairflow.co.uk` with its document
+     root set to `/home/fairtlou/staging.fairflow.co.uk` (cPanel's box is
+     relative to the home folder: type `staging.fairflow.co.uk` only), beside the live
+     site's folder, never inside `/home/fairtlou/fairflow.co.uk`: nested there,
+     the API would look for `astro-config/` inside the live web root, and the
+     copy would also be served at a fairflow.co.uk path, sharing the live
+     site's storage. Set the
+     repository variable `SSH_REMOTE_STAGING` to `<document root>/astro`
+     (Settings, Secrets and variables, Actions, Variables).
+  2. Make sure AutoSSL has issued a certificate for the subdomain (https must
+     work before the first deploy; the redirect and HSTS assume it).
+  3. Database and config: `.venv/bin/python tools/host_staging.py setup` makes
+     a second MariaDB database and user for staging (not the live ones), with a
+     password made on the host, and writes `~/astro-config/staging.ini` (600,
+     outside every web root): that database in `[db]`, and the live `db.ini`'s
+     other tables copied on the host. Nothing secret is printed; it writes the
+     file only after a test login works, and is safe to run again.
+     `… host_staging.py check` shows what exists.
+  4. Deploy the Worker: `npx wrangler deploy --config worker/wrangler.toml`.
+  5. Push to `staging` (first deploy), then
+     `.venv/bin/python tools/host_account.py --staging migrate`, then make a
+     staging admin: `… --staging add you@example.com` and `… --staging admin you@example.com`.
 
 ### Server API (`api/`)
 
@@ -250,7 +317,8 @@ service worker never caches `api/`.
   then says it could not check rather than showing you signed out. The
   database is MariaDB on the same host as the PHP (no tunnel).
 - **Config and secrets:** only on the server, in `~/astro-config/db.ini`
-  (outside the web root). Locally `ASTRO_DB_INI` points at a SQLite config.
+  (outside the web root; the staging site uses `staging.ini`, see Staging
+  above). Locally `ASTRO_DB_INI` points at a SQLite config.
 - **Schema:** `api/sql/NNN_*.sql`, portable between MariaDB and SQLite
   (`/*TABLE_OPTIONS*/` is filled per driver). Run on the host:
   `php ~/fairflow.co.uk/astro/api/cli/migrate.php`. When new code needs the

@@ -18,3 +18,5 @@ declare const __GIT_DATE__: string;
 declare const __APP_VERSION__: string;
 /** '<version>+<5-hex commit>', '.dirty' appended for a build with uncommitted changes (buildstamp.ts). */
 declare const __BUILD_ID__: string;
+/** True only in the staging build (`npm run build:staging`): the app shows a staging indicator. */
+declare const __STAGING__: boolean;

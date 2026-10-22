@@ -1,21 +1,24 @@
 # Astrodynamics static hosting rules (Apache/LiteSpeed)
 AddType application/manifest+json .webmanifest
 
-# One address: https://fairflow.co.uk/astro/ (astro-n7f, 2026-10-21). Typed
-# without a scheme, Safari used http://, and a home-screen app saved from there
-# never kept its sign-in; www. was a separate site with its own storage too.
+# One address per site: https://fairflow.co.uk/astro/ (astro-n7f, 2026-10-21), and
+# likewise https://staging.fairflow.co.uk/astro/ for the staging copy: each host
+# redirects to its own https name with www. removed. Typed without a scheme,
+# Safari used http://, and a home-screen app saved from there never kept its
+# sign-in; www. was a separate site with its own storage too.
 # The api/ folders' own .htaccess files set no rewrite rules, so these apply there as well.
 <IfModule mod_rewrite.c>
   RewriteEngine On
   RewriteCond %{HTTPS} !=on
   RewriteCond %{HTTP:X-Forwarded-Proto} !=https
-  RewriteRule ^ https://fairflow.co.uk%{REQUEST_URI} [R=301,L]
-  RewriteCond %{HTTP_HOST} ^www\. [NC]
-  RewriteRule ^ https://fairflow.co.uk%{REQUEST_URI} [R=301,L]
+  RewriteCond %{HTTP_HOST} ^(?:www\.)?([a-z0-9.-]+)$ [NC]
+  RewriteRule ^ https://%1%{REQUEST_URI} [R=301,L]
+  RewriteCond %{HTTP_HOST} ^www\.([a-z0-9.-]+)$ [NC]
+  RewriteRule ^ https://%1%{REQUEST_URI} [R=301,L]
 </IfModule>
 
 <IfModule mod_headers.c>
-  # Browsers that have seen this go straight to https:// on fairflow.co.uk, even
+  # Browsers that have seen this go straight to https:// on this host, even
   # when the address is typed without a scheme. One year (Matthew, 2026-10-21).
   Header always set Strict-Transport-Security "max-age=31536000"
   # The service worker and entry page must revalidate so new builds land.

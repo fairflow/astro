@@ -17,6 +17,10 @@ standard input: never stored, never on a command line.
   .venv/bin/python tools/host_account.py state EMAIL active|paused|frozen|pending
   .venv/bin/python tools/host_account.py mail-test EMAIL
 
+Add --staging to run any of these on the staging site instead: its own folder,
+with ASTRO_DB_INI pointing at ~/astro-config/staging.ini, so nothing touches the
+live database (the staging build's API refuses db.ini anyway).
+
 Run from the repo root (it imports tools/deploy_sftp.py).
 """
 import argparse
@@ -31,6 +35,9 @@ sys.path.insert(0, 'tools')
 from deploy_sftp import DEFAULT_SECRETS, connect  # noqa: E402
 
 API = '~/fairflow.co.uk/astro/api'
+# the staging site: the subdomain's document root + astro/, and its own database config
+STAGING_API = '~/staging.fairflow.co.uk/astro/api'
+STAGING_INI = '$HOME/astro-config/staging.ini'
 EMAIL = re.compile(r'^[^@\s]+@[^@\s]+\.[^@\s]+$')
 
 
@@ -47,9 +54,9 @@ def run(client, cmd: str, stdin: str | None = None) -> int:
     return out.channel.recv_exit_status()
 
 
-def upload_missing_sql(client) -> None:
+def upload_missing_sql(client, api: str) -> None:
     sftp = client.open_sftp()
-    remote = API.removeprefix('~/') + '/sql'   # SFTP paths are relative to the home directory
+    remote = api.removeprefix('~/') + '/sql'   # SFTP paths are relative to the home directory
     have = set(sftp.listdir(remote))
     for f in sorted(glob.glob('api/sql/*.sql')):
         name = os.path.basename(f)
@@ -71,6 +78,7 @@ def main() -> None:
     ap.add_argument('--secrets', default=DEFAULT_SECRETS, help=f'file with an [ssh] table (default {DEFAULT_SECRETS})')
     ap.add_argument('command', choices=['migrate', 'list', 'add', 'passwd', 'admin', 'state', 'mail-test'])
     ap.add_argument('args', nargs='*')
+    ap.add_argument('--staging', action='store_true', help='run on the staging site (its folder and staging.ini)')
     ap.add_argument('--local-sql', action='store_true', help='migrate: upload missing api/sql/*.sql first')
     a = ap.parse_args()
 
@@ -82,20 +90,22 @@ def main() -> None:
 
     stdin = new_password() + '\n' if a.command in ('add', 'passwd') else None
     q = [shlex.quote(x) for x in a.args]
+    api = STAGING_API if a.staging else API
+    php = f'ASTRO_DB_INI="{STAGING_INI}" php' if a.staging else 'php'
     cmd = {
-        'migrate': f'php {API}/cli/migrate.php',
-        'list': f'php {API}/cli/user.php list',
-        'add': f'php {API}/cli/user.php add {q[0] if q else ""}',
-        'passwd': f'php {API}/cli/user.php passwd {q[0] if q else ""}',
-        'admin': f'php {API}/cli/user.php admin {q[0] if q else ""}',
-        'state': f'php {API}/cli/user.php state {" ".join(q[:2])}',
-        'mail-test': f'php {API}/cli/mail_test.php {q[0] if q else ""}',
+        'migrate': f'{php} {api}/cli/migrate.php',
+        'list': f'{php} {api}/cli/user.php list',
+        'add': f'{php} {api}/cli/user.php add {q[0] if q else ""}',
+        'passwd': f'{php} {api}/cli/user.php passwd {q[0] if q else ""}',
+        'admin': f'{php} {api}/cli/user.php admin {q[0] if q else ""}',
+        'state': f'{php} {api}/cli/user.php state {" ".join(q[:2])}',
+        'mail-test': f'{php} {api}/cli/mail_test.php {q[0] if q else ""}',
     }[a.command]
 
     client = connect(a.secrets)
     try:
         if a.command == 'migrate' and a.local_sql:
-            upload_missing_sql(client)
+            upload_missing_sql(client, api)
         code = run(client, cmd, stdin)
     finally:
         client.close()

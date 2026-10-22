@@ -1,7 +1,10 @@
 <script lang="ts">
   import PartnerPick from './PartnerPick.svelte';
   import ExpandableWheel from './ExpandableWheel.svelte';
-  import { compositeChart } from '../chart/relate';
+  import CrossAspectList from './CrossAspectList.svelte';
+  import { compositeChart, transitAspects } from '../chart/relate';
+  import { computeChart } from '../chart/chart';
+  import { localToUt } from '../chart/civil';
   import { contextReading } from '../interpret/contexts';
   import { compositeSnapshot } from '../interpret/snapshot';
   import { registerCopy } from './copyctx.svelte';
@@ -12,19 +15,21 @@
   import { aspectKey } from '../render/wheel';
   import { BODY_NAME, fmtDegInSign, fmtOrb } from '../render/glyphs';
   import type { Chart } from '../chart/chart';
+  import type { BodyKey, EphemerisProvider } from '../ephemeris/types';
   import type { SavedChart } from '../store/db';
   import type { StyleId } from '../interpret/types';
   import type { Selection } from './selection';
   import type { ChartMeta, DisplaySettings } from './state';
   import { session } from './session.svelte';
-  import { enabledAspectDefs } from './prefs.svelte';
+  import { enabledAspectDefs, enabledBodies } from './prefs.svelte';
 
-  let { natal, meta, chartFromSaved, display, style }: {
+  let { natal, meta, chartFromSaved, display, style, provider }: {
     natal: Chart;
     meta: ChartMeta;
     chartFromSaved: (c: SavedChart) => Chart;
     display: DisplaySettings;
     style: StyleId;
+    provider: EphemerisProvider;
   } = $props();
 
     let sel = $state<Selection>({ kind: 'none' });
@@ -38,6 +43,38 @@
   const compSun = $derived(comp?.positions.find(p => p.body === 'sun'));
   const compMoon = $derived(comp?.positions.find(p => p.body === 'moon'));
 
+  // "Transits on" (astro-ghw, moved here from Transits): the sky of the transit
+  // date (shared with the Transits tab) around the composite, computed for
+  // your birthplace as the Transits tab does.
+  function now() {
+    const n = new Date();
+    session.transitDate = n.toISOString().slice(0, 10);
+    session.transitTime = `${String(n.getHours()).padStart(2, '0')}:${String(n.getMinutes()).padStart(2, '0')}`;
+  }
+  $effect(() => { if (session.compositeTransits && !session.transitDate) now(); });
+  const sky = $derived.by<Chart | null>(() => {
+    if (!session.compositeTransits || !session.transitDate) return null;
+    const [y, mo, d] = session.transitDate.split('-').map(Number);
+    const [h, mi] = (session.transitTime || '12:00').split(':').map(Number);
+    try {
+      const { jdUt } = localToUt(y!, mo!, d!, h ?? 12, mi ?? 0, meta.place.zone);
+      return computeChart(provider, {
+        jdUt, lat: meta.place.lat, lon: meta.place.lon,
+        bodies: enabledBodies(), aspectOptions: { defs: enabledAspectDefs() },
+      });
+    } catch {
+      return null;
+    }
+  });
+  const pts = (c: Chart) => c.positions.map(p => ({ body: p.body, state: p }));
+  const enabledNames = $derived(new Set(enabledAspectDefs().map(d => d.name as string)));
+  const crossesC = $derived(sky && comp ? transitAspects(pts(sky), pts(comp), enabledNames) : []);
+  const skyBodies = $derived(sky ? sky.positions.map(p => ({ body: p.body, lon: p.lon, retro: p.speed < 0 })) : []);
+  let tSel = $state<number | null>(null);
+  let outerSel = $state<BodyKey | null>(null);
+  const tAspect = $derived(tSel !== null ? crossesC[tSel] ?? null : null);
+  const houseIn = (c: Chart) => (b: BodyKey) => c.positions.find(p => p.body === b)?.house;
+
 
   /** Composite snapshot for Ask Claude, optionally with names redacted. */
   function compBuild(anon: boolean): string {
@@ -45,7 +82,11 @@
     const partner = chartFromSaved(session.partner);
     const aName = meta.name || 'Person A';
     const bName = session.partner.name;
-    const text = compositeSnapshot(comp, aName, natal, partner, bName);
+    const transits = sky ? {
+      when: `${session.transitDate} ${session.transitTime}`,
+      place: `${meta.place.name}, ${meta.place.country}`, toComposite: crossesC,
+    } : null;
+    const text = compositeSnapshot(comp, aName, natal, partner, bName, transits);
     if (!anon) return text;
     return redact(text, [
       { find: aName, replace: 'Person A' },
@@ -73,18 +114,37 @@
 <div class="cview">
   <div class="pickrow">
     <PartnerPick excludeName={meta.name} selectedId={session.partner?.id ?? null}
-      onpick={c => { session.partner = c; sel = { kind: 'none' }; }} />
+      onpick={c => { session.partner = c; sel = { kind: 'none' }; tSel = null; }} />
+    <label class="tron"><input type="checkbox" bind:checked={session.compositeTransits}
+      onchange={() => { tSel = null; outerSel = null; }}> Transits on</label>
+    {#if session.compositeTransits}
+      <label>Date<input type="date" bind:value={session.transitDate}></label>
+      <label>Time<input type="time" bind:value={session.transitTime}></label>
+      <button class="chip" onclick={now}>Now</button>
+    {/if}
   </div>
 
   {#if comp && session.partner}
     {@const compCtx = `composite|${who(meta.name, meta.date)}|${who(session.partner.name, session.partner.date)}`}
     <AskClaude system={COMPOSITE_SYSTEM} starters={COMPOSITE_STARTERS}
       defaultRequest={DEFAULT_COMPOSITE_REQUEST} buildSnapshot={compBuild} accent="var(--syn)"
-      tab="composite" readingKey={compCtx} readingGroup={compCtx}
+      tab="composite" readingKey={sky ? `${compCtx}|${session.transitDate}` : compCtx} readingGroup={compCtx}
       readingTitle={`Composite · ${meta.name || 'unnamed'} × ${session.partner.name}`} />
     <div class="split">
       <div class="wheelcol">
-        <ExpandableWheel chart={comp} selection={sel} {display} {caption} onselect={s => sel = s} />
+        {#if sky}
+          <ExpandableWheel chart={comp} selection={sel} {display}
+            caption={[...caption.slice(0, 2), `sky of ${session.transitDate} ${session.transitTime} (outer ring)`]}
+            onselect={s => { sel = s; tSel = null; outerSel = null; }}
+            outer={skyBodies} outerColor="var(--transit)"
+            crossAspects={crossesC.slice(0, 30)} crossSelected={tSel}
+            oncross={i => { tSel = i; sel = { kind: 'none' }; outerSel = null; }}
+            outerSelected={outerSel}
+            onouter={b => { outerSel = outerSel === b ? null : b; tSel = null; }} />
+          <div class="hint" style="padding:2px 6px">Bi-wheel: the composite inside, the sky of {session.transitDate} outside (teal). Dashed lines are transits to the relationship itself, felt as "how we are together", not as either person's mood.</div>
+        {:else}
+          <ExpandableWheel chart={comp} selection={sel} {display} {caption} onselect={s => sel = s} />
+        {/if}
       </div>
       <div class="listcol">
         <details open>
@@ -106,7 +166,16 @@
             astronomically.</p>
           </div>
         </details>
-        {#if selAspect}
+        {#if tAspect && sky}
+          {@const r = contextReading(tAspect, style, 'transit')}
+          {@const t = sky.positions.find(p => p.body === tAspect.a)!}
+          {@const n = comp.positions.find(p => p.body === tAspect.b)!}
+          <div class="readingcard">
+            <h2 class="serif">transiting {BODY_NAME[tAspect.a]} {tAspect.def.name} composite {BODY_NAME[tAspect.b]}</h2>
+            <div class="sub">{fmtDegInSign(t.lon)} → {fmtDegInSign(n.lon)} · orb {fmtOrb(tAspect.orb)} · {tAspect.applying ? 'applying' : 'separating'}</div>
+            <p>{r.text} <span class="src">{r.source}</span></p>
+          </div>
+        {:else if selAspect}
           {@const r = contextReading(selAspect, style, 'composite')}
           <div class="readingcard">
             <h2 class="serif">{BODY_NAME[selAspect.a]} {selAspect.def.name} {BODY_NAME[selAspect.b]}</h2>
@@ -115,6 +184,13 @@
           </div>
         {:else}
           <div class="readingcard hint">Tap an aspect on the composite wheel for its reading — phrased for the relationship as a unit, not for either person.</div>
+        {/if}
+        {#if sky}
+          <details open>
+            <summary>Transits to the composite: the relationship itself ({crossesC.length})</summary>
+            <CrossAspectList items={crossesC} aLabel="t" bLabel="comp" bHouse={houseIn(comp)}
+              selectedIndex={tSel} onselect={i => { tSel = i; sel = { kind: 'none' }; }} />
+          </details>
         {/if}
       </div>
     </div>
@@ -148,5 +224,14 @@
     padding: 0 6px; margin-left: 4px;
   }
   .hint { color: var(--dim); }
+  .tron { display: flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink); align-self: flex-end; padding-bottom: 6px; }
+  .pickrow label:not(.tron) { display: flex; flex-direction: column; font-size: 12px; color: var(--dim); gap: 2px; }
+  .pickrow input[type=date], .pickrow input[type=time] {
+    background: var(--bg2); color: var(--ink); border: 1px solid var(--line); border-radius: 6px; padding: 4px 6px;
+  }
+  .chip {
+    background: var(--bg2); color: var(--gold); border: 1px solid var(--gold-dim);
+    border-radius: 14px; padding: 5px 14px; font-size: 12.5px; align-self: flex-end;
+  }
   @media (max-width: 900px) { .split { flex-direction: column; } .listcol { flex: auto; width: 100%; } }
 </style>
