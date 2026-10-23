@@ -17,6 +17,11 @@ AddType application/manifest+json .webmanifest
   RewriteRule ^ https://%1%{REQUEST_URI} [R=301,L]
 </IfModule>
 
+# the deploy's record of what the host has (tools/deploy_sftp.py): not for the web
+<Files ".deploy-manifest.json">
+  Require all denied
+</Files>
+
 <IfModule mod_headers.c>
   # Browsers that have seen this go straight to https:// on this host, even
   # when the address is typed without a scheme. One year (Matthew, 2026-10-21).
