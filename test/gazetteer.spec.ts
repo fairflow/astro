@@ -45,15 +45,17 @@ describe('the place files', () => {
     const files = readdirSync(resolve(root, 'places')).map(f => f.replace(/\.json$/, ''));
     expect(files.length).toBeGreaterThan(200);
     let rows = 0;
+    const misfiled: string[] = [];
     for (const k of files) {
       for (const r of shard(k)) {
         rows++;
         const names = [r[0], ...(r[6] ? [r[6]] : [])].map(n => (fold(n) + '___').slice(0, k.length));
-        expect(names, `${r[0]} in ${k}.json`).toContain(k);
+        if (!names.includes(k)) misfiled.push(`${r[0]} in ${k}.json`);
       }
     }
+    expect(misfiled).toEqual([]);
     expect(rows).toBeGreaterThan(150_000);
-  });
+  }, 60_000);   // 200,000 rows: a few seconds on a slow CI machine
 
   it('the larger places come first by population and carry a zone and region', () => {
     expect(g.cities.length).toBeGreaterThan(30_000);
