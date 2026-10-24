@@ -141,11 +141,11 @@ Fields: **name/label · date of birth · time of birth · time accuracy · place
 
 - **Place**: type-ahead against a **bundled offline gazetteer** from GeoNames
   `cities500` (about 237,000 places down to 500 people, astro-brv, 2026-10-23)
-  with name, region, country, lat/lon, IANA timezone, in two tiers:
+  with name, county, region, country, lat/lon, IANA timezone, in two tiers:
   `gazetteer.json` (places of 15,000 or more, fetched at start, about 460 KB
   compressed) and `places/<first letters>.json` (the smaller places, fetched
   only for what is typed; mostly a few KB). Matching ignores accents and
-  punctuation ("Zurich" finds Zürich); "Newport, Wales" narrows by region or
+  punctuation ("Zurich" finds Zürich); "Newport, Wales" or "Newport, Pembrokeshire" narrows by region, county or
   country code. Typed coordinates ("51.48, -3.18") make a place whose timezone
   and country come from the nearest listed place, shown for checking. Built by
   `tools/make_gazetteer.py`.

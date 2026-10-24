@@ -1,22 +1,24 @@
 #!/usr/bin/env python3
 """Build the offline place gazetteer from GeoNames cities500 (CC-BY 4.0,
 https://www.geonames.org; attribution kept in the app's About), with region
-names from admin1CodesASCII (astro-brv).
+names from admin1CodesASCII and county names from admin2Codes (astro-brv).
 
 Two tiers, so the search starts at once and stays light on a phone:
 
   data/gazetteer.json      places of 15,000 people or more, fetched at start:
     { "attribution", "zones": [iana...], "regions": ["", "England", ...],
-      "cities": [[name, country, lat, lon, zoneIdx, regionIdx, alt?], ...] }
+      "cities": [[name, country, lat, lon, zoneIdx, regionIdx, county, alt?], ...] }
   data/places/<key>.json   every smaller place (down to 500 people, and every
     seat of local government), split by the first two letters of its name
     (key, e.g. "ne"), or three for the prefixes listed in gazetteer.json's
     "split" (e.g. "san"), so no file is large; fetched only when a search
     starts with them:
-    { "cities": [[name, country, lat, lon, zoneIdx, regionIdx, alt?], ...] }
+    { "cities": [[name, country, lat, lon, zoneIdx, regionIdx, county, alt?], ...] }
 
 Rows are sorted by population, largest first. zoneIdx and regionIdx index the
-lists in gazetteer.json. `alt` is GeoNames' plain-letter spelling, given only
+lists in gazetteer.json. county is the GeoNames admin2 name (a county in the
+UK and US, a département in France), "" when there is none or it is the
+place's own name; it tells same-named places apart (Newport, Pembrokeshire). `alt` is GeoNames' plain-letter spelling, given only
 when folding the name (below) does not already produce it (e.g. Łódź → Lodz);
 a place whose alt starts with other letters is also filed under them.
 
@@ -77,6 +79,11 @@ for line in fetch("admin1CodesASCII.txt").read_text(encoding="utf-8").splitlines
     code, name, *_ = line.split("\t")
     admin1[code] = name
 
+admin2 = {}
+for line in fetch("admin2Codes.txt").read_text(encoding="utf-8").splitlines():
+    code, name, *_ = line.split("\t")
+    admin2[code] = name
+
 with zipfile.ZipFile(fetch("cities500.zip")) as z:
     raw = z.read("cities500.txt").decode("utf-8")
 
@@ -85,12 +92,15 @@ regions: dict[str, int] = {"": 0}
 rows = []
 for rec in csv.reader(io.StringIO(raw), delimiter="\t", quoting=csv.QUOTE_NONE):
     name, ascii_name, lat, lon = rec[1], rec[2], float(rec[4]), float(rec[5])
-    country, adm1, pop, tz = rec[8], rec[10], int(rec[14] or 0), rec[17]
+    country, adm1, adm2, pop, tz = rec[8], rec[10], rec[11], int(rec[14] or 0), rec[17]
     if not tz:
         continue
     zi = zones.setdefault(tz, len(zones))
     ri = regions.setdefault(admin1.get(f"{country}.{adm1}", ""), len(regions))
-    row = [name, country, round(lat, 3), round(lon, 3), zi, ri]
+    county = admin2.get(f"{country}.{adm1}.{adm2}", "")
+    if fold(county) == fold(name):
+        county = ""             # Newport in Newport: the name says it already
+    row = [name, country, round(lat, 3), round(lon, 3), zi, ri, county]
     f, fa = fold(name), fold(ascii_name)
     if fa and fa != f:
         row.append(ascii_name)
@@ -101,17 +111,17 @@ tier1 = [r for p, _, _, r in rows if p >= TIER1_POP]
 small = [(f, fa, r) for p, f, fa, r in rows if p < TIER1_POP]
 size2 = collections.Counter()
 for f, fa, r in small:
-    for k in {key(f)} | ({key(fa)} if len(r) > 6 else set()):
+    for k in {key(f)} | ({key(fa)} if len(r) > 7 else set()):
         size2[k] += len(json.dumps(r, ensure_ascii=False)) + 1
 split = sorted(k for k, n in size2.items() if n > SPLIT_BYTES)
 shards: dict[str, list] = collections.defaultdict(list)
 for f, fa, r in small:
-    names = [f] + ([fa] if len(r) > 6 else [])
+    names = [f] + ([fa] if len(r) > 7 else [])
     for k in {key(n, 3) if key(n) in split else key(n) for n in names}:
         shards[k].append(r)
 
 OUT.write_text(json.dumps({
-    "attribution": "GeoNames cities500 and admin1 codes (CC-BY 4.0, geonames.org)",
+    "attribution": "GeoNames cities500, admin1 and admin2 codes (CC-BY 4.0, geonames.org)",
     "zones": [z for z, _ in sorted(zones.items(), key=lambda kv: kv[1])],
     "regions": [r for r, _ in sorted(regions.items(), key=lambda kv: kv[1])],
     "split": split,

@@ -7,7 +7,7 @@ import type { SavedPlace } from './db.js';
  * that key (its first two folded letters, or three for the prefixes in `split`).
  */
 export type PlaceRow = [name: string, country: string, lat: number, lon: number,
-  zone: number, region: number, alt?: string];
+  zone: number, region: number, county: string, alt?: string];
 
 export interface Gazetteer {
   attribution: string;
@@ -20,9 +20,11 @@ export interface Gazetteer {
   cities: PlaceRow[];
 }
 
-/** A search result: a place to save, and its region to tell same-named places apart. */
+/** A search result: a place to save, and its county and region to tell same-named places apart. */
 export interface PlaceHit extends SavedPlace {
   region: string;
+  /** GeoNames admin2 (a county, a département); "" when none or the place's own name. */
+  county: string;
   /** Set for a place made from typed coordinates: the listed place its time zone came from. */
   near?: string;
 }
@@ -76,7 +78,7 @@ const folded = new WeakMap<PlaceRow[], string[][]>();
 function foldedNames(rows: PlaceRow[]): string[][] {
   let f = folded.get(rows);
   if (!f) {
-    f = rows.map(r => (r[6] ? [fold(r[0]), fold(r[6])] : [fold(r[0])]));
+    f = rows.map(r => (r[7] ? [fold(r[0]), fold(r[7])] : [fold(r[0])]));
     folded.set(rows, f);
   }
   return f;
@@ -84,7 +86,8 @@ function foldedNames(rows: PlaceRow[]): string[][] {
 
 /**
  * Search the larger places and, if given, the smaller ones of the query's
- * file. "Newport, Wales" narrows by region (or country code, "Newport, GB").
+ * file. "Newport, Wales" narrows by region, "Newport, Pembrokeshire" by county,
+ * "Newport, GB" by country code.
  * Names starting with the query rank first, larger places first; then names
  * containing it.
  */
@@ -93,10 +96,11 @@ export function searchPlaces(g: Gazetteer, query: string, limit = 8, small: Plac
   const q = fold(namePart ?? '');
   const where = fold(rest.join(','));
   if (!q) return [];
-  const regionOk = (r: PlaceRow) => !where
-    || fold(g.regions[r[5]] ?? '').startsWith(where) || r[1].toLowerCase() === where;
+  const regionOk = (r: PlaceRow) => !where || fold(g.regions[r[5]] ?? '').startsWith(where)
+    || (!!r[6] && fold(r[6]).startsWith(where)) || r[1].toLowerCase() === where;
   const hit = (r: PlaceRow): PlaceHit => ({
-    name: r[0], country: r[1], lat: r[2], lon: r[3], zone: g.zones[r[4]]!, region: g.regions[r[5]] ?? '',
+    name: r[0], country: r[1], lat: r[2], lon: r[3], zone: g.zones[r[4]]!,
+    region: g.regions[r[5]] ?? '', county: r[6] ?? '',
   });
   const prefix: PlaceHit[][] = [[], []];
   const inner: PlaceHit[][] = [[], []];
@@ -131,6 +135,6 @@ export function placeFromCoordinates(g: Gazetteer, query: string): PlaceHit | nu
   }
   return {
     name: `${lat.toFixed(3)}, ${lon.toFixed(3)}`, country: best[1], lat, lon,
-    zone: g.zones[best[4]]!, region: g.regions[best[5]] ?? '', near: best[0],
+    zone: g.zones[best[4]]!, region: g.regions[best[5]] ?? '', county: best[6] ?? '', near: best[0],
   };
 }

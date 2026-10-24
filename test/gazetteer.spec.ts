@@ -49,7 +49,7 @@ describe('the place files', () => {
     for (const k of files) {
       for (const r of shard(k)) {
         rows++;
-        const names = [r[0], ...(r[6] ? [r[6]] : [])].map(n => (fold(n) + '___').slice(0, k.length));
+        const names = [r[0], ...(r[7] ? [r[7]] : [])].map(n => (fold(n) + '___').slice(0, k.length));
         if (!names.includes(k)) misfiled.push(`${r[0]} in ${k}.json`);
       }
     }
@@ -84,6 +84,15 @@ describe('searchPlaces', () => {
     expect(wales.length).toBeGreaterThan(0);
     expect(wales.every(p => p.region === 'Wales')).toBe(true);
     expect(search('Newport, US').every(p => p.country === 'US')).toBe(true);
+  });
+
+  it('a county tells same-named places in one region apart (astro-brv)', () => {
+    const wales = search('Newport, Wales', 20);
+    expect(wales.map(p => p.county).sort()).toEqual(['', 'Pembrokeshire']);   // the city: county is its own name
+    const pem = search('Newport, Pembrokeshire');
+    expect(pem).toHaveLength(1);
+    expect(pem[0]).toMatchObject({ county: 'Pembrokeshire', region: 'Wales', country: 'GB' });
+    expect(search('Newport, Essex')[0]).toMatchObject({ county: 'Essex', region: 'England' });
   });
 
   it('larger places rank first, and each hit names its region', () => {

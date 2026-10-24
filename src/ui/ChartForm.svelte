@@ -80,10 +80,10 @@
       <div class="dropdown">
         {#each matches as m (m.name + m.country + m.lat + m.lon)}
           <button type="button" onclick={() => pick(m)}>
-            {m.name}<span class="cc">{m.region ? `${m.region}, ` : ''}{m.country} · {m.lat.toFixed(2)}, {m.lon.toFixed(2)}</span>
+            {m.name}<span class="cc">{[m.county, m.region, m.country].filter(Boolean).join(', ')} · {m.lat.toFixed(2)}, {m.lon.toFixed(2)}</span>
           </button>
         {/each}
-        <div class="nolist">{matches.length ? 'Not the one?' : 'No match.'} Add a region (“Newport, Wales”), or type latitude, longitude (e.g. 51.48, -3.18).</div>
+        <div class="nolist">{matches.length ? 'Not the one?' : 'No match.'} Add a county or region (“Newport, Pembrokeshire”), or type latitude, longitude (e.g. 51.48, -3.18).</div>
       </div>
     {/if}
   </label>
