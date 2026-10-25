@@ -191,8 +191,10 @@ function start_session(string $userId, bool $secondStep = false): void {
 }
 
 /** Whether signing in to this account takes an emailed code after the password: always for admins. */
+/** Whether sign-in asks for an emailed code: the account's own choice, admins included
+ *  (on when made an admin; an admin may turn it off: migration 009, 2026-10-25). */
 function needs_second_step(array $u): bool {
-  return ($u['role'] ?? '') === 'admin' || (int)($u['two_step'] ?? 0) === 1;
+  return (int)($u['two_step'] ?? 0) === 1;
 }
 
 /** The account as the app sees it (login, me, reset replies). */
@@ -248,13 +250,14 @@ function require_writer(): array {
 }
 
 /**
- * The signed-in admin, or a 403: the role, an active account, and a session that
- * passed the email-code step (one made before two-step sign-in existed has not).
+ * The signed-in admin, or a 403: the role, an active account, and, while the
+ * admin has two-step sign-in on, a session that passed the email-code step. An
+ * admin who turned two-step off is let in on the password alone (their choice).
  */
 function require_admin(): array {
   $u = require_user();
   if ($u['role'] !== 'admin' || $u['status'] !== 'active') reply(403, ['error' => 'admin only']);
-  if (!$u['verified']) {
+  if ($u['two_step'] && !$u['verified']) {
     reply(403, ['error' => 'second step', 'message' => 'Sign out and sign in again: admin pages need the emailed code.']);
   }
   return $u;
@@ -302,7 +305,9 @@ function cancel_deletion(string $userId): string {
 
 function set_role(string $userId, string $role): void {
   if (!in_array($role, ROLES, true)) throw new InvalidArgumentException("unknown role $role");
-  db()->prepare('UPDATE users SET role = ? WHERE id = ?')->execute([$role, $userId]);
+  // a new admin starts with two-step sign-in on; they may turn it off themselves
+  db()->prepare('UPDATE users SET role = ?' . ($role === 'admin' ? ', two_step = 1' : '') . ' WHERE id = ?')
+    ->execute([$role, $userId]);
 }
 
 /**

@@ -2,7 +2,7 @@
 /**
  * POST {email, password} → 200 {user} and a session cookie; 401 for any wrong pair; 429 when limited.
  *
- * Two-step sign-in (always for admins, by choice for users): a correct password
+ * Two-step sign-in (each account's choice; on for admins unless they turn it off): a correct password
  * gets 200 {step: 'code'} and a 6-digit code by email, and no session. The app
  * then sends {email, password, code}; the password is checked again, so a code
  * is useful only together with it. A wrong code is 400 and changes nothing else.
