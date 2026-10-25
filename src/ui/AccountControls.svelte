@@ -71,12 +71,15 @@
       <p class="note">This account is paused: you can read and download your data, but not add to it.</p>
     {/if}
     <label class="check">
-      <input type="checkbox" checked={account.twoStep} disabled={account.admin || account.busy}
+      <input type="checkbox" checked={account.twoStep} disabled={account.busy}
         onchange={(e) => setTwoStep(e.currentTarget.checked)}>
-      <span>Ask for an emailed code each time I sign in{#if account.admin}{' '}(always on for admins){/if}</span>
+      <span>Ask for an emailed code each time I sign in</span>
     </label>
+    {#if account.admin && !account.twoStep}
+      <p class="note">Two-step is off: your password alone opens the admin panel.</p>
+    {/if}
     {#if account.admin}
-      {#if account.verified}
+      {#if account.verified || !account.twoStep}
         <button type="button" onclick={() => adminOpen = true}>Admin panel</button>
         <AdminPanel bind:open={adminOpen} />
       {:else}

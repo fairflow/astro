@@ -120,16 +120,30 @@ describe.skipIf(!hasPhp)('API two-step sign-in, registration and admin (php -S +
     expect((await call('/api/login.php', { email: USER, password: PW })).body.user).toMatchObject({ twoStep: false });
   });
 
-  it('admins always have two-step, cannot turn it off, and need a verified session for admin pages', async () => {
+  it('a new admin has two-step on, and with it on needs a verified session for admin pages', async () => {
     clearLimits();
     expect((await call('/api/login.php', { email: ADMIN, password: PW })).body).toMatchObject({ step: 'code' });
     expect((await signInAs(ADMIN)).body.user).toMatchObject({ role: 'admin', twoStep: true, verified: true });
-    expect(await call('/api/two_step.php', { on: false })).toMatchObject({ status: 403, body: { error: 'admin' } });
     expect((await call('/api/admin_users.php')).status).toBe(200);
     // a session made before two-step existed (no second step) is still signed in, but not for admin pages
     sql(`$p->exec("UPDATE sessions SET second_step_at = NULL");`);
     expect(await me()).toMatchObject({ role: 'admin', verified: false });
     expect(await call('/api/admin_users.php')).toMatchObject({ status: 403, body: { error: 'second step' } });
+  });
+
+  it('an admin may turn two-step off (2026-10-25): then the password alone signs in and opens admin pages', async () => {
+    jar = ''; clearLimits();
+    await signInAs(ADMIN);                                                         // with the code: verified
+    expect((await call('/api/two_step.php', { on: false })).body.user).toMatchObject({ role: 'admin', twoStep: false });
+    jar = '';
+    const r = await call('/api/login.php', { email: ADMIN, password: PW });
+    expect(r).toMatchObject({ status: 200, body: { user: { role: 'admin', twoStep: false, verified: false } } });
+    expect((await call('/api/admin_users.php')).status).toBe(200);
+    // turning it back on needs no code; the next sign-in asks for one again
+    expect((await call('/api/two_step.php', { on: true })).body.user).toMatchObject({ twoStep: true });
+    expect(await call('/api/admin_users.php')).toMatchObject({ status: 403, body: { error: 'second step' } });
+    jar = ''; clearLimits();
+    expect((await call('/api/login.php', { email: ADMIN, password: PW })).body).toMatchObject({ step: 'code' });
   });
 
   it('a password reset by emailed code counts as the second step', async () => {
