@@ -74,10 +74,23 @@ export async function refreshAccount(): Promise<void> {
     // a JSON error means the API is here but failing; anything else, no API here
     account.status = j ? 'unreachable' : (account.status === 'checking' ? 'unavailable' : 'unreachable');
   } catch {
-    // offline or the request failed: keep any known sign-in, check again later
-    if (account.status !== 'checking' && account.status !== 'unavailable') account.status = 'unreachable';
-    else account.status = 'unavailable';
+    // The request failed outright: the connection (offline, a phone waking), not a
+    // missing API, which answers 404. Keep any known sign-in and check again soon.
+    // (It used to mark a failure while 'checking' as 'unavailable', which hid the
+    // account and was never checked again: Ask Claude then went without a pass.)
+    account.status = 'unreachable';
+    retrySoon();
   }
+}
+
+let retry: ReturnType<typeof setTimeout> | undefined;
+/** One more check in a while, while the page is in view (and once coming back to it). */
+function retrySoon(): void {
+  if (retry || typeof document === 'undefined') return;
+  retry = setTimeout(() => {
+    retry = undefined;
+    if (!document.hidden && account.status === 'unreachable') void refreshAccount();
+  }, 20_000);
 }
 
 // check again when the page comes back into view (phones suspend pages; the
