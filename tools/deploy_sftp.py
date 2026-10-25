@@ -10,11 +10,15 @@ Usage:
   .venv/bin/python tools/deploy_sftp.py \
       --remote /home/USER/site.example/astro [--delete] [--secrets PATH]
 
-Uploads the contents of dist/ into --remote (created if missing).
---delete removes remote files that no longer exist locally (stale hashed
-assets); it only ever deletes inside --remote.
+Uploads the contents of dist/ into --remote (created if missing), skipping
+files whose content the host already has: --remote/.deploy-manifest.json
+records each uploaded file's SHA-256, and only files that differ from it are
+sent (--all sends everything). --delete removes remote files that no longer
+exist locally (stale hashed assets); it only ever deletes inside --remote.
 """
 import argparse
+import hashlib
+import json
 import pathlib
 import posixpath
 import stat
@@ -28,6 +32,7 @@ DIST = ROOT / "dist"
 
 
 DEFAULT_SECRETS = "~/.config/fairflow/hosting.toml"
+MANIFEST = ".deploy-manifest.json"
 
 
 def connect(secrets_path: str = DEFAULT_SECRETS) -> paramiko.SSHClient:
@@ -43,15 +48,31 @@ def connect(secrets_path: str = DEFAULT_SECRETS) -> paramiko.SSHClient:
     return client
 
 
+_made: set[str] = set()
+
+
 def ensure_dir(sftp: paramiko.SFTPClient, remote: str) -> None:
     parts = remote.strip("/").split("/")
     path = ""
     for p in parts:
         path += "/" + p
+        if path in _made:
+            continue
         try:
             sftp.stat(path)
         except FileNotFoundError:
             sftp.mkdir(path)
+        _made.add(path)
+
+
+def read_manifest(sftp: paramiko.SFTPClient, remote: str) -> dict[str, str]:
+    """What the host has, by SHA-256; {} when there is no manifest (or it is unreadable)."""
+    try:
+        with sftp.open(posixpath.join(remote, MANIFEST)) as f:
+            got = json.loads(f.read())
+        return got if isinstance(got, dict) else {}
+    except (OSError, ValueError):
+        return {}
 
 
 def remote_files(sftp: paramiko.SFTPClient, base: str) -> set[str]:
@@ -74,6 +95,7 @@ def main() -> None:
     ap.add_argument("--secrets", default=DEFAULT_SECRETS, help=f"default {DEFAULT_SECRETS}")
     ap.add_argument("--remote", required=True, help="absolute remote directory")
     ap.add_argument("--delete", action="store_true")
+    ap.add_argument("--all", action="store_true", help="upload every file, whatever the manifest says")
     args = ap.parse_args()
 
     if not (DIST / "index.html").exists():
@@ -84,17 +106,25 @@ def main() -> None:
     ensure_dir(sftp, args.remote)
 
     local = sorted(p for p in DIST.rglob("*") if p.is_file())
+    have = {} if args.all else read_manifest(sftp, args.remote)
+    now: dict[str, str] = {}
     uploaded = 0
     for p in local:
         rel = p.relative_to(DIST).as_posix()
+        now[rel] = hashlib.sha256(p.read_bytes()).hexdigest()
+        if have.get(rel) == now[rel]:
+            continue
         dest = posixpath.join(args.remote, rel)
         ensure_dir(sftp, posixpath.dirname(dest))
         sftp.put(str(p), dest)
         uploaded += 1
-    print(f"uploaded {uploaded} files to {args.remote}")
+    # written after the uploads, so an interrupted deploy re-sends what it may have missed
+    with sftp.open(posixpath.join(args.remote, MANIFEST), "w") as f:
+        f.write(json.dumps(now, separators=(",", ":")))
+    print(f"uploaded {uploaded} files to {args.remote} ({len(local) - uploaded} unchanged, skipped)")
 
     if args.delete:
-        keep = {p.relative_to(DIST).as_posix() for p in local}
+        keep = {p.relative_to(DIST).as_posix() for p in local} | {MANIFEST}
         stale = remote_files(sftp, args.remote) - keep
         for rel in sorted(stale):
             sftp.remove(posixpath.join(args.remote, rel))

@@ -139,11 +139,16 @@ body set.
 
 Fields: **name/label · date of birth · time of birth · time accuracy · place**.
 
-- **Place**: type-ahead against a **bundled offline gazetteer** — the GeoNames
-  `cities15000` subset (~25k places, ~2 MB compressed) with name, country,
-  lat/lon, IANA timezone. Online mode can optionally query the full GeoNames or
-  Nominatim APIs for obscure villages; offline mode also accepts manual
-  lat/lon + timezone entry.
+- **Place**: type-ahead against a **bundled offline gazetteer** from GeoNames
+  `cities500` (about 237,000 places down to 500 people, astro-brv, 2026-10-23)
+  with name, county, region, country, lat/lon, IANA timezone, in two tiers:
+  `gazetteer.json` (places of 15,000 or more, fetched at start, about 460 KB
+  compressed) and `places/<first letters>.json` (the smaller places, fetched
+  only for what is typed; mostly a few KB). Matching ignores accents and
+  punctuation ("Zurich" finds Zürich); "Newport, Wales" or "Newport, Pembrokeshire" narrows by region, county or
+  country code. Typed coordinates ("51.48, -3.18") make a place whose timezone
+  and country come from the nearest listed place, shown for checking. Built by
+  `tools/make_gazetteer.py`.
 - **Timezone & historical DST**: the resolved IANA zone (e.g. `Europe/London`)
   is evaluated **for the birth instant** using the browser's built-in IANA
   database (`Intl` API + the Temporal polyfill) — this handles historical

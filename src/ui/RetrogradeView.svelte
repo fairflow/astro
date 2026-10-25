@@ -16,12 +16,14 @@
     flashRings: boolean; flashLabels: boolean; retroArcs: boolean; stationLabels: boolean;
     mercuryInferior: boolean; mercurySuperior: boolean;
     stationSight: boolean; siderealRefs: boolean; sunEarthLine: boolean;
+    moon: boolean;
   };
   const MARKS_DEFAULT: Marks = {
     flashRings: true, flashLabels: true, retroArcs: true, stationLabels: true,
     mercuryInferior: true, mercurySuperior: false,
     // the frozen station sight lines repeat what the arcs and ℞/D ticks show: off unless wanted
     stationSight: false, siderealRefs: true, sunEarthLine: true,
+    moon: true,
   };
   function loadMarks(): Marks {
     try {
@@ -37,6 +39,9 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import Glyph from './Glyph.svelte';
+  import MoonPhases from './MoonPhases.svelte';
+  import { moonPhaseAt, nextQuarters, SYNODIC_MONTH } from '../chart/moonphase';
+  import { eclipseCache, GREENWICH, moonDistanceKm, type EclipseSet } from '../chart/eclipses';
   import {
     GROUPS, OrreryPlate, PLANETS_IN_ORDER, StripChart, circularModel, dateOfJd, ephemerisModel,
     paletteFor, type OrreryModel, type PlateState,
@@ -79,9 +84,12 @@
   const JD_MIN = J2000_JD - 299 * 365.25, JD_MAX = J2000_JD + 199 * 365.25;
   let playing = $state(!matchMedia('(prefers-reduced-motion: reduce)').matches);
   let dir = $state(1);
-  // 0.25 to 10,000 days a second on a log scale; 392 ≈ 16 d/s
-  let slider = $state(392);
-  const speed = $derived(0.25 * Math.pow(40000, slider / 1000));
+  // real time (one second a second) to 10,000 days a second on a log scale; 687 ≈ 16 d/s
+  const REAL_TIME = 1 / 86400, FASTEST = 10000;
+  let slider = $state(687);
+  const speed = $derived(REAL_TIME * Math.pow(FASTEST / REAL_TIME, slider / 1000));
+  /** Real time from now: the orrery as a clock. */
+  function clock() { slider = 0; dir = 1; jump(nowJd()); playing = true; }
   let show = $state<Record<Planet, boolean>>({ ...kept.show });
   let sight = $state(kept.sight);
   let inferior = $state(kept.inferior);
@@ -107,8 +115,32 @@
     next: { sr: { jdUt: number; lon: number }; sd: { jdUt: number; lon: number }; inRetro: boolean; arc: number } | null;
   }
   let jdShown = $state(plate.jd);
+
+  // The Moon card (astro-0qk): facts from the app's ephemeris, eclipses for Greenwich
+  interface MoonReadout {
+    lon: number; lat: number; speed: number; distKm: number;
+    phase: ReturnType<typeof moonPhaseAt>; quarters: ReturnType<typeof nextQuarters>;
+    /** The Sun's distance from the nearer lunar node: eclipses happen within about 18°. */
+    sunNode: number; ecl: EclipseSet;
+  }
+  const eclipsesAt = eclipseCache(GREENWICH);
+  let moonRo = $state<MoonReadout | null>(null);
+  let quartersFrom = -Infinity, quartersCache: ReturnType<typeof nextQuarters> = [];
+  function moonReadout(jd: number): MoonReadout {
+    const st = provider.state('moon', jd), sun = provider.state('sun', jd).lon, node = provider.state('meanNode', jd).lon;
+    // the quarters only change when one passes (or when stepping back)
+    if (jd < quartersFrom || jd >= (quartersCache[0]?.jdUt ?? -Infinity)) { quartersCache = nextQuarters(jd, 4); quartersFrom = jd; }
+    return {
+      lon: st.lon, lat: st.lat, speed: st.speed, distKm: moonDistanceKm(jd),
+      phase: moonPhaseAt(jd), quarters: quartersCache,
+      sunNode: Math.min(Math.abs(degDiff(sun, node)), Math.abs(degDiff(sun, node + 180))),
+      ecl: eclipsesAt(jd),
+    };
+  }
   let ro = $state<Partial<Record<Planet, Readout>>>({});
-  let log = $state<{ jd: number; text: string; glyph: Planet; tone: '' | 'rc' | 'dc' }[]>([]);
+  // each entry its own id: after a jump back, replaying logs the same event again
+  let log = $state<{ id: number; jd: number; text: string; glyph: Planet; tone: '' | 'rc' | 'dc' }[]>([]);
+  let logId = 0;
 
   let skyEl: HTMLCanvasElement, stripEl: HTMLCanvasElement, plateBox: HTMLDivElement;
 
@@ -144,7 +176,7 @@
   }
 
   function addLog(jd: number, glyph: Planet, text: string, tone: '' | 'rc' | 'dc' = '') {
-    log = [{ jd, glyph, text, tone }, ...log].slice(0, 40);
+    log = [{ id: ++logId, jd, glyph, text, tone }, ...log].slice(0, 40);
   }
   const midName = (b: Planet) => isInner(b) ? 'inferior conjunction' : 'opposition';
   const behindName = (b: Planet) => isInner(b) ? 'superior conjunction' : 'conjunction with the Sun';
@@ -222,6 +254,8 @@
     let last = performance.now(), lastPanel = 0, raf = 0, styleKey = '';
     const frame = (now: number) => {
       const dt = Math.min(.1, (now - last) / 1000); last = now;
+      // faster than about a lunar month in ten seconds, the Moon is drawn as the blur it would be
+      plate.moonBlur = playing && speed > 3;
       if (playing) {
         const j0 = plate.jd, j1 = j0 + dir * speed * dt;
         if (j1 > JD_MAX || j1 < JD_MIN) playing = false;
@@ -236,6 +270,7 @@
         const r: Partial<Record<Planet, Readout>> = {};
         for (const b of PLANETS_IN_ORDER) if (plate.show[b]) r[b] = readout(b, plate.jd);
         ro = r;
+        if (plate.moon) moonRo = moonReadout(plate.jd);
       }
       raf = requestAnimationFrame(frame);
     };
@@ -269,7 +304,19 @@
   $effect(() => standalone ? undefined : registerCopy('orrery', buildOrrery));
 
   const elapsed = $derived(jdShown - plate.jdStart);
-  const fmtSpeed = (v: number) => v < 10 ? `${v.toFixed(1)} d/s` : v < 1000 ? `${Math.round(v)} d/s` : `${(v / 365.25).toFixed(1)} yr/s`;
+  const fmtSpeed = (v: number) => {
+    const sps = v * 86400;   // seconds of sky time per second
+    if (sps < 1.5) return 'real time';
+    if (sps < 60) return `${Math.round(sps)}× real time`;
+    if (sps < 3600) return `${Math.round(sps / 60)} min/s`;
+    if (sps < 86400) return `${(sps / 3600).toFixed(sps < 36000 ? 1 : 0)} h/s`;
+    return v < 10 ? `${v.toFixed(1)} d/s` : v < 1000 ? `${Math.round(v)} d/s` : `${(v / 365.25).toFixed(1)} yr/s`;
+  };
+  const KIND = { penumbral: 'Penumbral', partial: 'Partial', annular: 'Annular', total: 'Total' } as const;
+  const inSpan = (jd: number, a: number, b: number) => jd >= a && jd <= b;
+  const hm = (jd: number) => dateOfJd(jd).toISOString().slice(11, 16);
+  const latLon = (lat?: number, lon?: number) => lat === undefined || lon === undefined ? ''
+    : `${Math.abs(lat).toFixed(0)}° ${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lon).toFixed(0)}° ${lon >= 0 ? 'E' : 'W'}`;
   const fmtPeriod = (d: number) => d < 1000 ? `${d.toFixed(2)} d` : `${(d / 365.25).toFixed(2)} yr`;
 </script>
 
@@ -309,6 +356,8 @@
       <canvas class="strip" bind:this={stripEl}></canvas>
     </section>
 
+    {#if marks.moon}<MoonPhases jd={jdShown} {theme} />{/if}
+
     <p class="note">
       Seen from above the north ecliptic pole: motion is anticlockwise.
       With Earth centred, each sight line meets the zodiac where the planet appears.
@@ -330,6 +379,59 @@
         <button onclick={() => panelOpen = true}>Planets and options…</button>
       </div>
     </div>
+
+    {#if marks.moon && moonRo}
+      {@const mr = moonRo}
+      {@const L = mr.ecl.lunar}
+      {@const S = mr.ecl.localSolar}
+      {@const G = mr.ecl.globalSolar}
+      <div class="card">
+        <div class="ptitle">
+          <h2><Glyph body="moon" size={18} color={pal.ink} /> Moon</h2>
+          {#if inSpan(jdShown, L.start, L.end)}<span class="chip eclipse">Lunar eclipse</span>
+          {:else if inSpan(jdShown, S.start, S.end)}<span class="chip eclipse">Solar eclipse</span>
+          {:else if mr.sunNode < 18}<span class="chip station" title="The Sun is within 18° of a lunar node: New and Full Moons near now can eclipse">Eclipse season</span>{/if}
+        </div>
+        <dl class="kv">
+          <dt>Phase</dt><dd>{mr.phase.name}, {Math.round(mr.phase.lit * 100)}% lit</dd>
+          <dt>Longitude</dt><dd>{fmtDegInSign(mr.lon)}</dd>
+          <dt>Latitude</dt><dd>{Math.abs(mr.lat).toFixed(2)}° {mr.lat >= 0 ? 'N' : 'S'} of the ecliptic</dd>
+          <dt>Motion</dt><dd>+{mr.speed.toFixed(2)}°/d</dd>
+          <dt>Moon–Sun angle</dt><dd>{mr.phase.elong.toFixed(1)}° {mr.phase.waxing ? '(waxing)' : '(waning)'}</dd>
+          <dt>Distance</dt><dd>{Math.round(mr.distKm).toLocaleString('en-GB')} km</dd>
+          <dt>Sun from node</dt><dd>{mr.sunNode.toFixed(1)}°</dd>
+        </dl>
+        <div class="bar-row"><span>Synodic month <span class="num">{SYNODIC_MONTH.toFixed(2)} d</span></span><span class="num">day {mr.phase.age.toFixed(1)}</span>
+          <div class="bar"><i style="width:{mr.phase.elong / 3.6}%;background:{pal.brass}"></i></div></div>
+        <dl class="kv">
+          {#each mr.quarters as q (q.jdUt)}
+            <dt>{q.name}</dt><dd>{fmtDate(q.jdUt, true)}</dd>
+          {/each}
+        </dl>
+        <div class="lab">Eclipses · {GREENWICH.name}</div>
+        <dl class="kv ecl">
+          <dt>Lunar</dt>
+          <dd>
+            <button class="link" onclick={() => { jump(L.peak); playing = false; }} title="Go to its peak">{fmtDate(L.peak, true)}</button><br>
+            {KIND[L.kind]}{L.total ? `, totality ${Math.round((L.total[1] - L.total[0]) * 1440)} min` : ''}<br>
+            <span class:seen={L.moonAlt > 0}>{L.moonAlt > 0 ? `Moon ${L.moonAlt.toFixed(0)}° up at the peak: visible` : 'Moon below the horizon at the peak'}</span>
+            {#if inSpan(jdShown, L.start, L.end)}<br><b class="now">Under way now</b>{/if}
+          </dd>
+          <dt>Solar, here</dt>
+          <dd>
+            <button class="link" onclick={() => { jump(S.peak); playing = false; }} title="Go to its peak">{fmtDate(S.peak, true)}</button><br>
+            {KIND[S.kind]}, {Math.round(S.obscuration * 100)}% of the Sun covered, Sun {S.sunAlt.toFixed(0)}° up<br>
+            {hm(S.start)}–{hm(S.end)} UT
+            {#if inSpan(jdShown, S.start, S.end)}<br><b class="now">Under way now</b>{/if}
+          </dd>
+          <dt>Solar, anywhere</dt>
+          <dd>
+            <button class="link" onclick={() => { jump(G.peak); playing = false; }} title="Go to its peak">{fmtDate(G.peak, true)}</button><br>
+            {KIND[G.kind]}{G.lat !== undefined ? `, greatest at ${latLon(G.lat, G.lon)}` : ''}
+          </dd>
+        </dl>
+      </div>
+    {/if}
 
     {#each visible as b (b)}
       {@const r = ro[b]}
@@ -387,7 +489,7 @@
     <div class="card">
       <h2>Event log</h2>
       <ul class="log">
-        {#each log as e (e.jd + e.text)}
+        {#each log as e (e.id)}
           <li><span class="num">{fmtDate(e.jd)}</span><span><Glyph body={e.glyph} size={12} color={pal[e.glyph]} /> <span class={e.tone}>{e.text}</span></span></li>
         {:else}
           <li><span>—</span><span>Stations, alignments with the Sun and completed orbits appear here as they happen.</span></li>
@@ -396,6 +498,7 @@
     </div>
   </aside>
 </div>
+
 
 <!-- the player stays in view at all times -->
 <div class="player" role="group" aria-label="Animation controls">
@@ -410,9 +513,10 @@
       <input id="rv-speed" type="range" min="0" max="1000" bind:value={slider}>
       <span class="num">{fmtSpeed(speed)}</span>
     </span>
-    <span class="when num">{fmtDate(jdShown)}</span>
+    <span class="when num">{fmtDate(jdShown, speed < 1)}</span>
     <button onclick={nextStation}>Next station</button>
     <button onclick={() => jump(nowJd())}>Now</button>
+    <button onclick={clock} class:on={slider === 0 && playing && dir > 0} title="Now, running at real time: the orrery as a clock">Clock</button>
     {#if chartJd != null}
       <button onclick={() => jump(chartJd!)} title="Jump to the cast chart's moment">{chartLabel || 'Chart date'}</button>
     {/if}
@@ -451,6 +555,8 @@
   <section>
     <h3>Show</h3>
     <label><input type="checkbox" bind:checked={sight}> Sight lines</label>
+    <label title="The Moon circling the Earth at its true angle from the Sun (its orbit not to scale), with its panel and eclipses">
+      <input type="checkbox" bind:checked={marks.moon}> The Moon</label>
     <label style="--c:{pal.mercury}" title="Mercury's last three inferior conjunctions, joined on its orbit">
       <input type="checkbox" bind:checked={marks.mercuryInferior}> Mercury inferior ☌ triangle</label>
     <label style="--c:{pal.superior}" title="The same for its superior conjunctions (behind the Sun)">
@@ -572,6 +678,12 @@
   .chip.direct { color: var(--sextile); }
   .chip.retro { color: var(--square); }
   .chip.station { color: var(--gold); }
+  .chip.eclipse { color: var(--square); }
+  .lab { margin-top: 2px; }
+  .kv.ecl dd { text-align: left; line-height: 1.45; }
+  .kv.ecl .seen { color: var(--sextile); }
+  .kv.ecl .now { color: var(--square); font-weight: 600; }
+  button.link { background: none; border: none; padding: 0; border-radius: 0; color: var(--gold); text-decoration: underline; text-underline-offset: 2px; font-size: 13px; }
   .bar-row { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; font-size: 12px; align-items: center; }
   .bar { grid-column: 1 / -1; height: 8px; background: var(--bg); border: 1px solid var(--line); border-radius: 4px; overflow: hidden; }
   .bar i { display: block; height: 100%; }

@@ -1,6 +1,8 @@
 <script lang="ts">
-  import { searchPlaces, type Gazetteer } from '../store/gazetteer';
-  import type { SavedPlace } from '../store/db';
+  import {
+    fold, loadShard, placeFromCoordinates, searchPlaces, shardKey,
+    type Gazetteer, type PlaceHit, type PlaceRow,
+  } from '../store/gazetteer';
   import type { FormState } from './state';
 
   let { form = $bindable(), gaz, onsubmit }: {
@@ -16,14 +18,25 @@
     if (form.place) query = `${form.place.name}, ${form.place.country}`;
   });
 
+  // the smaller places filed under the query's first letters, fetched as it is typed (astro-brv)
+  let small = $state<PlaceRow[]>([]);
+  $effect(() => {
+    const key = gaz && open ? shardKey(fold(query.split(',')[0] ?? ''), gaz.split) : null;
+    if (!key) { small = []; return; }
+    let current = true;
+    void loadShard(key).then(rows => { if (current) small = rows; });
+    return () => { current = false; };
+  });
+
+  const coords = $derived(gaz && open ? placeFromCoordinates(gaz, query) : null);
   const matches = $derived(
-    gaz && open && query.trim().length >= 2
-      ? searchPlaces(gaz, query.trim(), 8)
+    gaz && open && !coords && query.trim().length >= 2
+      ? searchPlaces(gaz, query.trim(), 8, small)
       : [],
   );
 
-  function pick(p: SavedPlace) {
-    form.place = p;
+  function pick(p: PlaceHit) {
+    form.place = { name: p.name, country: p.country, lat: p.lat, lon: p.lon, zone: p.zone };
     open = false;
   }
 
@@ -51,19 +64,26 @@
   <label>Place
     <input
       class="place"
-      placeholder={gaz ? 'type a city…' : 'loading places…'}
+      placeholder={gaz ? 'type a town, or latitude, longitude' : 'loading places…'}
       disabled={!gaz}
       bind:value={query}
       oninput={() => { open = true; form.place = null; }}
       onfocus={() => { open = true; }}
     >
-    {#if matches.length}
+    {#if coords}
       <div class="dropdown">
-        {#each matches as m (m.name + m.country + m.lat)}
+        <button type="button" onclick={() => pick(coords)}>
+          Use these coordinates<span class="cc">time zone {coords.zone}, from the nearest listed place, {coords.near} ({coords.country}): check it is right</span>
+        </button>
+      </div>
+    {:else if open && query.trim().length >= 2}
+      <div class="dropdown">
+        {#each matches as m (m.name + m.country + m.lat + m.lon)}
           <button type="button" onclick={() => pick(m)}>
-            {m.name}<span class="cc">{m.country} · {m.lat.toFixed(2)}, {m.lon.toFixed(2)}</span>
+            {m.name}<span class="cc">{[m.county, m.region, m.country].filter(Boolean).join(', ')} · {m.lat.toFixed(2)}, {m.lon.toFixed(2)}</span>
           </button>
         {/each}
+        <div class="nolist">{matches.length ? 'Not the one?' : 'No match.'} Add a county or region (“Newport, Pembrokeshire”), or type latitude, longitude (e.g. 51.48, -3.18).</div>
       </div>
     {/if}
   </label>

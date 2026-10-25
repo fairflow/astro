@@ -1,4 +1,4 @@
-import { account } from '../api/account.svelte.js';
+import { account, refreshAccount } from '../api/account.svelte.js';
 import { AI_WORKER_URL, type AiPresetId } from './config.js';
 
 /** Development only: the relay's DEV_KEY (from .env.local), sent from the dev server instead of a pass. */
@@ -6,19 +6,38 @@ const DEV_KEY: string = import.meta.env.DEV ? (import.meta.env.VITE_AI_DEV_KEY ?
 
 /**
  * A one-use pass for one reading from the site's API (ask_pass.php), or null
- * when not signed in (the relay will then refuse with "sign in"). Throws with
- * the server's message when the account may not ask now (daily limit, paused).
+ * when signed out or there is no API here (the relay then refuses with "sign
+ * in"). Throws with the server's message when the account may not ask now
+ * (daily limit, paused), or a plain reason when the site cannot be reached.
+ *
+ * Only a known sign-out skips the request: while the page is still checking
+ * the sign-in, or after a dropped connection marked it "unreachable", the
+ * cookie may well be good, and the server decides. (Before 2026-10-25 any
+ * state but "signed in" skipped it, and a signed-in admin was told to sign in.)
  */
 async function getPass(preset: AiPresetId): Promise<string | null> {
-  if (account.status !== 'signedIn') return null;
-  // the preset is only counted, for the admin's usage view; the relay picks the model itself
-  const res = await fetch('api/ask_pass.php', {
-    method: 'POST', credentials: 'same-origin', cache: 'no-store',
-    headers: { 'content-type': 'application/json', 'x-astro': '1' }, body: JSON.stringify({ preset }),
-  });
-  let j: { pass?: unknown; message?: unknown } = {};
-  try { j = await res.json() as typeof j; } catch { /* not JSON */ }
-  if (res.ok && typeof j.pass === 'string') return j.pass;
+  if (account.status === 'signedOut') return null;
+  let res: Response;
+  try {
+    // the preset is only counted, for the admin's usage view; the relay picks the model itself
+    res = await fetch('api/ask_pass.php', {
+      method: 'POST', credentials: 'same-origin', cache: 'no-store',
+      headers: { 'content-type': 'application/json', 'x-astro': '1' }, body: JSON.stringify({ preset }),
+    });
+  } catch {
+    throw new Error('Could not reach the site to start a reading. Check the connection and try again.');
+  }
+  type Reply = { pass?: unknown; message?: unknown };
+  const j = await res.json().then(v => v as Reply, () => null);   // null: not JSON, so no API here
+  if (res.ok && typeof j?.pass === 'string') {
+    if (account.status !== 'signedIn') void refreshAccount();   // the server says signed in: show it
+    return j.pass;
+  }
+  if (res.status === 401) {
+    void refreshAccount();
+    throw new Error('The server does not have you signed in: sign in again (Settings, Account).');
+  }
+  if (!j) return null;
   throw new Error(typeof j.message === 'string' ? j.message : `Could not start a reading (HTTP ${res.status}).`);
 }
 

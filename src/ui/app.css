@@ -119,6 +119,7 @@ header.app .brand .spacer { flex: 1; }
 }
 .dropdown button:hover { background: var(--rowhover); }
 .dropdown .cc { color: var(--dim); margin-left: 6px; font-size: 12px; }
+.dropdown .nolist { color: var(--dim); font-size: 11.5px; padding: 6px 10px 8px; border-top: 1px solid var(--line); text-transform: none; letter-spacing: normal; }
 
 /* ---- layout ---- */
 /* Wide enough for the open Ask Claude column + the wheel at its set size + the side panel. */

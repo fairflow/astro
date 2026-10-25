@@ -3,6 +3,7 @@ import {
   PLANETS_IN_ORDER, PRECESSION_PER_DAY, SIDEREAL_DAYS, solarConjunctions, superiorConjunctions,
   synodicDays, type OrreryBody, type Planet, type Station,
 } from '../chart/retrograde.js';
+import { MoonPhase } from 'astronomy-engine';
 import { J2000_JD, degDiff, normDeg, type EphemerisProvider } from '../ephemeris/types.js';
 import { BODY_GLYPHS, SIGN_GLYPHS_SVG, type GlyphDef, type GlyphStyle } from './glyphset.js';
 
@@ -263,6 +264,8 @@ export interface Palette {
   /** ring band gradient stops and the plate's central glow */
   band: [string, string, string]; glow: [string, string];
   sun: [string, string, string]; label: string;
+  /** The Moon round the Earth: its sunlit half, its night half. */
+  moonLit: string; moonDark: string;
 }
 export const DARK: Palette = {
   night: '#05080f', sky: '#0a1020', brass: '#d6b46e', retro: '#ff6f7f', direct: '#7fe0a8',
@@ -274,6 +277,7 @@ export const DARK: Palette = {
   glow: ['rgba(40,52,90,.30)', 'rgba(16,22,44,.18)'],
   sun: ['rgba(255,226,150,1)', 'rgba(255,200,100,.55)', 'rgba(255,180,80,0)'],
   label: 'rgba(235,228,210,.6)',
+  moonLit: '#efe8d4', moonDark: '#1c2236',
 };
 /** Ink on paper: an old star atlas rather than a night sky. */
 export const LIGHT: Palette = {
@@ -286,6 +290,7 @@ export const LIGHT: Palette = {
   glow: ['rgba(255,250,235,.6)', 'rgba(244,239,227,0)'],
   sun: ['rgba(232,160,40,1)', 'rgba(240,180,70,.45)', 'rgba(240,190,90,0)'],
   label: 'rgba(60,50,30,.7)',
+  moonLit: '#fffcf2', moonDark: '#6d6656',
 };
 export const paletteFor = (theme: 'dark' | 'light'): Palette => theme === 'light' ? LIGHT : DARK;
 
@@ -393,6 +398,10 @@ export interface PlateState {
   glyphStyle: GlyphStyle;
   /** Optional chart moment to mark (natal date) as a ring on Earth's orbit. */
   markJd?: number | null;
+  /** The Moon round the Earth (not to scale): its true angle from the Sun, lit on the sunward side. */
+  moon?: boolean;
+  /** Too fast to follow: a faint ring where the Moon is a blur, as a long exposure shows it. */
+  moonBlur?: boolean;
 }
 
 type XYp = [number, number];
@@ -848,9 +857,39 @@ export class OrreryPlate {
       if (b === 'saturn') { // a ring, so Saturn reads at a glance
         c.strokeStyle = pal[b]; c.lineWidth = 1.4; c.beginPath(); c.ellipse(x, y, r * 1.9, r * .7, -.35, 0, 7); c.stroke();
       }
-      const [gx, gy] = this.away([x, y], r + 13);
+      // Earth's label clears the Moon's little orbit when the Moon is shown
+      const [gx, gy] = this.away([x, y], b === 'earth' && s.moon ? this.moonR() + gsz * .6 + 3 : r + 13);
       drawGlyph(c, glyphOf(b), gx, gy, gsz, pal[b], s.glyphStyle, pal.night);
     }
+    if (s.moon) this.drawMoon(this.XY(m.pos('earth', t)), t, !!s.moonBlur);
+  }
+
+  /** Radius of the Moon's drawn orbit round the Earth, px (for visibility, not to scale). */
+  private moonR() { return Math.max(15, Math.min(24, this.U * .11)); }
+
+  /**
+   * The Moon round the Earth (astro-0qk): at its true elongation from the Sun
+   * (anticlockwise, as everything here is seen from the north), its sunward
+   * half lit. When it would go round faster than the eye can follow, a faint
+   * ring instead: what a long exposure would show.
+   */
+  private drawMoon([ex, ey]: XYp, t: number, blur: boolean) {
+    const c = this.ctx, pal = this.pal, R = this.moonR();
+    if (blur) {
+      c.strokeStyle = rgba(pal.ink, .3);
+      c.lineWidth = 3; c.beginPath(); c.arc(ex, ey, R, 0, 2 * Math.PI); c.stroke();
+      return;
+    }
+    c.strokeStyle = rgba(pal.muted, .45); c.lineWidth = 1; c.setLineDash([2, 3]);
+    c.beginPath(); c.arc(ex, ey, R, 0, 2 * Math.PI); c.stroke(); c.setLineDash([]);
+    // screen angle of the Sun from the Earth (y down), then the Moon's, anticlockwise on screen
+    const sun = Math.atan2(this.O[1] - ey, this.O[0] - ex);
+    const a = sun - MoonPhase(t - J2000_JD) * D2R;
+    const mx = ex + R * Math.cos(a), my = ey + R * Math.sin(a), r = Math.max(3.5, R * .22);
+    this.disc(mx, my, r, pal.moonDark, rgba(pal.muted, .9));
+    const toSun = Math.atan2(this.O[1] - my, this.O[0] - mx);
+    c.fillStyle = pal.moonLit; c.beginPath(); c.arc(mx, my, r, toSun - Math.PI / 2, toSun + Math.PI / 2); c.closePath(); c.fill();
+    c.strokeStyle = rgba(pal.muted, .9); c.lineWidth = 1; c.beginPath(); c.arc(mx, my, r, 0, 2 * Math.PI); c.stroke();
   }
 }
 
