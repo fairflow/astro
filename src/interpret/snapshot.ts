@@ -223,6 +223,24 @@ export interface OrreryPlanetSnap {
   };
 }
 
+/** The Moon and the eclipses round the date shown, pre-formatted by the view. */
+export interface OrreryMoonSnap {
+  lon: string; lat: number; speed: number; distKm: number;
+  phase: string; lit: number; elong: number; waxing: boolean; age: number;
+  /** The Sun's distance from the nearer lunar node, degrees. */
+  sunNode: number;
+  quarters: { name: string; date: string }[];
+  /** Where the local eclipse facts are for. */
+  place: string;
+  lunar: { date: string; kind: string; start: string; end: string; totality?: string; moonAlt: number; now: boolean };
+  localSolar: { date: string; kind: string; covered: number; sunAlt: number; start: string; end: string; now: boolean };
+  globalSolar: {
+    date: string; kind: string; greatest?: string;
+    /** Where the shadow's axis meets the Earth (total and annular eclipses). */
+    centralLine: { time: string; at: string }[];
+  };
+}
+
 /**
  * Snapshot of the orrery (Retrograde tab / standalone page) for AI
  * conversations: the date shown, each visible planet's apparent position and
@@ -233,7 +251,10 @@ export function orrerySnapshot(o: {
   date: string;
   model: 'ephemeris' | 'circular';
   view: 'earth' | 'sun';
+  /** The Sun's geocentric longitude, formatted. */
+  sun: string;
   planets: OrreryPlanetSnap[];
+  moon?: OrreryMoonSnap;
   events: { date: string; text: string }[];
 }): string {
   const strip = (s: string) => s.replace(/︎/g, '').trim();
@@ -244,6 +265,7 @@ export function orrerySnapshot(o: {
       ? 'Orbit model: true orbits, from the same ephemeris as the charts.'
       : 'Orbit model: idealised circular orbits (station dates can be off by a few days).')
     + ` Display: ${o.view === 'earth' ? 'Earth' : 'Sun'} at the centre.`);
+  L.push('', `The Sun: ${strip(o.sun)}.`);
   L.push('', '## Planets shown');
   if (!o.planets.length) L.push('- (none selected)');
   for (const p of o.planets) {
@@ -253,6 +275,28 @@ export function orrerySnapshot(o: {
       const n = p.next;
       L.push(`  - ${n.inRetro ? 'Turned retrograde' : 'Next turns retrograde'} ${n.srDate} at ${strip(n.srLon)}; `
         + `turns direct ${n.sdDate} at ${strip(n.sdLon)}; retrograde arc ${n.arc.toFixed(1)}° over ${n.days.toFixed(1)} days.`);
+    }
+  }
+  if (o.moon) {
+    const m = o.moon;
+    L.push('', '## The Moon (from the ephemeris, whichever orbit model is shown)',
+      `- ${m.phase}, ${Math.round(m.lit * 100)}% lit; ${m.elong.toFixed(1)}° from the Sun (${m.waxing ? 'waxing' : 'waning'}), day ${m.age.toFixed(1)} of the synodic month`,
+      `- ${strip(m.lon)}, ${Math.abs(m.lat).toFixed(2)}° ${m.lat >= 0 ? 'north' : 'south'} of the ecliptic, moving ${m.speed.toFixed(2)}°/day`,
+      `- Distance ${Math.round(m.distKm).toLocaleString('en-GB')} km (centre to centre)`,
+      `- The Sun is ${m.sunNode.toFixed(1)}° from the nearer lunar node${m.sunNode < 18 ? ' (eclipse season: New and Full Moons now can eclipse)' : ''}`,
+      `- Next: ${m.quarters.map(q => `${q.name} ${q.date}`).join('; ')}`);
+    const now = (b: boolean) => (b ? ' **Under way at the date shown.**' : '');
+    const lu = m.lunar, ls = m.localSolar, g = m.globalSolar;
+    L.push('', `## Eclipses (in progress at the date shown, or next; computed with astronomy-engine)`,
+      `- Lunar: ${lu.kind}, peak ${lu.date}; penumbral contacts ${lu.start}–${lu.end}${lu.totality ? `; totality ${lu.totality}` : ''}. `
+        + `At ${m.place} the Moon is ${lu.moonAlt > 0 ? `${lu.moonAlt.toFixed(0)}° up at the peak (visible)` : 'below the horizon at the peak'}.${now(lu.now)}`,
+      `- Solar, seen from ${m.place}: ${ls.kind} there, peak ${ls.date} with ${Math.round(ls.covered * 100)}% of the Sun's disc covered, `
+        + `Sun ${ls.sunAlt.toFixed(0)}° up; ${ls.start}–${ls.end}.${now(ls.now)}`,
+      `- Solar, anywhere on Earth: ${g.kind}, greatest ${g.date}${g.greatest ? ` at ${g.greatest}` : ''}.`);
+    if (g.centralLine.length) {
+      L.push(`  - Central line (where the axis of the Moon's shadow meets the Earth; the ${g.kind === 'annular' ? 'annular' : 'total'} path runs along it, `
+        + 'its width is not computed here). First and last points are where the line begins at sunrise and ends at sunset:');
+      for (const p of g.centralLine) L.push(`    - ${p.time}: ${p.at}`);
     }
   }
   if (o.events.length) {

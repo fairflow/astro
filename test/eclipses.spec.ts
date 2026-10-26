@@ -1,7 +1,7 @@
 // Eclipses for the orrery's Moon panel (astro-0qk), against eclipses on record.
 import { describe, expect, it } from 'vitest';
 import {
-  eclipseCache, globalSolarEclipseAt, localSolarEclipseAt, lunarEclipseAt, moonDistanceKm,
+  centralLine, eclipseCache, globalSolarEclipseAt, localSolarEclipseAt, lunarEclipseAt, moonDistanceKm,
 } from '../src/chart/eclipses.js';
 
 const jd = (s: string) => new Date(s).getTime() / 86400000 + 2440587.5;
@@ -54,6 +54,39 @@ describe('in progress, then the next', () => {
     for (let t = start + 40; t > start; t -= 0.37) {
       expect(at(t).lunar.peak).toBe(lunarEclipseAt(t).peak);
     }
+  });
+});
+
+describe('centralLine', () => {
+  it('12 August 2026: Siberia at sunrise, over the Pole, west of Iceland, ending at sunset past Spain', () => {
+    const g = globalSolarEclipseAt(jd('2026-08-01'));
+    const line = centralLine(g.peak);
+    const first = line[0]!, last = line.at(-1)!;
+    expect(first.lat).toBeGreaterThan(70);
+    expect(first.lon).toBeGreaterThan(90);           // Taymyr
+    expect(Math.max(...line.map(p => p.lat))).toBeGreaterThan(85);
+    // at the peak the axis lands on astronomy-engine's own point of greatest eclipse
+    const peak = line.find(p => Math.abs(p.jd - g.peak) < 1e-6)!;
+    expect(peak.lat).toBeCloseTo(g.lat!, 1);
+    expect(peak.lon).toBeCloseTo(g.lon!, 1);
+    expect(last.lat).toBeGreaterThan(38);
+    expect(last.lat).toBeLessThan(40.5);
+    expect(last.lon).toBeGreaterThan(2);             // the Balearics
+    expect(last.lon).toBeLessThan(6);
+    expect((last.jd - first.jd) * 1440).toBeGreaterThan(80);
+  });
+
+  it('2 August 2027: crosses the Strait of Gibraltar and passes Luxor', () => {
+    const line = centralLine(globalSolarEclipseAt(jd('2027-07-20')).peak);
+    const near = (lat: number, lon: number) => Math.min(...line.map(p => Math.hypot(p.lat - lat, p.lon - lon)));
+    expect(near(35.9, -5.6)).toBeLessThan(1.5);
+    expect(near(25.7, 32.6)).toBeLessThan(1.5);
+  });
+
+  it('is empty for a partial eclipse (the axis misses the Earth)', () => {
+    const g = globalSolarEclipseAt(jd('2025-09-01'));
+    expect(g.kind).toBe('partial');
+    expect(centralLine(g.peak)).toEqual([]);
   });
 });
 

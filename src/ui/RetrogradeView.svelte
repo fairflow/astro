@@ -41,7 +41,7 @@
   import Glyph from './Glyph.svelte';
   import MoonPhases from './MoonPhases.svelte';
   import { moonPhaseAt, nextQuarters, SYNODIC_MONTH } from '../chart/moonphase';
-  import { eclipseCache, GREENWICH, moonDistanceKm, type EclipseSet } from '../chart/eclipses';
+  import { centralLine, eclipseCache, GREENWICH, moonDistanceKm, type EclipseSet } from '../chart/eclipses';
   import {
     GROUPS, OrreryPlate, PLANETS_IN_ORDER, StripChart, circularModel, dateOfJd, ephemerisModel,
     paletteFor, type OrreryModel, type PlateState,
@@ -53,7 +53,7 @@
   import type { DisplaySettings } from './state';
   import AskClaude from './AskClaude.svelte';
   import { registerCopy } from './copyctx.svelte';
-  import { orrerySnapshot, type OrreryPlanetSnap } from '../interpret/snapshot';
+  import { orrerySnapshot, type OrreryMoonSnap, type OrreryPlanetSnap } from '../interpret/snapshot';
   import { ORRERY_SYSTEM, ORRERY_STARTERS, DEFAULT_ORRERY_REQUEST } from '../interpret/prompts';
 
   let {
@@ -296,9 +296,32 @@
       };
     });
     return orrerySnapshot({
-      date: fmtDate(jd, true), model: modelId, view, planets,
+      date: fmtDate(jd, true), model: modelId, view, planets, moon: moonSnap(jd),
+      sun: fmtDegInSign(provider.state('sun', jd).lon),
       events: log.slice(0, 12).map(e => ({ date: fmtDate(e.jd), text: `${BODY_NAME[e.glyph]} ${e.text}` })),
     });
+  }
+  // the central line only changes with the eclipse
+  let lineFor = NaN, lineCache: ReturnType<typeof centralLine> = [];
+  function moonSnap(jd: number): OrreryMoonSnap {
+    const mr = moonReadout(jd), L = mr.ecl.lunar, S = mr.ecl.localSolar, G = mr.ecl.globalSolar;
+    if (G.peak !== lineFor) { lineFor = G.peak; lineCache = G.kind === 'total' || G.kind === 'annular' ? centralLine(G.peak) : []; }
+    const at = (lat: number, lon: number) => `${Math.abs(lat).toFixed(1)}° ${lat >= 0 ? 'N' : 'S'}, ${Math.abs(lon).toFixed(1)}° ${lon >= 0 ? 'E' : 'W'}`;
+    const time = (j: number) => dateOfJd(j).toISOString().slice(11, 19) + ' UT';
+    return {
+      lon: fmtDegInSign(mr.lon), lat: mr.lat, speed: mr.speed, distKm: mr.distKm,
+      phase: mr.phase.name, lit: mr.phase.lit, elong: mr.phase.elong, waxing: mr.phase.waxing, age: mr.phase.age,
+      sunNode: mr.sunNode, quarters: mr.quarters.map(q => ({ name: q.name, date: fmtDate(q.jdUt, true) })),
+      place: GREENWICH.name,
+      lunar: { date: fmtDate(L.peak, true), kind: KIND[L.kind].toLowerCase(), start: fmtDate(L.start, true), end: fmtDate(L.end, true),
+        totality: L.total ? `${hm(L.total[0])}–${hm(L.total[1])} UT (${Math.round((L.total[1] - L.total[0]) * 1440)} min)` : undefined,
+        moonAlt: L.moonAlt, now: inSpan(jd, L.start, L.end) },
+      localSolar: { date: fmtDate(S.peak, true), kind: KIND[S.kind].toLowerCase(), covered: S.obscuration, sunAlt: S.sunAlt,
+        start: fmtDate(S.start, true), end: fmtDate(S.end, true), now: inSpan(jd, S.start, S.end) },
+      globalSolar: { date: fmtDate(G.peak, true), kind: KIND[G.kind].toLowerCase(),
+        greatest: G.lat !== undefined && G.lon !== undefined ? at(G.lat, G.lon) : undefined,
+        centralLine: lineCache.map(p => ({ time: time(p.jd), at: at(p.lat, p.lon) })) },
+    };
   }
   // The app header's Copy for AI button (the standalone page has no header).
   $effect(() => standalone ? undefined : registerCopy('orrery', buildOrrery));

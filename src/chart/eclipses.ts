@@ -1,6 +1,7 @@
 import {
-  Body, Equator, GeoMoon, Horizon, NextGlobalSolarEclipse, NextLocalSolarEclipse, NextLunarEclipse,
-  Observer, SearchGlobalSolarEclipse, SearchLocalSolarEclipse, SearchLunarEclipse,
+  AstroTime, Body, Equator, GeoMoon, GeoVector, Horizon, NextGlobalSolarEclipse, NextLocalSolarEclipse,
+  NextLunarEclipse, Observer, RotateVector, Rotation_EQJ_EQD, SearchGlobalSolarEclipse,
+  SearchLocalSolarEclipse, SearchLunarEclipse, Vector, VectorObserver,
 } from 'astronomy-engine';
 import { J2000_JD } from '../ephemeris/types.js';
 
@@ -89,10 +90,63 @@ export function globalSolarEclipseAt(jd: number): GlobalSolarEclipse {
   return { kind: e.kind as EclipseKind, peak: jdOf(e.peak), lat: e.latitude, lon: e.longitude, since };
 }
 
+const AU_KM = 149_597_870.7;
+// WGS 84
+const EARTH_A = 6378.137 / AU_KM, EARTH_B = 6356.752 / AU_KM;
+
+/**
+ * Where the axis of the Moon's shadow meets the Earth at jd: a point on the
+ * central line of a total or annular solar eclipse, or null when the axis
+ * misses the Earth.
+ */
+export function shadowAxisPoint(jd: number): { lat: number; lon: number } | null {
+  const t = new AstroTime(ut(jd));
+  const rot = Rotation_EQJ_EQD(t);
+  const m = RotateVector(rot, GeoMoon(t)), s = RotateVector(rot, GeoVector(Body.Sun, t, true));
+  // the line from the Sun through the Moon, in coordinates where the Earth is a unit sphere
+  const k = EARTH_A / EARTH_B;
+  const p = [m.x / EARTH_A, m.y / EARTH_A, m.z * k / EARTH_A];
+  const d0 = [m.x - s.x, m.y - s.y, (m.z - s.z) * k];
+  const n = Math.hypot(d0[0]!, d0[1]!, d0[2]!), d = d0.map(c => c / n);
+  // |p + u d| = 1, nearer root
+  const b = p[0]! * d[0]! + p[1]! * d[1]! + p[2]! * d[2]!;
+  const c = p[0]! ** 2 + p[1]! ** 2 + p[2]! ** 2 - 1;
+  const disc = b * b - c;
+  if (disc < 0) return null;
+  const u = -b - Math.sqrt(disc);
+  const q = p.map((x, i) => x + u * d[i]!);
+  const o = VectorObserver(new Vector(q[0]! * EARTH_A, q[1]! * EARTH_A, q[2]! * EARTH_A / k, t), true);
+  return { lat: o.latitude, lon: o.longitude };
+}
+
+/**
+ * The central line of the solar eclipse peaking at `peak`: the shadow axis's
+ * landing point every `stepMin` minutes while it touches the Earth, with the
+ * first and last points (sunrise and sunset on the line) found to the second.
+ * Empty when the axis misses the Earth (a partial eclipse).
+ */
+export function centralLine(peak: number, stepMin = 10): { jd: number; lat: number; lon: number }[] {
+  if (!shadowAxisPoint(peak)) return [];
+  // the axis crosses the Earth in at most about 3.5 hours: the edges lie within 2 hours of the peak
+  const edge = (dir: 1 | -1) => {
+    let on = peak, off = peak + dir * 120 * MIN;
+    while (Math.abs(off - on) > 1 / 86400) {
+      const mid = (on + off) / 2;
+      if (shadowAxisPoint(mid)) on = mid; else off = mid;
+    }
+    return on;
+  };
+  const first = edge(-1), last = edge(1), step = stepMin * MIN;
+  const times = [first];
+  for (let jd = peak - Math.floor((peak - first) / step) * step; jd < last; jd += step) if (jd > first) times.push(jd);
+  times.push(last);
+  return times.map(jd => ({ jd, ...shadowAxisPoint(jd)! }));
+}
+
 /** The Earth–Moon distance at jd, km (centre to centre). */
 export function moonDistanceKm(jd: number): number {
   const v = GeoMoon(ut(jd));
-  return Math.hypot(v.x, v.y, v.z) * 149_597_870.7;
+  return Math.hypot(v.x, v.y, v.z) * AU_KM;
 }
 
 export interface EclipseSet { lunar: LunarEclipse; localSolar: LocalSolarEclipse; globalSolar: GlobalSolarEclipse }
